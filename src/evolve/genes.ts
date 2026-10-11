@@ -22,6 +22,7 @@ export const TRAITS = {
   separatorWidth: { values: [1, 2, 3, 4], ordinal: true, label: 'Ring spacing' },
   ground: { values: ['plain', 'tint', 'vine', 'pattern'], label: 'Ground' },
   fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze'], label: 'Centre' },
+  vary: { values: [0, 0.5, 1], ordinal: true, label: 'Line height follows shape' },
   monogram: {
     values: ['seal', 'mirror', 'quad', 'pinwheel', 'pinwheelIn', 'block', 'spiral', 'tughra'],
     label: 'Monogram',
@@ -86,6 +87,7 @@ export function traitsOf(c: Composition): Traits {
   t.ground = tb[0]?.ground?.kind ?? 'plain';
   if (r.fill) t.fill = r.fill.type === 'region' ? 'nested' : r.fill.type;
   if (r.fill?.type === 'monogram') t.monogram = r.fill.method;
+  if (r.fill?.type === 'lines') t.vary = r.fill.vary ?? 0;
   t.spandrels = c.root.spandrels?.type ?? 'none';
   if (pat) {
     t.tiling = pat.tiling;

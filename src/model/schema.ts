@@ -74,7 +74,14 @@ export type BorderNode = TextBorder | OrnamentBorder;
 export type MonogramMethod =
   'mirror' | 'below' | 'quad' | 'pair' | 'pinwheel' | 'pinwheelIn' | 'block' | 'spiral' | 'tughra' | 'seal';
 export type FillerNode =
-  | { type: 'lines'; text: string; lineGap: number; minWords?: number }
+  | {
+      type: 'lines';
+      text: string;
+      lineGap: number;
+      minWords?: number;
+      /** Variable line height, 0–1: lines shrink where the region narrows (0 = one letter size throughout). */
+      vary?: number;
+    }
   | { type: 'maze'; text: string; corridors: number; wall: boolean; seed?: number }
   | { type: 'monogram'; text: string; method: MonogramMethod; params: Record<string, number | string | boolean> }
   | { type: 'abjad'; text: string }
@@ -227,6 +234,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       text: slotName,
       lineGap: z.number().min(0).max(6),
       minWords: z.number().int().min(1).optional(),
+      vary: z.number().min(0).max(1).optional(),
     }),
     z.object({
       type: z.literal('maze'),

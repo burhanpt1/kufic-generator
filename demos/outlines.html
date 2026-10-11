@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shapes and line heights</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:20px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:78ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+input[type=file]{font:inherit}
+</style>
+</head>
+<body>
+<h1>Shapes and line heights</h1>
+<p>Phase 6.1 and 6.2. Any SVG silhouette can be a region's outline, at any depth: borders follow it and fills take its inside. Line fills can vary their height: each line's letter scale follows the shape's width at that height, so the narrow parts (an arch, a tip) get smaller lines instead of none.</p>
+<h2>Silhouettes</h2>
+<p>Built-in silhouettes, each with an Ayat al-Kursi border and a line fill with varied height. Try your own: <input type="file" id="up" accept=".svg,image/svg+xml"></p>
+<div class="g" id="sil"></div>
+<h2>Line height: uniform, half, full</h2>
+<div class="g" id="vary"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset, TEXTS } from '../src/model/presets.ts';
+import { SILHOUETTES, SILHOUETTE_NAMES } from '../src/model/silhouettes.ts';
+import { svgOutline } from '../src/studio/ui/editor-outline.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+let n = 0;
+const comp = (outline, vary) => {
+  const c = structuredClone(preset('mihrab-ayat-al-kursi'));
+  c.root.child.outline = outline;
+  c.texts.ayat = { text: TEXTS.ayatKursi, repeat: 'fill', wordGap: 2 };
+  c.root.child.fill = { type: 'lines', text: 'ayat', lineGap: 1, vary };
+  return c;
+};
+function show(box, c, cap) {
+  setTimeout(() => {
+    const t0 = performance.now(), p = resolve(c), svg = renderPlaced(p, { idPrefix: 'o' + n++ });
+    const f = document.createElement('figure');
+    f.innerHTML = svg + `<figcaption>${cap} · ${(performance.now() - t0).toFixed(0)} ms${p.meta.warnings.length ? ' · ' + p.meta.warnings.join('; ') : ''}</figcaption>`;
+    box.append(f);
+  }, 10);
+}
+for (const [k, path] of Object.entries(SILHOUETTES)) show(document.getElementById('sil'), comp({ kind: 'svg', path }, 1), SILHOUETTE_NAMES[k]);
+for (const [name, o] of [['Teardrop', { kind: 'preset', name: 'teardrop' }], ['Mihrab', { kind: 'preset', name: 'mihrab' }], ['Onion dome', { kind: 'svg', path: SILHOUETTES.onion }]])
+  for (const v of [0, 0.5, 1]) show(document.getElementById('vary'), comp(o, v), `${name}, vary ${v}`);
+document.getElementById('up').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const d = svgOutline(await f.text());
+  if (d) show(document.getElementById('sil'), comp({ kind: 'svg', path: d }, 1), f.name);
+};
+</script>
+</body>
+</html>
