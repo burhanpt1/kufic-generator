@@ -9,3 +9,4 @@ prototypes/
 tests/golden-lab/*.svg
 demos/golden-lab.html
 COMPOSITION_ENGINE.md
+demos/*.html
