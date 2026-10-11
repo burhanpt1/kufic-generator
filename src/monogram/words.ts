@@ -90,7 +90,7 @@ export function letterShape(
   let g = trim(wg.g);
   if (vext) {
     // grow taller by repeating one row of the body: a row whose inked cells all have letter ink directly above and
-    // below and none beside (lab port §6); the middle such row, as it sits furthest from the letter's turns
+    // below and none beside (lab port §6); the middle such row (the upper-middle one of an even count, as the lab)
     const isL = (x: number, y: number) => gAt(g, x, y) === 1 || gAt(g, x, y) === 4,
       rows: number[] = [];
     for (let y = 1; y < g.h - 1; y++) {
@@ -108,7 +108,7 @@ export function letterShape(
       shapeCache.set(key, null);
       return null;
     }
-    const r = rows[(rows.length - 1) >> 1],
+    const r = rows[Math.floor(rows.length / 2)],
       t = G(g.w, g.h + vext);
     for (let y = 0; y < t.h; y++) {
       const sy = y <= r ? y : y <= r + vext ? r : y - vext;
