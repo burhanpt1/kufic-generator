@@ -4,7 +4,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'legacy/', 'coverage/', 'tests/golden/svg/', 'tests/golden/engine/'] },
+  { ignores: ['dist/', 'coverage/', 'tests/golden/svg/', 'tests/golden/engine/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
