@@ -1,3 +1,6 @@
 tests/golden/svg/** linguist-generated=true
 tests/golden/engine/** linguist-generated=true
 tests/golden/manifest.json linguist-generated=true
+tests/golden-lab/*.svg linguist-generated=true
+tests/golden-lab/*.png binary
+prototypes/** linguist-vendored=true

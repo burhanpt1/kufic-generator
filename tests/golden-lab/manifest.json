@@ -1,0 +1,360 @@
+[
+  {
+    "id": "shape--fatimid-circle",
+    "kind": "shape",
+    "genome": {},
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--square-4",
+    "kind": "shape",
+    "genome": {
+      "layout": "poly",
+      "sides": 4,
+      "center": "abjad",
+      "corners": "stars"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--hexagon",
+    "kind": "shape",
+    "genome": {
+      "layout": "poly",
+      "sides": 6,
+      "bandStyle": "pearls",
+      "ground": "tint",
+      "center": "geo"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--octagon-curved",
+    "kind": "shape",
+    "genome": {
+      "layout": "poly",
+      "sides": 8,
+      "stroke": "curved",
+      "curve": 0.6,
+      "center": "squares",
+      "corners": "none"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--star-8",
+    "kind": "shape",
+    "genome": {
+      "layout": "star",
+      "points": 8,
+      "depth": 0.55,
+      "rings": 2,
+      "center": "abjad"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--star-6-pen",
+    "kind": "shape",
+    "genome": {
+      "layout": "star",
+      "points": 6,
+      "depth": 0.65,
+      "rings": 2,
+      "stroke": "pen",
+      "palette": 4,
+      "center": "abjad"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--teardrop",
+    "kind": "shape",
+    "genome": {
+      "layout": "teardrop",
+      "rings": 2,
+      "palette": 4,
+      "center": "abjad",
+      "corners": "none"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--heart",
+    "kind": "shape",
+    "genome": {
+      "layout": "heart",
+      "rings": 2,
+      "bandStyle": "chevron",
+      "center": "abjad",
+      "palette": 2
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--mihrab",
+    "kind": "shape",
+    "genome": {
+      "layout": "mihrab",
+      "rings": 2,
+      "center": "geo",
+      "tiling": "hex"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "shape--names-circle",
+    "kind": "shape",
+    "genome": {
+      "colourMode": "repeat",
+      "letterStyle": "banded",
+      "center": "abjad"
+    },
+    "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
+  },
+  {
+    "id": "shape--la-ilaha-poly5",
+    "kind": "shape",
+    "genome": {
+      "layout": "poly",
+      "sides": 5,
+      "rings": 2,
+      "center": "solid",
+      "colourMode": "radial",
+      "ground": "geo",
+      "tiling": "31212"
+    },
+    "text": "لا اله الا الله"
+  },
+  {
+    "id": "fill--teardrop",
+    "kind": "fill",
+    "state": {
+      "shape": "teardrop"
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "fill--mihrab-blocks",
+    "kind": "fill",
+    "state": {
+      "shape": "mihrab",
+      "stroke": "blocks"
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "fill--heart-2rings",
+    "kind": "fill",
+    "state": {
+      "shape": "heart",
+      "borderRings": 2
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "fill--circle-open",
+    "kind": "fill",
+    "state": {
+      "shape": "circle",
+      "lineGap": 2
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "fill--octagon",
+    "kind": "fill",
+    "state": {
+      "shape": "poly",
+      "sides": 8
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "fill--star8-pen",
+    "kind": "fill",
+    "state": {
+      "shape": "star",
+      "sides": 8,
+      "depth": 0.65,
+      "stroke": "pen",
+      "palette": 4
+    },
+    "text": "الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم",
+    "border": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "maze--teardrop",
+    "kind": "maze",
+    "state": {
+      "style": "maze",
+      "shape": "teardrop",
+      "mseed": 7
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "maze--circle-twisty",
+    "kind": "maze",
+    "state": {
+      "style": "maze",
+      "shape": "circle",
+      "straight": 0.35,
+      "mseed": 11
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "maze--hexagon-long",
+    "kind": "maze",
+    "state": {
+      "style": "maze",
+      "shape": "poly",
+      "sides": 6,
+      "straight": 0.92,
+      "mseed": 3,
+      "stroke": "blocks"
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "mono--mirror",
+    "kind": "mono",
+    "params": {
+      "mode": "mirror"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--below",
+    "kind": "mono",
+    "params": {
+      "mode": "below"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--quad",
+    "kind": "mono",
+    "params": {
+      "mode": "quad"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--pair",
+    "kind": "mono",
+    "params": {
+      "mode": "pair"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--pinout",
+    "kind": "mono",
+    "params": {
+      "mode": "pinout"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--pinin",
+    "kind": "mono",
+    "params": {
+      "mode": "pinin"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--block",
+    "kind": "mono",
+    "params": {
+      "mode": "block"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--spiral",
+    "kind": "mono",
+    "params": {
+      "mode": "spiral"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--tughra",
+    "kind": "mono",
+    "params": {
+      "mode": "tughra"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--seal",
+    "kind": "mono",
+    "params": {
+      "mode": "seal"
+    },
+    "text": "محمد"
+  },
+  {
+    "id": "mono--seal-joined-mirror",
+    "kind": "mono",
+    "params": {
+      "mode": "seal",
+      "joins": true,
+      "sym": "mirror",
+      "dots": true
+    },
+    "text": "علي"
+  },
+  {
+    "id": "mono--seal-turn-curved",
+    "kind": "mono",
+    "params": {
+      "mode": "seal",
+      "sym": "turn",
+      "stroke": "curved",
+      "curve": 0.8,
+      "frame": "double"
+    },
+    "text": "فاطمة"
+  },
+  {
+    "id": "mono--block-basmala",
+    "kind": "mono",
+    "params": {
+      "mode": "block",
+      "alternate": true,
+      "lines": 1
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "mono--spiral-seal-core",
+    "kind": "mono",
+    "params": {
+      "mode": "spiral",
+      "core": "seal",
+      "spiralRings": 2
+    },
+    "text": "بسم الله الرحمن الرحيم"
+  },
+  {
+    "id": "mono--tughra-tall",
+    "kind": "mono",
+    "params": {
+      "mode": "tughra",
+      "spineH": 19,
+      "flags": 2,
+      "loops": 2,
+      "arms": 2
+    },
+    "text": "الحسين"
+  }
+]
