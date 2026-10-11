@@ -33,18 +33,24 @@ const fromB64url = (s: string) => {
   return Uint8Array.from(bin, c => c.charCodeAt(0));
 };
 
-export async function encodeSettings(s: Settings): Promise<string> {
-  return toB64url(await pipe(new TextEncoder().encode(JSON.stringify(s)), new CompressionStream('deflate-raw')));
+/** Any JSON value, deflated and base64url'd. */
+export async function encodeJSON(v: unknown): Promise<string> {
+  return toB64url(await pipe(new TextEncoder().encode(JSON.stringify(v)), new CompressionStream('deflate-raw')));
 }
+/** undefined if the string isn't a valid encoding. */
+export async function decodeJSON(code: string): Promise<unknown> {
+  try {
+    return JSON.parse(new TextDecoder().decode(await pipe(fromB64url(code), new DecompressionStream('deflate-raw'))));
+  } catch {
+    return undefined;
+  }
+}
+
+export const encodeSettings = (s: Settings) => encodeJSON(s);
 /** null if the string isn't a valid encoding. */
 export async function decodeSettings(code: string): Promise<Settings | null> {
-  try {
-    const json = new TextDecoder().decode(await pipe(fromB64url(code), new DecompressionStream('deflate-raw')));
-    const s = JSON.parse(json);
-    return s && typeof s === 'object' && !Array.isArray(s) ? s : null;
-  } catch {
-    return null;
-  }
+  const s = await decodeJSON(code);
+  return s && typeof s === 'object' && !Array.isArray(s) ? (s as Settings) : null;
 }
 
 export const hashToCode = (hash: string) => (hash.startsWith(PREFIX) ? hash.slice(PREFIX.length) : null);

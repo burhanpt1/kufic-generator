@@ -12,7 +12,9 @@ const demos = Object.fromEntries(
 export default defineConfig({
   // relative asset URLs, so the build works under any GitHub Pages path
   base: './',
-  build: { rollupOptions: { input: { main: resolve(here, 'index.html'), ...demos } } },
+  build: {
+    rollupOptions: { input: { main: resolve(here, 'index.html'), studio: resolve(here, 'studio.html'), ...demos } },
+  },
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
