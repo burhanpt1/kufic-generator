@@ -42,7 +42,8 @@ describe('silhouettes', () => {
       const ring = p.meta.borders[0].rings[0];
       expect(ring.groupSizes.some(n => n === 0)).toBe(true);
       expect(ring.groupSizes.some(n => n > 0)).toBe(true);
-      expect(p.meta.size).toBeLessThan(100); // was 158 for the lamp when every run had to hold text
+      // was 158 for the lamp when every run had to hold text; bands gained headroom above the letters since (98 → 102)
+      expect(p.meta.size).toBeLessThan(110);
     }
   });
   it('a nested region can have an SVG outline too', () => {

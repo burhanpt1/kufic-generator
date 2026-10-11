@@ -1,0 +1,7 @@
+// Headroom check on 50 random evolvable compositions (batch 1 of 4: 200 in all, split so they run in parallel).
+import { expect, it } from 'vitest';
+import { randomBatchViolations } from './helpers/clearance';
+
+it('keeps letters half a cell from separators and the outline', async () => {
+  expect(await randomBatchViolations(1001, 50)).toEqual([]);
+}, 300000);

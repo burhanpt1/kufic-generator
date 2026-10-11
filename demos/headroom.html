@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Band headroom</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:980px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg,figure img{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Band headroom</h1>
+<p>Owner's feedback: at the tallest ascender setting, stems reached the inner edge of their band and ran into the separator beside it. Now each band is deep enough that tall stems end at about 83% of it, with at least a cell clear above whatever rises highest (leaf and palmette endings, marks). Each separator also sits in a gap with half a cell clear on each side. Below, ascenders are 13 (the tallest setting) with braid and pearl separators and leaf and palmette endings. Before (rendered by the previous code) is on the left, after is on the right. The caption gives the tightest clearance between letter ink and a separator, in cells.</p>
+<div id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { HEADROOM_CASES } from './headroom-cases.ts';
+import { clearances } from '../tests/helpers/clearance.ts';
+const before = import.meta.glob('./headroom-before/*.png', { eager: true, query: '?url', import: 'default' });
+for (const c of HEADROOM_CASES) {
+  const p = resolve(c.comp),
+    worst = clearances(p, Infinity).filter(v => v.what === 'separator').reduce((a, v) => Math.min(a, v.gap), Infinity);
+  const h = document.createElement('h2');
+  h.textContent = c.name;
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML =
+    `<figure><img alt="Before: ${c.name}" src="${before[`./headroom-before/${c.id}.png`]}"><figcaption>Before: stems and endings run into the separators</figcaption></figure>` +
+    `<figure>${renderPlaced(p, { idPrefix: 'h' + c.id })}<figcaption>After: tightest clearance ${worst.toFixed(2)} cells</figcaption></figure>`;
+  document.getElementById('g').append(h, row);
+}
+</script>
+</body>
+</html>

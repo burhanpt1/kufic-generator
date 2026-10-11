@@ -32,17 +32,18 @@ export function bandGeom(shape: ShapeGeometry, size: number, inset: number): Ban
 /** A run may curve no tighter than this many band heights (radius of curvature). */
 export const MIN_CURVE = 1.25;
 
-/** Capacity (strip width in cells) of each run at letter scale s, or null if the band doesn't fit. */
-export function capacities(bg: BandGeom, Hb: number, s: number): number[] | null {
+/** Capacity (strip width in cells) of each run at letter scale s, or null if the band doesn't fit. room = the band's
+ *  depth in cells (letters plus headroom), Hb by default. */
+export function capacities(bg: BandGeom, Hb: number, s: number, room = Hb): number[] | null {
   if (bg.kind === 'circle') {
     const r = bg.R / s;
-    if (r - Hb < Math.max(3, Hb * 0.9)) return null;
+    if (r - room < Math.max(3, room * 0.9)) return null;
     return [Math.round(2 * Math.PI * (r - Hb / 2)) - 1];
   }
   // letters fan out on a curve tighter than the band is tall: no ring there at this size
   if (bg.runs.some(rn => runMinRadius(rn) < Hb * s * MIN_CURVE)) return null;
   if (bg.kind === 'closed') return [Math.floor(bg.runs[0].len / s) - 1];
-  return bg.runs.map(rn => Math.floor((rn.len - Hb * s * (rn.start!.clearance + rn.end!.clearance) - s) / s));
+  return bg.runs.map(rn => Math.floor((rn.len - room * s * (rn.start!.clearance + rn.end!.clearance) - s) / s));
 }
 
 export interface RingFit {
@@ -52,6 +53,8 @@ export interface RingFit {
   caps: number[];
   mode: 'words' | 'breaks';
   score: number;
+  /** Band depth in cells. */
+  room: number;
 }
 
 export interface FitOptions {
@@ -63,6 +66,8 @@ export interface FitOptions {
   wordGap: number;
   /** Largest scale at which the band's inner edge still exists. */
   sMax: number;
+  /** Band depth in cells (letters plus headroom); the letters' height by default. */
+  room?: number;
 }
 
 /** Runs too short to hold any segment may stay empty (just the band) when they add up to no more than this share of
@@ -95,6 +100,7 @@ function usableRuns(bg: BandGeom, c: number[], minSeg: number): { ord: number[];
 /** Best (scale, repeats) for one ring. */
 export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, o: FitOptions): RingFit | null {
   let best: RingFit | null = null;
+  const room = o.room ?? prepared.Hb;
   const hi = Math.min(o.sMax, Math.min(1.15, o.sTarget * 1.3)),
     lo = Math.max(0.36, o.sTarget * 0.7);
   if (!o.fixed && hi < lo) return null; // the band can't be drawn at an acceptable size here
@@ -105,7 +111,7 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
     const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length,
       minSeg = Math.min(...segs0.map(x => x.minW));
     for (const s of scales) {
-      const c = capacities(bg, prepared.Hb, s);
+      const c = capacities(bg, prepared.Hb, s, room);
       if (!c) continue;
       const use = usableRuns(bg, c, minSeg);
       if (!use) continue;
@@ -128,7 +134,7 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
           // groups in reading order for every run; skipped runs get none
           const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
           use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
-          best = { s, rep, groups, caps: c, mode, score };
+          best = { s, rep, groups, caps: c, mode, score, room };
         }
       }
     }
@@ -138,8 +144,14 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
 }
 
 /** Does the text fit once at scale 1 (the auto-size test)? */
-export function fitsAtFullSize(bg: BandGeom, script: ScriptEngine, prepared: Prepared, wordGap: number): boolean {
-  const c = capacities(bg, prepared.Hb, 1);
+export function fitsAtFullSize(
+  bg: BandGeom,
+  script: ScriptEngine,
+  prepared: Prepared,
+  wordGap: number,
+  room = prepared.Hb,
+): boolean {
+  const c = capacities(bg, prepared.Hb, 1, room);
   if (!c) return false;
   for (const mode of ['words', 'breaks'] as const) {
     const segs = script.segments(prepared, mode, wordGap) as Segs,
@@ -163,7 +175,6 @@ export function layRing(
 ): { strip: Strip; place: StripPlace; group: number; run: number }[] {
   const G = fit.caps.length,
     s = fit.s,
-    Hb = prepared.Hb,
     out: { strip: Strip; place: StripPlace; group: number; run: number }[] = [];
   for (let gi = 0; gi < G; gi++) {
     const gg = (G - gi) % G,
@@ -180,8 +191,8 @@ export function layRing(
       const rn = bg.runs[gi],
         cA = rn.start!.clearance,
         cB = rn.end!.clearance,
-        usable = rn.len - Hb * s * (cA + cB),
-        off = Hb * s * cA + (usable - W * s) / 2;
+        usable = rn.len - fit.room * s * (cA + cB),
+        off = fit.room * s * cA + (usable - W * s) / 2;
       if (rn.pts.length === 2) {
         const f = frameAt(rn, 0),
           O: Pt = [rn.pts[0][0] + f.t[0] * off, rn.pts[0][1] + f.t[1] * off];
