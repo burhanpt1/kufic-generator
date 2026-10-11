@@ -49,6 +49,7 @@ export const TRAITS = {
   ra: { values: ['desc', 'short'], label: 'Ra' },
   marks: { values: ['dots', 'off'], label: 'Dots' },
   alternates: { values: [false, true], label: 'Long letter forms' },
+  plait: { values: [false, true], label: 'Plaited stems' },
 } as const satisfies Record<string, TraitSpec>;
 export type Trait = keyof typeof TRAITS;
 export type Traits = { [K in Trait]?: string | number | boolean };
@@ -115,6 +116,7 @@ export function traitsOf(c: Composition): Traits {
   t.ra = c.style.letter.ra;
   t.marks = c.style.letter.marks;
   t.alternates = !!c.style.letter.alternates;
+  t.plait = !!(tb[0]?.plait || ((r.fill?.type === 'lines' || r.fill?.type === 'maze') && r.fill.plait));
   return t;
 }
 

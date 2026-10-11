@@ -225,6 +225,10 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'alternates':
       s.letter.alternates = v as boolean;
       break;
+    case 'plait':
+      tb.forEach(b => (b.plait = v as boolean));
+      if (r.fill?.type === 'lines' || r.fill?.type === 'maze') r.fill = { ...r.fill, plait: v as boolean };
+      break;
   }
 }
 
@@ -243,6 +247,9 @@ export function relevantTraits(c: Composition): Trait[] {
       return t.fill === 'pattern' || t.ground === 'pattern' || t.spandrels === 'pattern';
     if (k === 'reach') return t.terminal !== 'none';
     if (k === 'corner') return t.stroke !== 'blocks';
+    // plaits need tall stems, and text in bands, lines or a maze
+    if (k === 'plait')
+      return (t.ascenders as number) >= 9 && ((t.borders as number) > 0 || t.fill === 'lines' || t.fill === 'maze');
     return true;
   });
 }

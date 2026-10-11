@@ -172,11 +172,12 @@ describe('lab importer', () => {
       marks: 'off',
       stroke: 'curved',
       corner: 0.6,
+      plait: true,
     });
+    expect(dropped.some(d => d.startsWith('plait'))).toBe(false);
     expect(dropped).toEqual(
       expect.arrayContaining([
         'centre (no studio equivalent)',
-        'plait (no studio equivalent)',
         'sparkle (unknown gene)',
         'rings 4 → 3',
         'weight 1 → 0.85',

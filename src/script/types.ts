@@ -60,6 +60,8 @@ export interface LayoutOptions {
   wordGap: number;
   /** Which stem tops to mark for floriated endings. */
   terminals: 'none' | 'tall' | 'tails' | 'all';
+  /** Plait neighbouring tall stems (Fatimid style); needs ascenders of 9 or more. */
+  plait?: boolean;
 }
 
 export interface ScriptEngine {

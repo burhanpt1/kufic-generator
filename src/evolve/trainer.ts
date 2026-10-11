@@ -245,7 +245,7 @@ const LAB: Record<string, { trait: Trait; map?: Record<string, V>; byIndex?: rea
   marks: { trait: 'marks' },
   stroke: { trait: 'stroke' },
   curve: { trait: 'corner' },
-  plait: null, // plaited stems aren't in the studio yet
+  plait: { trait: 'plait' },
 };
 const ORDER: Trait[] = ['outline', 'sides', 'points', 'depth', 'borders', 'taper', 'fill', 'spandrels', 'ground'];
 
