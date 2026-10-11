@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio demo</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6;--accent:#17807E}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B;--accent:#45B7B1}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p,li{color:var(--muted);max-width:80ch}a{color:var(--accent)}
+iframe{width:100%;height:80vh;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+</style>
+</head>
+<body>
+<h1>Phase 5: the studio</h1>
+<p>The interface over the composition model, three levels deep:</p>
+<ul>
+  <li><b>Gallery</b>: the eight presets, Breed (pick one or two, lock traits from a pick, vary the current composition) and favourites. Picks teach a taste that is kept in this browser.</li>
+  <li><b>Editor</b>: text slots with live abjad values, guided controls (shape, borders, centre, letters, style, counting conventions, an outline from any SVG file), and a layers panel to add, remove, reorder and edit nodes as JSON.</li>
+  <li><b>Chronogram</b>: read a phrase, complete it to a year (Gregorian, Hijri or a number), or find phrases from a word bank; Mashriqi or Maghribi values and ة as 5 or 400.</li>
+  <li><b>Letters</b>: the glyph editor; edits apply to every composition.</li>
+</ul>
+<p>The composition lives in the URL, so every state is a shareable link. Export as SVG or PNG. <a href="../studio.html" target="_blank">Open the studio on its own page</a>.</p>
+<iframe src="../studio.html" title="Kufic Studio"></iframe>
+</body>
+</html>
