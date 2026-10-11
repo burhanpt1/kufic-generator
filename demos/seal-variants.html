@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller seal letters</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.letters{display:flex;flex-wrap:wrap;gap:10px}.l{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center;font-size:12px;color:var(--muted)}
+.l svg{display:block;margin:0 auto 4px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Taller seal letters</h1>
+<p>Lab port §6. Besides taller ascenders and wider stretches, each seal letter now has a variant 3 rows taller, made by repeating one row of its body: a row whose inked cells all have letter ink directly above and below and none beside (the middle such row). It costs 0.8 per added row in the search; letters with no such row (م) get no variant. The variants go into the tables that both the WebAssembly kernel and the JS fallback read.</p>
+<h2>Letters: as drawn, and 3 rows taller (the repeated row in the accent colour)</h2>
+<div class="letters" id="letters"></div>
+<h2>Seals</h2>
+<div class="g" id="g"></div>
+<script type="module">
+import { letterShape } from '../src/monogram/words.ts';
+import { kufi } from '../src/script/kufi.ts';
+import { DEFAULT_STYLE } from '../src/model/style.ts';
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const L = { ...DEFAULT_STYLE.letter, ascenders: 9 }, C = 6;
+const draw = (s, mark) => {
+  const rects = s.cells.map(([x, y, v]) => `<rect x="${x * C}" y="${y * C}" width="${C}" height="${C}" fill="${mark(y) ? '#17807e' : v === 3 ? '#9c3a22' : 'currentColor'}"/>`).join('');
+  return `<svg width="${s.w * C}" height="${s.h * C}" viewBox="0 0 ${s.w * C} ${s.h * C}" style="color:var(--ink)">${rects}</svg>`;
+};
+for (const c of [...'ابسطكلنهويم']) {
+  const a = letterShape(kufi, c, L, 0, 'iso', 0), b = letterShape(kufi, c, L, 0, 'iso', 3);
+  // the repeated rows: where b differs from a shifted down by 3
+  const row = y => b && y > 0 && y < b.h - 1 && b.cells.filter(q => q[1] === y).length && (() => {
+    const at = (s, x, yy) => s.cells.some(q => q[0] === x && q[1] === yy);
+    let r = -1;
+    for (let k = 1; k < a.h - 1; k++) {
+      let ok = true;
+      for (let yy = 0; yy < b.h && ok; yy++) for (let x = 0; x < a.w && ok; x++) if (at(b, x, yy) !== at(a, x, yy <= k ? yy : yy <= k + 3 ? k : yy - 3)) ok = false;
+      if (ok) { r = k; break; }
+    }
+    return y > r && y <= r + 3;
+  })();
+  const d = document.createElement('div');
+  d.className = 'l';
+  d.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-end">${draw(a, () => false)}${b ? draw(b, row) : '<span>no variant</span>'}</div>${c}`;
+  document.getElementById('letters').append(d);
+}
+const cases = [['Basmala seal', 'basmala-seal', null], ['Fatimid medallion centre', 'fatimid-medallion', null], ['يا علي مدد', 'basmala-seal', 'يا علي مدد'], ['محمد علي', 'basmala-seal', 'محمد علي']];
+cases.forEach(([name, id, text], i) => {
+  const c = structuredClone(preset(id));
+  if (text) c.texts[Object.keys(c.texts)[0]].text = text;
+  const p = resolve(c), f = document.createElement('figure');
+  f.innerHTML = renderPlaced(p, { idPrefix: 'sv' + i }) + `<figcaption>${name}</figcaption>`;
+  document.getElementById('g').append(f);
+});
+</script>
+</body>
+</html>

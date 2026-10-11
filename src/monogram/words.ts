@@ -66,6 +66,8 @@ export interface LetterShape {
   joins: [number, number, number][];
   form: 'iso' | 'ini' | 'med' | 'fin';
   extra: number;
+  /** Rows repeated to make the letter taller (seal variants). */
+  vext: number;
   H: number;
   cost: number;
 }
@@ -78,14 +80,43 @@ export function letterShape(
   letter: LetterStyle,
   extra = 0,
   form: LetterShape['form'] = 'iso',
+  vext = 0,
 ): LetterShape | null {
   const text = form === 'ini' ? c + 'ـ' : form === 'med' ? 'ـ' + c + 'ـ' : form === 'fin' ? 'ـ' + c : c;
-  const key = script.id + text + JSON.stringify(letter) + extra + ':' + glyphEpoch();
+  const key = script.id + text + JSON.stringify(letter) + extra + 'v' + vext + ':' + glyphEpoch();
   if (shapeCache.has(key)) return shapeCache.get(key)!;
   const wg = wordGrid(script, text, { ...letter, marks: 'dots' }, extra, 1);
   if (!wg) return null;
-  const g = trim(wg.g),
-    cells: [number, number, number][] = [],
+  let g = trim(wg.g);
+  if (vext) {
+    // grow taller by repeating one row of the body: a row whose inked cells all have letter ink directly above and
+    // below and none beside (lab port §6); the middle such row, as it sits furthest from the letter's turns
+    const isL = (x: number, y: number) => gAt(g, x, y) === 1 || gAt(g, x, y) === 4,
+      rows: number[] = [];
+    for (let y = 1; y < g.h - 1; y++) {
+      let ok = true,
+        n = 0;
+      for (let x = 0; x < g.w && ok; x++) {
+        const v = gAt(g, x, y);
+        if (!v) continue;
+        if ((v !== 1 && v !== 4) || !isL(x, y - 1) || !isL(x, y + 1) || isL(x - 1, y) || isL(x + 1, y)) ok = false;
+        n++;
+      }
+      if (ok && n) rows.push(y);
+    }
+    if (!rows.length) {
+      shapeCache.set(key, null);
+      return null;
+    }
+    const r = rows[(rows.length - 1) >> 1],
+      t = G(g.w, g.h + vext);
+    for (let y = 0; y < t.h; y++) {
+      const sy = y <= r ? y : y <= r + vext ? r : y - vext;
+      for (let x = 0; x < g.w; x++) t.data[y * g.w + x] = g.data[sy * g.w + x];
+    }
+    g = t;
+  }
+  const cells: [number, number, number][] = [],
     share = new Set<string>();
   const L = (x: number, y: number) => gAt(g, x, y) === 1 || gAt(g, x, y) === 4;
   for (let y = 0; y < g.h; y++)
@@ -129,8 +160,9 @@ export function letterShape(
     joins,
     form,
     extra,
+    vext,
     H: letter.ascenders,
-    cost: extra + (letter.ascenders - 7) * 0.6 + (form === 'iso' ? 0 : 0.5),
+    cost: extra + (letter.ascenders - 7) * 0.6 + (form === 'iso' ? 0 : 0.5) + 0.8 * vext,
   };
   shapeCache.set(key, out);
   return out;
