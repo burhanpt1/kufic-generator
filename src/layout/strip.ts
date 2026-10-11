@@ -1,0 +1,160 @@
+import type { Seg, Strip } from '../types';
+
+/** Stem-rhythm search switch; compose() sets it from opts.rhythm. */
+export const RHY = { on: false };
+
+// Justify a line of segments to width W. Extra cells go to word-final tails (3), letter bodies (2.5), word gaps (2),
+// joins before a final letter (2) and other joins (1). With rhythm on, the split is then nudged so tall stems fall evenly.
+// Returns null if the segments don't fit; W = null means natural width.
+export function strip(
+  segs: Seg[],
+  Hb: number,
+  base: number,
+  wg: number,
+  W: number | null,
+  wrap?: boolean,
+): Strip | null {
+  const gapAfter = (i: number) => (segs[i].endsWord ? wg : 1);
+  let nat = 0;
+  segs.forEach((s, i) => {
+    nat += s.minW + (i < segs.length - 1 ? gapAfter(i) : 0);
+  });
+  if (W == null) W = nat;
+  if (nat > W) return null;
+  const width = W;
+  const extra = W - nat,
+    pts: { w: number }[] = [],
+    idx = new Map<string, number>();
+  segs.forEach((s, si) => {
+    s.glyphs.forEach((g, gi) => {
+      g.str.forEach(st => {
+        idx.set('t' + si + ',' + gi + ',' + st.c, pts.length);
+        pts.push({ w: st.w });
+      });
+      if (gi < s.seps.length && s.seps[gi] === 'join') {
+        idx.set('j' + si + ',' + gi, pts.length);
+        pts.push({ w: s.glyphs[gi + 1].form === 'fin' ? 2 : 1 });
+      }
+    });
+    if (si < segs.length - 1 && s.endsWord) {
+      idx.set('g' + si, pts.length);
+      pts.push({ w: 2 });
+    }
+  });
+  const a = new Int32Array(pts.length);
+  let padR = 0;
+  if (pts.length && extra) {
+    const tw = pts.reduce((x, p) => x + p.w, 0);
+    let used = 0;
+    const fr = pts.map((p, i) => {
+      const ex = (extra * p.w) / tw,
+        f = Math.floor(ex);
+      a[i] = f;
+      used += f;
+      return [ex - f, i];
+    });
+    fr.sort((x, y) => y[0] - x[0] || x[1] - y[1]);
+    for (let i = 0; i < extra - used; i++) a[fr[i % fr.length][1]]++;
+  } else padR = Math.floor(extra / 2);
+  const get = (k: string) => {
+    const i = idx.get(k);
+    return i == null ? 0 : a[i];
+  };
+  // tall-stem positions for an allocation
+  const stems = () => {
+    const xs: number[] = [];
+    let x = width - padR;
+    segs.forEach((s, si) => {
+      s.glyphs.forEach((g, gi) => {
+        let gw = g.w;
+        g.str.forEach(st => (gw += get('t' + si + ',' + gi + ',' + st.c)));
+        x -= gw;
+        g.tall.forEach(c => {
+          let sh = 0;
+          g.str.forEach(st => {
+            if (st.c < c) sh += get('t' + si + ',' + gi + ',' + st.c);
+          });
+          xs.push(x + c + sh);
+        });
+        if (gi < s.seps.length) x -= 1 + get('j' + si + ',' + gi);
+      });
+      if (si < segs.length - 1) x -= gapAfter(si) + get('g' + si);
+    });
+    return xs.sort((p, q) => p - q);
+  };
+  if (RHY.on && extra > 1 && pts.length > 1) {
+    const a0 = Array.from(a),
+      norm = (extra * extra) / pts.length + 1;
+    const cost = () => {
+      const xs = stems();
+      if (xs.length < 2) return 0;
+      const gaps: number[] = [];
+      for (let i = 1; i < xs.length; i++) gaps.push(xs[i] - xs[i - 1]);
+      if (wrap) gaps.push(width + 1 - (xs[xs.length - 1] - xs[0]));
+      const m = gaps.reduce((p, q) => p + q, 0) / gaps.length;
+      let v = 0;
+      gaps.forEach(g => (v += (g - m) * (g - m)));
+      let nc = 0;
+      for (let i = 0; i < a.length; i++) nc += ((a[i] - a0[i]) * (a[i] - a0[i])) / pts[i].w;
+      return (v / gaps.length / (m * m + 1)) * 4 + (0.15 * nc) / norm;
+    };
+    let c = cost(),
+      seed = 7;
+    const rnd = (n: number) => {
+      seed = (seed * 16807) % 2147483647;
+      return seed % n;
+    };
+    for (let it = 0; it < 400 + 25 * pts.length; it++) {
+      const i = rnd(a.length),
+        j = rnd(a.length);
+      if (i === j || a[i] === 0) continue;
+      a[i]--;
+      a[j]++;
+      const c2 = cost();
+      if (c2 < c) c = c2;
+      else {
+        a[i]++;
+        a[j]--;
+      }
+    }
+  }
+  const data = new Uint8Array(width * Hb),
+    tag = new Uint8Array(width * Hb);
+  let x = width - padR;
+  segs.forEach((s, si) => {
+    const rt = (s.rep || 0) + 1;
+    s.glyphs.forEach((g, gi) => {
+      const ex = g.str.map(st => get('t' + si + ',' + gi + ',' + st.c));
+      const gw = g.w + ex.reduce((p, q) => p + q, 0);
+      x -= gw;
+      for (let gx = 0; gx < g.w; gx++) {
+        let sh = 0,
+          rep = 1;
+        g.str.forEach((st, k) => {
+          if (st.c < gx) sh += ex[k];
+          else if (st.c === gx) rep = 1 + ex[k];
+        });
+        for (let y = 0; y < Hb; y++) {
+          const v = g.data[y * g.w + gx];
+          if (!v) continue;
+          for (let r = 0; r < rep; r++) {
+            const v2 = v === 4 ? 1 : v;
+            data[y * width + x + gx + sh + r] = v2;
+            tag[y * width + x + gx + sh + r] = rt;
+          }
+        }
+      }
+      if (gi < s.seps.length) {
+        const len = 1 + get('j' + si + ',' + gi);
+        x -= len;
+        if (s.seps[gi] === 'join')
+          for (let k = 0; k < len; k++) {
+            data[base * width + x + k] = 1;
+            tag[base * width + x + k] = rt;
+          }
+      }
+    });
+    if (si < segs.length - 1) x -= gapAfter(si) + get('g' + si);
+  });
+  return { W: width, data, tag };
+}
