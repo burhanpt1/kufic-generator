@@ -100,7 +100,9 @@ export interface Placed {
     size: number;
     outline: Pt[];
     borders: BorderMeta[];
-    fill: { type: string; scale?: number; ok: boolean; note?: string } | null;
+    fill: { type: string; scale?: number; ok: boolean; note?: string; metrics?: Record<string, number> } | null;
+    /** Free centre: sqrt(inner area / outline area) of the root region after its borders. */
+    inner: number;
     warnings: string[];
   };
 }

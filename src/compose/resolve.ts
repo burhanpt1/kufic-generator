@@ -431,7 +431,14 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
     canvas: { w, h, origin },
     styles: ctx.styles,
     items: ctx.items,
-    meta: { size: region?.size ?? 0, outline: outer, borders: ctx.borders, fill: ctx.fill, warnings: ctx.warnings },
+    meta: {
+      size: region?.size ?? 0,
+      outline: outer,
+      borders: ctx.borders,
+      fill: ctx.fill,
+      warnings: ctx.warnings,
+      inner: region && region.inner ? Math.sqrt(region.inner.area / Math.max(1e-9, area(outer))) : 0,
+    },
   };
 }
 
