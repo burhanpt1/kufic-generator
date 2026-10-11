@@ -14,6 +14,7 @@ import { tiles } from '../ornament/patterns/tilings';
 import { starSVG, vineDefs } from '../ornament/stars';
 import type { CellStrip } from '../script/types';
 import { gridSource, letterShapes } from './letters';
+import { NIB, nibSweep, simplify } from './strokes';
 import type { Source } from './letters';
 import type { RenderOptions, Shapes } from './svg';
 import { U, acc, diamond, f2, groupsOut, merge, mix, wrap } from './svg';
@@ -234,6 +235,12 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
         out = `<path d="${dRing(it.path)}" fill="none" stroke="${it.colour === 'accent' ? accent : o.ink}" stroke-width="${f2(it.width * U)}"/>`;
         break;
       case 'ribbon':
+        if (it.pen) {
+          out = it.paths
+            .map(q => nibSweep(simplify(q.map(P), 0.15), it.width * U * 1.25, it.width * U * 0.32, NIB, accent))
+            .join('');
+          break;
+        }
         out = `<path d="${it.paths
           .map(
             q =>

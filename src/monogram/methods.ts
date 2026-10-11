@@ -24,6 +24,7 @@ import {
 } from './grid';
 import type { LetterShape } from './words';
 import { letterShape, wordGrid } from './words';
+import { strokeGraph } from '../geometry/strokegraph';
 
 export type MonoMethod =
   'mirror' | 'below' | 'quad' | 'pair' | 'pinwheel' | 'pinwheelIn' | 'block' | 'spiral' | 'tughra' | 'seal';
@@ -307,7 +308,7 @@ function tughraCompose(p: MonoParams, text: string, script: ScriptEngine, letter
     for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) set(x, y);
   };
   const chosen = spines.slice(-Math.max(1, Math.min(spines.length, 3)));
-  if (p.curved) return curvedTughra(p, A, out, X0, top, b, spines, chosen, loopW, armLen, hline, vline);
+  if (p.curved) return curvedTughra(p, A, out, X0, top, b, spines, chosen, loopW, armLen);
   for (let f = 0; f < p.flags; f++) {
     const y = top + Math.round((b - top) * (0.22 + 0.2 * f)),
       x0 = X0 + chosen[0],
@@ -346,8 +347,54 @@ function tughraCompose(p: MonoParams, text: string, script: ScriptEngine, letter
 }
 
 type Curve = [number, number][];
-/** The tughra with true curves: the flags stay on the grid; the loops (beyze) are nested ellipses round the spines'
- *  feet, passing alternately over and under each spine they cross, and the arms (kol) sweep out to the right. */
+type V2 = [number, number];
+/** A free end of the letters' stroke graph: its cell centre and the outward direction of the stroke there. */
+export interface StrokeEnd {
+  p: V2;
+  d: V2;
+}
+/** Free stroke ends of a letter grid (y down), from the centreline graph the curved renderer draws. */
+export function strokeEnds(g: CellGrid): StrokeEnd[] {
+  const ink = (x: number, y: number) => isL(g, x, y),
+    deg = (x: number, y: number) =>
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].filter(([dx, dy]) => ink(x + dx, y + dy)).length,
+    ends: StrokeEnd[] = [];
+  for (const ch of strokeGraph(g.w, g.h, ink).chains) {
+    if (ch.closed || ch.pts.length < 2) continue;
+    for (const [e, q] of [
+      [ch.pts[0], ch.pts[1]],
+      [ch.pts[ch.pts.length - 1], ch.pts[ch.pts.length - 2]],
+    ]) {
+      if (deg(e[0], e[1]) !== 1) continue;
+      const dx = e[0] - q[0],
+        dy = e[1] - q[1],
+        l = Math.hypot(dx, dy);
+      ends.push({ p: [e[0] + 0.5, e[1] + 0.5], d: [dx / l, dy / l] });
+    }
+  }
+  return ends;
+}
+/** A cubic Bézier sampled; consecutive cubics that share end tangents join smoothly. */
+const cubic = (a: V2, b: V2, c: V2, e: V2, n = 24): Curve =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const t = i / n,
+      u = 1 - t;
+    return [
+      u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * e[0],
+      u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * e[1],
+    ] as V2;
+  });
+const add = (a: V2, b: V2, k = 1): V2 => [a[0] + b[0] * k, a[1] + b[1] * k];
+const join = (...parts: Curve[]) => parts.reduce((acc, c) => (acc.length ? [...acc, ...c.slice(1)] : c), [] as Curve);
+
+/** The tughra with true curves that grow out of the letters' own strokes: the arm continues the final letter's tail,
+ *  each flag rises from a stem top and turns to run across the spines, and each loop leaves the word's free right
+ *  end, swings round over the word and comes back into the baseline along it. Every join is tangent-continuous. */
 function curvedTughra(
   p: MonoParams,
   A: CellGrid,
@@ -355,95 +402,87 @@ function curvedTughra(
   X0: number,
   top: number,
   b: number,
-  spines: number[],
-  chosen: number[],
-  loopW: number,
+  _spines: number[],
+  _chosen: number[],
+  _loopW: number,
   armLen: number,
-  hline: (x0: number, x1: number, y: number) => void,
-  vline: (x: number, y0: number, y1: number) => void,
 ): MonoResult {
-  for (let f = 0; f < p.flags; f++) {
-    const y = top + Math.round((b - top) * (0.22 + 0.2 * f)),
-      x0 = X0 + chosen[0],
-      x1 = X0 + A.w - 1 + Math.round(armLen * (0.5 + 0.25 * f));
-    hline(x0, x1, y);
-    vline(x1, y, y + 2);
+  void A;
+  void X0;
+  const ends = strokeEnds(out),
+    base = b + 0.5,
+    curves: Curve[] = [];
+  const lowEnds = ends.filter(e => Math.abs(e.p[1] - base) <= 2.5);
+  // arm: the final (leftmost) letter's tail, heading left
+  const tail = lowEnds.filter(e => e.d[0] < -0.7).sort((u, v) => u.p[0] - v.p[0])[0];
+  // the word's free right end, heading right, for the loops
+  const head = lowEnds.filter(e => e.d[0] > 0.7).sort((u, v) => v.p[0] - u.p[0])[0];
+  const h = Math.max(4, b - top),
+    xr = head ? head.p[0] : out.w - 0.5,
+    xl = tail ? tail.p[0] : 0.5;
+  if (tail) {
+    const L = armLen + 4,
+      d = tail.d;
+    curves.push(
+      cubic(
+        tail.p,
+        add(tail.p, d, L * 0.45),
+        add(add(tail.p, d, L * 0.95), [0, -L * 0.2]),
+        add(add(tail.p, d, L * 1.1), [0, -L * 0.75]),
+      ),
+    );
   }
-  const curves: Curve[] = [],
-    spineX = spines.map(s => X0 + s + 0.5),
-    first = spineX[0] ?? X0 + A.w / 2,
-    h = b - top;
-  // loops: nested ellipses hanging to the left of the text, their right sides reaching in across the nearest spines
-  void first;
-  for (let k = 0; k < Math.max(1, p.loops); k++) {
-    const rx = Math.max(4, Math.min(loopW * 0.9, h * 1.1) * (1 - 0.24 * k)),
-      ry = Math.max(3, h * (0.6 - 0.12 * k)),
-      cx = X0 - rx * 0.3,
-      cy = b + 0.5 - ry * 0.6,
-      N = 120,
-      E: Curve = [];
-    for (let i = 0; i <= N; i++) {
-      const th = (2 * Math.PI * i) / N;
-      E.push([cx + rx * Math.cos(th), cy + ry * Math.sin(th)]);
+  // flags: stem tops (heading up), rightmost first, each rising a little higher before turning right
+  const tops = ends
+    .filter(e => e.d[1] < -0.9 && e.p[1] <= top + 2)
+    .sort((u, v) => v.p[0] - u.p[0])
+    .slice(0, Math.max(0, p.flags));
+  tops.forEach((T, f) => {
+    const r = 2.5 + 2.2 * f,
+      bend = cubic(T.p, add(T.p, [0, -r * 0.55]), add(T.p, [r * 0.45, -r]), add(T.p, [r, -r])),
+      y = T.p[1] - r,
+      x1 = out.w + armLen * (0.4 + 0.2 * f),
+      run: Curve = [
+        [T.p[0] + r, y],
+        [x1, y],
+      ],
+      hook = cubic([x1, y], [x1 + 1.6, y], [x1 + 2.6, y + 0.9], [x1 + 2.6, y + 2.6], 12);
+    curves.push(join(bend, run, hook));
+  });
+  // loops: out of the right end, up and over the word, down on the left and back into the baseline heading right
+  if (head && tail && xr - xl > 2)
+    for (let k = 0; k < Math.max(1, p.loops); k++) {
+      const H = h * (1.3 + 0.35 * k),
+        w = 4 + 3 * k,
+        c = 0.55,
+        E = head.p,
+        R: V2 = [xr + w, base - H * 0.5],
+        T: V2 = [(xl + xr) / 2, base - H],
+        Lp: V2 = [xl - w, base - H * 0.5],
+        F: V2 = [xl + 1.5, base],
+        rx = (xr - xl) / 2 + w;
+      curves.push(
+        join(
+          cubic(E, add(E, [w * c * 1.6, 0]), add(R, [0, H * 0.5 * c]), R),
+          cubic(R, add(R, [0, -H * 0.5 * c]), add(T, [rx * c, 0]), T),
+          cubic(T, add(T, [-rx * c, 0]), add(Lp, [0, -H * 0.5 * c]), Lp),
+          cubic(Lp, add(Lp, [0, H * 0.5 * c]), add(F, [-w * c * 1.6, 0]), F),
+        ),
+      );
     }
-    // crossings with spines (between their top and the baseline), alternately over and under
-    const cuts: number[] = [];
-    let n = k;
-    for (let i = 0; i < N; i++)
-      for (const sx of spineX) {
-        const [x1, y1] = E[i],
-          [x2, y2] = E[i + 1];
-        if ((x1 - sx) * (x2 - sx) > 0 || x1 === x2) continue;
-        const y = y1 + ((sx - x1) * (y2 - y1)) / (x2 - x1);
-        if (y < top || y > b + 0.5) continue;
-        if (n++ % 2 === 1) cuts.push(i);
-      }
-    // split the ellipse where it passes under, leaving a gap a little wider than the spine
-    let piece: Curve = [];
-    const pieces: Curve[] = [];
-    const near = (i: number) => cuts.some(c => Math.hypot(E[i][0] - E[c][0], E[i][1] - E[c][1]) < 1.3);
-    for (let i = 0; i <= N; i++) {
-      if (near(i)) {
-        if (piece.length > 1) pieces.push(piece);
-        piece = [];
-      } else piece.push(E[i]);
-    }
-    if (piece.length > 1) {
-      // join the last piece to the first when the ellipse closes without a gap at its seam
-      if (pieces.length && !near(0)) pieces[0] = [...piece, ...pieces[0]];
-      else pieces.push(piece);
-    }
-    curves.push(...pieces);
-  }
-  // arms: sweeping curves out of the baseline to the right (quadratic Béziers)
-  let xr = X0 + A.w - 1;
-  while (xr > X0 && !isL(out, xr, b)) xr--;
-  const bez = (a: [number, number], c: [number, number], e: [number, number]): Curve =>
-    Array.from({ length: 33 }, (_, i) => {
-      const t = i / 32;
-      return [
-        (1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * e[0],
-        (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * e[1],
-      ] as [number, number];
-    });
-  curves.push(bez([xr + 0.5, b + 0.5], [xr + armLen * 0.8, b + 3], [xr + armLen + 3, b - armLen * 0.4]));
-  if (p.arms > 1) {
-    const xs = spineX[spineX.length - 1] ?? xr;
-    curves.push(bez([xs, b - 2.5], [xr + armLen * 0.7, b - 1], [xr + armLen + 1, b - 3 - armLen * 0.5]));
-  }
   // trim the cells, then grow the grid to hold the curves too
   const t = trimAt(out, 1);
-  let cs = curves.map(c => c.map(([x, y]) => [x + t.dx, y + t.dy] as [number, number]));
+  let cs = curves.map(cv => cv.map(([x, y]) => [x + t.dx, y + t.dy] as V2));
   const xs = cs.flat().map(q => q[0]),
     ys = cs.flat().map(q => q[1]),
-    ox = Math.max(0, Math.ceil(1 - Math.min(...xs))),
-    oy = Math.max(0, Math.ceil(1 - Math.min(...ys))),
-    W = Math.max(t.g.w + ox, Math.ceil(Math.max(...xs) + ox + 1)),
-    H = Math.max(t.g.h + oy, Math.ceil(Math.max(...ys) + oy + 1)),
+    ox = cs.length ? Math.max(0, Math.ceil(1 - Math.min(...xs))) : 0,
+    oy = cs.length ? Math.max(0, Math.ceil(1 - Math.min(...ys))) : 0,
+    W = cs.length ? Math.max(t.g.w + ox, Math.ceil(Math.max(...xs) + ox + 1)) : t.g.w,
+    H = cs.length ? Math.max(t.g.h + oy, Math.ceil(Math.max(...ys) + oy + 1)) : t.g.h,
     g = G(W, H);
   gPut(g, t.g, ox, oy);
-  cs = cs.map(c => c.map(([x, y]) => [x + ox, y + oy] as [number, number]));
-  return { grid: markEnds(g), stats: { spines: spines.length }, curves: cs };
+  cs = cs.map(cv => cv.map(([x, y]) => [x + ox, y + oy] as V2));
+  return { grid: markEnds(g), stats: { spines: _spines.length }, curves: cs };
 }
 
 // ---- stacked block: the text in justified lines filling a square ----

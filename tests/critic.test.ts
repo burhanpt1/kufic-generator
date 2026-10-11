@@ -70,11 +70,11 @@ describe('askCritic', () => {
   it('posts to the Messages API with the user key and parses the reply', async () => {
     const fetchImpl = vi.fn(async () =>
       Response.json({
-        content: [{ type: 'text', text: '{"critique":"ok","suggestions":[{"trait":"weight","value":0.8}]}' }],
+        content: [{ type: 'text', text: '{"critique":"ok","suggestions":[{"trait":"weight","value":0.75}]}' }],
       }),
     );
     const c = await askCritic(comp, 'AAAA', { apiKey: 'sk-test', model: 'claude-haiku-5-5', fetchImpl });
-    expect(c.suggestions[0]).toMatchObject({ trait: 'weight', value: 0.8 });
+    expect(c.suggestions[0]).toMatchObject({ trait: 'weight', value: 0.75 });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(API_URL);
     const headers = init.headers as Record<string, string>;

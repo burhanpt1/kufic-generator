@@ -70,3 +70,31 @@ export function frameAt(run: Run, a: number): Frame {
     l = Math.hypot(tx, ty) || 1;
   return { p, t: [tx / l, ty / l], n: [ty / l, -tx / l] };
 }
+
+const minRCache = new WeakMap<Run, number>();
+/** The run's tightest radius of curvature (circumradius of points four cells apart), ignoring the first and last 12% near
+ *  its corners. Infinite for straight runs. Cached per run. */
+export function runMinRadius(run: Run): number {
+  let r = minRCache.get(run);
+  if (r !== undefined) return r;
+  // measured on an evenly spaced copy (about a cell apart): simplified curves have long gaps between points, which
+  // would smooth a tight lobe away
+  const n = Math.max(2, Math.min(800, Math.ceil(run.len))),
+    P: Pt[] = [];
+  for (let i = 0; i <= n; i++) P.push(frameAt(run, (run.len * i) / n).p);
+  r = Infinity;
+  const j0 = Math.max(4, Math.floor(P.length * 0.12)),
+    j1 = Math.min(P.length - 4, Math.ceil(P.length * 0.88));
+  for (let j = j0; j < j1; j += 2) {
+    const A = P[j - 4],
+      B = P[j],
+      C = P[j + 4];
+    const a = Math.hypot(B[0] - C[0], B[1] - C[1]),
+      b = Math.hypot(A[0] - C[0], A[1] - C[1]),
+      c = Math.hypot(A[0] - B[0], A[1] - B[1]);
+    const cross = Math.abs((B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]));
+    if (cross > 1e-9) r = Math.min(r, (a * b * c) / (2 * cross));
+  }
+  minRCache.set(run, r);
+  return r;
+}
