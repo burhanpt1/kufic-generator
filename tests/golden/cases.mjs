@@ -19,7 +19,9 @@ const COMBOS = {
   'colour-ring': { colourMode: 'ring' },
   'colour-repeat': { colourMode: 'repeat' },
   'colour-radial': { colourMode: 'radial' },
-  ...Object.fromEntries(['abjad', 'letters', 'geo', 'squares', 'solid', 'none'].map(v => [`centre-${v}`, { center: v, centreSize: 0.3 }])),
+  ...Object.fromEntries(
+    ['abjad', 'letters', 'geo', 'squares', 'solid', 'none'].map(v => [`centre-${v}`, { center: v, centreSize: 0.3 }]),
+  ),
   ...Object.fromEntries(['stars', 'geo', 'vine'].map(v => [`corners-${v}`, { corners: v }])),
   ...Object.fromEntries(['none', 'pearls', 'chevron', 'braid'].map(v => [`band-${v}`, { bandStyle: v }])),
   ...Object.fromEntries(['sq', '488', 'hex', '31212'].map(v => [`tiling-${v}`, { ground: 'geo', tiling: v }])),
@@ -60,12 +62,17 @@ const LETTERS_COMBOS = {
 function build() {
   const cases = [];
   const add = (id, ui) => cases.push({ id, ui });
-  for (const [lk, layout] of Object.entries(LAYOUTS)) for (const [tk, text] of Object.entries(TEXTS)) add(`${lk}--${tk}--default`, { layout, text });
-  for (const lk of ['square', 'circle']) for (const tk of COMBO_TEXTS) for (const [ck, ui] of Object.entries(COMBOS)) {
-    // the Fatimid preset sets its own layout; apply the layout after it so square gets the preset too
-    add(`${lk}--${tk}--${ck}`, { ...ui, layout: LAYOUTS[lk], text: TEXTS[tk] });
-  }
-  for (const tk of ['bv', 'la']) for (const [ck, ui] of Object.entries(LINE_COMBOS)) add(`line--${tk}--${ck}`, { ...ui, layout: 'line', text: TEXTS[tk] });
+  for (const [lk, layout] of Object.entries(LAYOUTS))
+    for (const [tk, text] of Object.entries(TEXTS)) add(`${lk}--${tk}--default`, { layout, text });
+  for (const lk of ['square', 'circle'])
+    for (const tk of COMBO_TEXTS)
+      for (const [ck, ui] of Object.entries(COMBOS)) {
+        // the Fatimid preset sets its own layout; apply the layout after it so square gets the preset too
+        add(`${lk}--${tk}--${ck}`, { ...ui, layout: LAYOUTS[lk], text: TEXTS[tk] });
+      }
+  for (const tk of ['bv', 'la'])
+    for (const [ck, ui] of Object.entries(LINE_COMBOS))
+      add(`line--${tk}--${ck}`, { ...ui, layout: 'line', text: TEXTS[tk] });
   for (const [ck, ui] of Object.entries(LETTERS_COMBOS)) add(`letters--${ck}`, { ...ui, layout: 'letters' });
   add('empty--blank', { text: '' });
   add('empty--latin', { text: 'hello' });
