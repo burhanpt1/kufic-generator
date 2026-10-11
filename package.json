@@ -37,5 +37,9 @@
   },
   "engines": {
     "node": ">=22.12"
+  },
+  "dependencies": {
+    "@countertype/clipper2-ts": "^1.5.4",
+    "polylabel": "^2.1.0"
   }
 }
