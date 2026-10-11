@@ -447,3 +447,28 @@ details.critic input[type='password'] {
   flex: 1 1 200px;
   width: auto;
 }
+.rate {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+.rate button {
+  padding: 10px 4px;
+}
+.rate kbd {
+  font:
+    11px ui-monospace,
+    monospace;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+.learned p {
+  margin: 0 0 6px;
+}
+.learned b {
+  font-weight: 600;
+}
+#trainer textarea {
+  width: 100%;
+}

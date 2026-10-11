@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taste trainer</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 10px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;max-width:80ch}.box p{color:var(--ink)}
+pre{white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px;max-width:80ch}
+</style>
+</head>
+<body>
+<h1>Taste trainer</h1>
+<p>Lab port §3. The studio's Trainer tab shows one composition at a time to rate (Veto 3/←, Meh 2/↓, Like 1/→, Skip space). Two logistic regressions learn from the ratings: a veto model on traits alone, which screens genomes before they are rendered, and a liking model on traits plus the critic measures. Here 60 ratings are simulated from the pattern the owner's lab ratings showed: hearts and teardrops vetoed, heavy strokes vetoed, circles and polygons liked, stars and mihrabs mixed, vetoes with more empty space.</p>
+<h2>What it has learned</h2>
+<div class="box" id="learned"></div>
+<h2>Twelve fresh candidates, as the models see them</h2>
+<p>Sorted by the gallery's ranking (0.4 × critic + 0.6 × liking). Those over 55% veto chance would be swapped out before breeding.</p>
+<div class="g" id="g"></div>
+<h2>Importing lab ratings</h2>
+<pre id="imp"></pre>
+<script type="module">
+import { evaluate } from '../src/evolve/breed.ts';
+import { randomComposition, applyTrait } from '../src/evolve/operators.ts';
+import { Rng } from '../src/evolve/rng.ts';
+import { traitsOf, TRAITS } from '../src/evolve/genes.ts';
+import { score, newTaste } from '../src/evolve/taste.ts';
+import { METRIC_LABELS } from '../src/evolve/critic.ts';
+import { train, learned, blendScore, parseLabRatings, VETO_LIMIT } from '../src/evolve/trainer.ts';
+import { valueLabel } from '../src/studio/ui/labels.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const rng = new Rng(17), texts = { main: { text: 'بسم الله الرحمن الرحيم', repeat: 'fill', wordGap: 2 } };
+const grade = t => {
+  if (t.outline === 'heart' || t.weight === 0.85) return 0;
+  if (t.outline === 'teardrop') return rng.next() < 0.75 ? 0 : 0.5;
+  if (t.outline === 'circle' || t.outline === 'polygon') return rng.next() < 0.8 ? 1 : 0.5;
+  return rng.pick([0.5, 1, 0.5, 0]);
+};
+const ratings = [];
+for (let i = 0; i < 60; i++) {
+  const c = randomComposition(texts, { rng }), r = grade(traitsOf(c)), space = r === 0 ? 0.3 + 0.3 * rng.next() : 0.7 + 0.3 * rng.next();
+  ratings.push({ comp: c, r, m: { space }, at: i });
+}
+const model = train(ratings), l = learned(model);
+const fmt = f => `${TRAITS[f.trait].label.toLowerCase()}: ${valueLabel(f.trait, f.value).toLowerCase()}`;
+document.getElementById('learned').innerHTML = [
+  ['You like', l.likes.map(fmt)], ['You rate lower', l.lower.map(fmt)], ['You veto', l.vetoes.map(fmt)],
+  ['Measures that matter most', l.measures.map(m => METRIC_LABELS[m.key].toLowerCase())],
+].filter(([, v]) => v.length).map(([k, v]) => `<p><b>${k}:</b> ${v.join(', ')}.</p>`).join('');
+const taste = newTaste(), cands = [];
+for (let i = 0; i < 12; i++) {
+  const comp = randomComposition(texts, { rng }), ev = evaluate(comp, 'd' + i);
+  cands.push({ comp, ev, rank: blendScore(score(ev.metrics, taste), model, comp, ev.metrics), veto: model.pVeto(comp), like: model.pLike(comp, ev.metrics) });
+}
+cands.sort((a, b) => b.rank - a.rank).forEach(c => {
+  const f = document.createElement('figure');
+  f.innerHTML = c.ev.svg + `<figcaption>${valueLabel('outline', traitsOf(c.comp).outline)} · rank ${c.rank.toFixed(2)} · liking ${Math.round(c.like * 100)}% · veto ${Math.round(c.veto * 100)}%${c.veto > VETO_LIMIT ? ' — would be swapped' : ''}</figcaption>`;
+  document.getElementById('g').append(f);
+});
+const sample = [
+  { g: { layout: 'heart', rings: 2, H: 9, center: 'squares', weight: 1, soft: 0.5, centre: 0.22 }, text: 'محمد علي', r: 0, m: { rhythm: 0.9 } },
+  { g: { layout: 'poly', sides: 8, rings: 3, center: 'geo', tiling: 'sq', colourMode: 'repeat', plait: true }, r: 1 },
+  { g: { layout: 'circle' }, r: 0.7 },
+];
+const p = parseLabRatings(JSON.stringify(sample));
+document.getElementById('imp').textContent = `Pasted:\n${JSON.stringify(sample, null, 1)}\n\nKept ${p.items.length}, skipped ${p.skipped} (a rating that is not 0, 0.5 or 1).\nNot carried over:\n` +
+  [...p.dropped].map(([k, n]) => `  ${k} ×${n}`).join('\n') + '\nTraits of the first:\n  ' + Object.entries(traitsOf(p.items[0].comp)).map(([k, v]) => k + ' ' + v).join(', ');
+</script>
+</body>
+</html>
