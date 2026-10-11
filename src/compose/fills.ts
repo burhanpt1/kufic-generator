@@ -12,6 +12,7 @@ import type { Segs } from '../types';
 import { centreOf, registerFiller } from './fillers';
 import type { Ctx, RegionResult } from './resolve';
 import { layoutOpts } from './resolve';
+import { weaveFill } from './weave';
 
 // ---------- lines ----------
 /** Horizontal crossings of a closed outline: y -> the inside intervals [x0, x1] along that line. Edges are bucketed
@@ -440,6 +441,11 @@ function mazeFill(f: Extract<FillerNode, { type: 'maze' }>, res: RegionResult, s
     pts = res.inner!.pts;
   if (!script.capabilities.mazes) {
     ctx.fill = { type: 'maze', ok: false, note: `the ${script.id} script can't build mazes` };
+    return;
+  }
+  if (f.interlace) {
+    if (!weaveFill(f, res, style, ctx, sid))
+      ctx.fill = { type: 'maze', ok: false, note: "the text doesn't fit an interlaced maze in this region" };
     return;
   }
   // the region, normalised to [-1, 1] on its bounding square

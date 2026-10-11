@@ -133,6 +133,8 @@ export function centrelines(placed: Placed, o: CentrelineOptions = {}): Polyline
         for (const ring of offsetPolyline(it.path, d).slice(0, 1))
           out.push({ pts: ring.map(P), closed: true, kind: 'separator' });
     } else if (it.type === 'rule') out.push({ pts: it.path.map(P), closed: true, kind: 'rule' });
+    else if (it.type === 'ribbon')
+      for (const q of it.paths) out.push({ pts: q.map(P), closed: false, kind: 'separator' });
     else if (o.patterns !== false && (it.type === 'pattern' || it.type === 'ground' || it.type === 'spandrels')) {
       if (!it.pattern || (it.type !== 'pattern' && it.kind !== 'pattern')) continue;
       const [cx, cy] = P(it.centre),

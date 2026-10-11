@@ -70,7 +70,7 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
     case 'flow':
       return { type: 'flow', text, lineGap: 1, strength: 0.8 };
     case 'maze':
-      return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed() };
+      return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed(), interlace: !!t.interlace };
     default:
       return { type: kind as 'rings' };
   }
@@ -140,6 +140,9 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
       break;
     case 'vary':
       if (r.fill?.type === 'lines') r.fill = { ...r.fill, vary: v as number };
+      break;
+    case 'interlace':
+      if (r.fill?.type === 'maze') r.fill = { ...r.fill, interlace: v as boolean };
       break;
     case 'monogram':
       if (r.fill?.type === 'monogram') r.fill = { ...r.fill, method: v as MonogramMethod };
@@ -219,6 +222,7 @@ export function relevantTraits(c: Composition): Trait[] {
     if (k === 'taper') return (t.borders as number) > 1;
     if (k === 'monogram') return t.fill === 'monogram';
     if (k === 'vary') return t.fill === 'lines';
+    if (k === 'interlace') return t.fill === 'maze';
     if (k === 'tiling' || k === 'angle' || k === 'scale')
       return t.fill === 'pattern' || t.ground === 'pattern' || t.spandrels === 'pattern';
     if (k === 'reach') return t.terminal !== 'none';

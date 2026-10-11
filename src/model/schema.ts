@@ -82,7 +82,15 @@ export type FillerNode =
       /** Variable line height, 0–1: lines shrink where the region narrows (0 = one letter size throughout). */
       vary?: number;
     }
-  | { type: 'maze'; text: string; corridors: number; wall: boolean; seed?: number }
+  | {
+      type: 'maze';
+      text: string;
+      corridors: number;
+      wall: boolean;
+      seed?: number;
+      /** Interlaced: ribbons that cross over and under on a lattice instead of one corridor. */
+      interlace?: boolean;
+    }
   /** Lines along streamlines that follow the outline near its edge; strength 0 = level lines, 1 = hug the edge. */
   | { type: 'flow'; text: string; lineGap: number; strength?: number }
   | { type: 'monogram'; text: string; method: MonogramMethod; params: Record<string, number | string | boolean> }
@@ -251,6 +259,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       corridors: z.number().min(0).max(1),
       wall: z.boolean(),
       seed: z.number().int().optional(),
+      interlace: z.boolean().optional(),
     }),
     z.object({
       type: z.literal('monogram'),
