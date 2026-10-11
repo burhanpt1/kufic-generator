@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stroke modes</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 14px;color:var(--muted);max-width:75ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+select{font:inherit;padding:4px 8px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<h1>Stroke modes</h1>
+<p>One composition, drawn three ways: grid blocks, curved centrelines with rounded corners, and a slanted broad nib (a true outline swept by the nib, one filled shape per stroke). Each plain and banded. Crossings go over and under; stem endings follow the stroke direction.</p>
+<label>Composition <select id="pick"></select></label>
+<div class="g" id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { PRESETS } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const pick = document.getElementById('pick');
+PRESETS.forEach((p, i) => pick.append(new Option(p.name, i)));
+pick.value = 2;
+function draw() {
+  const base = PRESETS[+pick.value].comp, g = document.getElementById('g'); g.innerHTML = '';
+  let n = 0;
+  for (const kind of ['blocks', 'curved', 'pen']) for (const banded of [false, true]) {
+    const c = structuredClone(base); c.style.stroke = { ...c.style.stroke, kind, banded };
+    if (c.style.terminals.kind === 'none') c.style.terminals = { kind: 'palmette', reach: 'tails' };
+    setTimeout(() => { const t0 = performance.now(), svg = renderPlaced(resolve(c), { idPrefix: kind + banded + n++ });
+      const f = document.createElement('figure'); f.innerHTML = svg + `<figcaption>${kind}${banded ? ', banded' : ''} · ${(svg.length / 1024).toFixed(0)} KB · ${(performance.now() - t0).toFixed(0)} ms</figcaption>`; g.append(f); }, 20);
+  }
+}
+pick.onchange = draw; draw();
+</script>
+</body>
+</html>

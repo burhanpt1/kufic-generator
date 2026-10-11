@@ -2,6 +2,7 @@
 // coordinates (y down for square grids; for circle strips the map does the bending).
 import type { CircleRing, Grid } from '../types';
 import { diag, prims, termCmds } from './prims';
+import { strokeLetters } from './strokes';
 import type { RenderOptions, Shapes } from './svg';
 import { U, diamondR, f2, keyColour, markW, pathFrom } from './svg';
 
@@ -61,6 +62,7 @@ export function letterShapes(
     });
   };
   const banded = opt.letterStyle === 'banded';
+  const strokeMode = opt.stroke === 'curved' || opt.stroke === 'pen' ? opt.stroke : null;
   for (const key of keys) {
     const col = solid || keyColour(opt, key, src.maxKey),
       kk = (x: number, y: number) => src.key(x, y) === key;
@@ -68,7 +70,19 @@ export function letterShapes(
       const v = src.at(x, y);
       return kk(x, y) && (v === 1 || (v === 4 && ts === 'none'));
     };
-    draw(letter, w, col, false);
+    if (strokeMode)
+      strokeLetters(
+        src,
+        { ...opt, stroke: strokeMode, curve: opt.curve ?? 0.7 },
+        mapPt,
+        (x, y) => {
+          const v = src.at(x, y);
+          return kk(x, y) && (v === 1 || v === 4);
+        },
+        col,
+        push,
+      );
+    else draw(letter, w, col, false);
     const terms: number[][] = [];
     if (ts !== 'none')
       for (let y = 0; y < src.h; y++)
@@ -82,8 +96,8 @@ export function letterShapes(
         pathFrom(termCmds(ts, ww), (u, v) => mapPt(x + 0.5 + u * rx + v * ux, y + 0.5 + u * ry + v * uy)),
       );
     };
-    terms.forEach(([x, y]) => termAt(x, y, w, col));
-    if (banded) {
+    if (!strokeMode) terms.forEach(([x, y]) => termAt(x, y, w, col));
+    if (banded && !strokeMode) {
       const iw = w * 0.4;
       draw(letter, iw, paper, true);
       terms.forEach(([x, y]) => termAt(x, y, iw, paper));

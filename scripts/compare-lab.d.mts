@@ -1,1 +1,1 @@
-export function comparePNG(ref: Buffer, cand: Buffer): { ratio: number; reason?: string; diff?: Buffer };
+export function comparePNG(ref: Buffer, cand: Buffer): { ratio: number; diff?: Buffer };

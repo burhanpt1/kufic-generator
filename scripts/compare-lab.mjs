@@ -10,16 +10,27 @@ import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 import { toPNG } from './raster.mjs';
 
+/** Centre an image on a white square canvas (so references and candidates of different aspect compare fairly). */
+function padSquare(p, side) {
+  const out = new PNG({ width: side, height: side });
+  out.data.fill(255);
+  const ox = Math.floor((side - p.width) / 2),
+    oy = Math.floor((side - p.height) / 2);
+  PNG.bitblt(p, out, 0, 0, p.width, p.height, ox, oy);
+  return out;
+}
+
 export function comparePNG(refBuf, candBuf) {
-  const a = PNG.sync.read(refBuf),
+  let a = PNG.sync.read(refBuf),
     b = PNG.sync.read(candBuf);
-  if (a.width !== b.width || Math.abs(a.height - b.height) > 2)
-    return { ratio: 1, reason: `size ${b.width}×${b.height} vs ${a.width}×${a.height}` };
-  const h = Math.min(a.height, b.height),
-    crop = p => p.data.subarray(0, a.width * h * 4);
-  const diff = new PNG({ width: a.width, height: h });
-  const n = pixelmatch(crop(a), crop(b), diff.data, a.width, h, { threshold: 0.2 });
-  return { ratio: n / (a.width * h), diff: PNG.sync.write(diff) };
+  const side = Math.max(a.width, a.height, b.width, b.height);
+  if (a.width !== b.width || a.height !== b.height) {
+    a = padSquare(a, side);
+    b = padSquare(b, side);
+  }
+  const diff = new PNG({ width: a.width, height: a.height });
+  const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.2 });
+  return { ratio: n / (a.width * a.height), diff: PNG.sync.write(diff) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

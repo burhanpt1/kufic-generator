@@ -25,6 +25,10 @@ export interface RenderOptions {
   geoAngle: number;
   geoScale: number;
   letterStyle: 'solid' | 'banded';
+  /** Stroke mode for letters; blocks (the default) is the cell grid. */
+  stroke?: 'blocks' | 'curved' | 'pen';
+  /** Corner rounding for curved and pen strokes. */
+  curve?: number;
 }
 
 /** Letter output grouped by fill colour, plus vowel marks (drawn in the mark colour). */
