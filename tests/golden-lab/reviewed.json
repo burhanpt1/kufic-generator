@@ -28,9 +28,9 @@
  "mono--block": 0.133,
  "mono--spiral": 0.141,
  "mono--tughra": 0.037,
- "mono--seal": 0.15,
- "mono--seal-joined-mirror": 0.102,
- "mono--seal-turn-curved": 0.101,
+ "mono--seal": 0.141,
+ "mono--seal-joined-mirror": 0.053,
+ "mono--seal-turn-curved": 0.11,
  "mono--block-basmala": 0.125,
  "mono--spiral-seal-core": 0.142,
  "mono--tughra-tall": 0.056
