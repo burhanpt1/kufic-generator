@@ -136,6 +136,7 @@ const letter = z.object({
   lamAlif: z.enum(['plain', 'knot']),
   marks: z.enum(['off', 'dots', 'all']),
   vowels: z.enum(['modern', 'early']),
+  alternates: z.boolean().optional(),
 });
 const stroke = z.object({
   kind: z.enum(['blocks', 'curved', 'pen']),

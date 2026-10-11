@@ -32,13 +32,13 @@ export const kufi: ScriptEngine = {
   },
   prepare(shaped: Shaped, style) {
     setVariants(variants(style));
-    const p = prepare(shaped.words, style.ascenders, style.marks, style.vowels);
+    const p = prepare(shaped.words, style.ascenders, style.marks, style.vowels, !!style.alternates);
     return { words: p.words, Hb: p.Hb, base: p.base, ascenders: style.ascenders };
   },
   prepareLines(lines, style) {
     setVariants(variants(style));
     const all = shape(lines.join(' ')),
-      p = prepare(all.words, style.ascenders, style.marks, style.vowels);
+      p = prepare(all.words, style.ascenders, style.marks, style.vowels, !!style.alternates);
     let wi = 0;
     return lines.map(l => {
       const n = shape(l).words.length,

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Letter alternates</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+input{font:inherit;padding:4px 8px;width:24em;direction:rtl}
+</style>
+</head>
+<body>
+<h1>Letter alternates</h1>
+<p>Phase 6.6. Long forms of final noon, yeh, kaf and meem, designed for the cell grid. Raised tails curl back and stay below an ascender, so they never read as alif; meem's tail descends. With alternates on, the justifier gives up to 60% of a line's slack to them, spread along the line, instead of stretching everything. With no room, lines are identical to the plain set. Licensing note: Rana Kufi (the Fatimid reference) is AGPL-3.0, so nothing is copied from it (see docs/letters.md).</p>
+<label>Text <input id="t" value="الحسين يلقى كمن كلم"></label>
+<h2>One line, natural width then +12 and +30 cells</h2>
+<div class="g" id="lines"></div>
+<h2>In a composition</h2>
+<div class="g" id="comps"></div>
+<script type="module">
+import { kufi } from '../src/script/kufi.ts';
+import { DEFAULT_STYLE } from '../src/model/style.ts';
+import { renderGrid } from '../src/render/index.ts';
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const RO = { weight: 0.85, soft: 0.15, ink: '#18302F', ink2: '#56676A', paper: '#F2F3EF', mark: '#9C3A22', grid: false, label: '', terminal: 'none', colourMode: 'solid', ground: 'plain', corners: 'none', bandStyle: 'none', tiling: '488', geoAngle: 60, geoScale: 5, letterStyle: 'solid' };
+function lines() {
+  const box = document.getElementById('lines'); box.innerHTML = '';
+  const text = document.getElementById('t').value.trim() || 'الحسين';
+  const plainP = kufi.prepareLines([text], DEFAULT_STYLE.letter)[0];
+  const nat = kufi.segments(plainP, 'words', 2).reduce((a, s) => a + s.minW, 0) + 2 * (kufi.segments(plainP, 'words', 2).length - 1);
+  for (const alternates of [false, true]) {
+    const p = kufi.prepareLines([text], { ...DEFAULT_STYLE.letter, alternates })[0], segs = kufi.segments(p, 'words', 2);
+    const rows = [0, 12, 30].map(d => kufi.layout(segs, p, nat + d, { wordGap: 2, rhythm: false, terminals: 'none', wrap: false }));
+    const W = Math.max(...rows.map(r => r.W)), H = rows.reduce((a, r) => a + r.Hb + 2, 0), data = new Uint8Array(W * H);
+    let y0 = 0;
+    for (const r of rows) { for (let y = 0; y < r.Hb; y++) for (let x = 0; x < r.W; x++) data[(y0 + r.Hb - 1 - y) * W + x] = r.data[y * r.W + x]; y0 += r.Hb + 2; }
+    const f = document.createElement('figure');
+    f.innerHTML = renderGrid({ w: W, h: H, data, tag: new Uint8Array(W * H), ring: new Uint8Array(W * H) }, RO, 1) + `<figcaption>${alternates ? 'With alternates' : 'Plain letters'}</figcaption>`;
+    box.append(f);
+  }
+}
+for (const alternates of [false, true]) {
+  const c = structuredClone(preset('octagon-panel')); c.style.letter.alternates = alternates;
+  const f = document.createElement('figure');
+  f.innerHTML = renderPlaced(resolve(c), { idPrefix: 'c' + alternates }) + `<figcaption>Octagon panel, ${alternates ? 'with' : 'without'} alternates</figcaption>`;
+  document.getElementById('comps').append(f);
+}
+document.getElementById('t').oninput = lines; lines();
+</script>
+</body>
+</html>

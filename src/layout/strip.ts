@@ -2,6 +2,8 @@ import type { Seg, Strip } from '../types';
 
 /** Stem-rhythm search switch; compose() sets it from opts.rhythm. */
 export const RHY = { on: false };
+/** Share of a line's slack that long alternates may take. */
+const ALT_SHARE = 0.6;
 
 // Justify a line of segments to width W. Extra cells go to word-final tails (3), letter bodies (2.5), word gaps (2),
 // joins before a final letter (2) and other joins (1). With rhythm on, the split is then nudged so tall stems fall evenly.
@@ -21,6 +23,45 @@ export function strip(
   });
   if (W == null) W = nat;
   if (nat > W) return null;
+  // long alternates: when there is room, some final letters take their designed long forms instead of leaving all
+  // the slack to stretching. Up to ALT_SHARE of the slack, spread along the line (farthest from those already used).
+  if (W > nat && segs.some(s => s.glyphs.some(g => g.alt))) {
+    const cands: { si: number; gi: number; k: number; cost: number }[] = [];
+    let k = 0;
+    segs.forEach((s, si) =>
+      s.glyphs.forEach((g, gi) => {
+        if (g.alt) cands.push({ si, gi, k, cost: g.alt.w - g.w });
+        k++;
+      }),
+    );
+    let budget = Math.floor((W - nat) * ALT_SHARE);
+    const used: typeof cands = [];
+    while (cands.length) {
+      let bi = -1,
+        bd = -1;
+      cands.forEach((c, i) => {
+        if (c.cost > budget) return;
+        const d = used.length ? Math.min(...used.map(u => Math.abs(u.k - c.k))) : Math.min(c.k + 1, k - c.k);
+        if (d > bd) [bd, bi] = [d, i];
+      });
+      if (bi < 0) break;
+      const c = cands.splice(bi, 1)[0];
+      used.push(c);
+      budget -= c.cost;
+    }
+    if (used.length) {
+      segs = segs.map((s, si) =>
+        used.some(u => u.si === si)
+          ? {
+              ...s,
+              glyphs: s.glyphs.map((g, gi) => (used.some(u => u.si === si && u.gi === gi) ? g.alt! : g)),
+              minW: s.minW + used.filter(u => u.si === si).reduce((a, u) => a + u.cost, 0),
+            }
+          : s,
+      );
+      nat += used.reduce((a, u) => a + u.cost, 0);
+    }
+  }
   const width = W;
   const extra = W - nat,
     pts: { w: number }[] = [],

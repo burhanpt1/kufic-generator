@@ -1,4 +1,5 @@
 import type { BandGlyph, MarksMode, Seg, Unit, VowelStyle, Word } from '../types';
+import { altDef } from '../glyphs/overrides';
 import { buildGlyph } from './buildGlyph';
 
 const TAILS = new Set(['BEH', 'NOON', 'YEH', 'HAH', 'SEEN', 'SAD', 'AIN', 'FEH', 'QAF', 'KAF', 'MEEM']);
@@ -11,11 +12,21 @@ export interface Prepared {
 
 // Composites glyphs to a shared band height Hb and finds their stretchable and tall-stem columns.
 // Stretchable columns: a word-final tail (baseline only) or a letter body (every stroke in the column is horizontal).
-export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: VowelStyle): Prepared {
+export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: VowelStyle, alts = false): Prepared {
   const built = shaped.map(units => units.map(u => buildGlyph(u, H, mode, style)));
+  // long alternates (opt-in) share the band, so they count toward its height
+  const altBuilt = alts
+    ? shaped.map(units =>
+        units.map(u => {
+          const d = altDef(u.key, u.form);
+          return d ? buildGlyph(u, H, mode, style, d) : null;
+        }),
+      )
+    : null;
   let up = H - 1,
     down = 0;
-  built.flat().forEach(g => {
+  [...built.flat(), ...(altBuilt?.flat() ?? [])].forEach(g => {
+    if (!g) return;
     up = Math.max(up, g.top);
     down = Math.max(down, -g.bottom);
   });
@@ -57,7 +68,12 @@ export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: Vow
     return { w: g.w, data, form: g.form, str, tall };
   };
   const words = built.map((gs, wi) => ({
-    glyphs: gs.map(comp),
+    glyphs: gs.map((g, gi) => {
+      const b = comp(g),
+        a = altBuilt?.[wi][gi];
+      if (a && a.w > g.w) b.alt = comp(a);
+      return b;
+    }),
     seps: shaped[wi].slice(0, -1).map(u => (u.jn ? 'join' : 'gap') as 'join' | 'gap'),
   }));
   return { words, Hb, base: down };

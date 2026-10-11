@@ -20,7 +20,7 @@ const GROUPS: [string, Trait[]][] = [
   ['Shape', ['outline', 'sides', 'points', 'depth', 'spread']],
   ['Borders', ['borders', 'taper', 'separator', 'separatorWidth', 'ground', 'tiling', 'angle', 'scale']],
   ['Centre and corners', ['fill', 'monogram', 'vary', 'spandrels', 'tips', 'corners']],
-  ['Letters', ['ascenders', 'ra', 'lamAlif', 'marks', 'terminal', 'reach']],
+  ['Letters', ['ascenders', 'ra', 'lamAlif', 'marks', 'alternates', 'terminal', 'reach']],
   ['Style', ['palette', 'colouring', 'stroke', 'corner', 'banded', 'weight', 'softness']],
 ];
 const FILL_TYPES: FillerNode['type'][] = [

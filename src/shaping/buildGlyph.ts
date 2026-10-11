@@ -2,7 +2,7 @@ import { bitmap } from '../glyphs/bitmap';
 import { COMB, DOTS, HAMZA_ON, ORDER, S } from '../glyphs/marks';
 import { def } from '../glyphs/overrides';
 import { ANCHOR, ANCHOR_BELOW } from '../glyphs/tables';
-import type { Form, MarksMode, Unit, VowelStyle } from '../types';
+import type { Form, GlyphDef, MarksMode, Unit, VowelStyle } from '../types';
 
 interface Mark {
   side: string;
@@ -83,8 +83,8 @@ const shapeCells = (rows: string[]) => {
 
 // build a glyph with marks: { w, cells:[[x,y,v]], top, bottom, form }  v: 1 letter, 2 vowel, 3 dot
 // Marks above sit side by side in one lane; marks that would rise past the ascender go in a lane beside the letter.
-export function buildGlyph(u: Unit, H: number, mode: MarksMode, style: VowelStyle): Glyph {
-  const bm = bitmap(def(u.key, u.form), H);
+export function buildGlyph(u: Unit, H: number, mode: MarksMode, style: VowelStyle, d?: GlyphDef): Glyph {
+  const bm = bitmap(d ?? def(u.key, u.form), H);
   const all = unitMarks(u, mode, style).map(
     m => ({ ...m, s: shapeCells(S[m.shape]), v: m.layer === 2 ? 2 : 3 }) as PlacedMark,
   );

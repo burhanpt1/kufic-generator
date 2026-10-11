@@ -202,6 +202,9 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'marks':
       s.letter.marks = v as 'dots';
       break;
+    case 'alternates':
+      s.letter.alternates = v as boolean;
+      break;
   }
 }
 
