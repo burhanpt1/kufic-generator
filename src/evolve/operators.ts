@@ -77,6 +77,8 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
       return { type: 'flow', text, lineGap: 1, strength: 0.8 };
     case 'maze':
       return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed(), interlace: !!t.interlace };
+    case 'strapwork':
+      return { type: 'strapwork', text, tiling: patternOf(t).tiling };
     default:
       return { type: kind as 'rings' };
   }
@@ -172,6 +174,8 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
       const key = trait === 'tiling' ? 'tiling' : trait === 'angle' ? 'angle' : 'scale';
       const set = (p?: PatternSpec) => p && ((p as unknown as Record<string, V>)[key] = v);
       if (r.fill?.type === 'pattern') set(r.fill.pattern);
+      if (r.fill?.type === 'strapwork' && trait === 'tiling')
+        r.fill = { ...r.fill, tiling: v as PatternSpec['tiling'] };
       tb.forEach(b => set(b.ground?.pattern));
       if (c.root.spandrels?.type === 'pattern') set(c.root.spandrels.pattern);
       break;
@@ -234,6 +238,7 @@ export function relevantTraits(c: Composition): Trait[] {
     if (k === 'monogram') return t.fill === 'monogram';
     if (k === 'vary') return t.fill === 'lines';
     if (k === 'interlace') return t.fill === 'maze';
+    if (k === 'tiling' && t.fill === 'strapwork') return true;
     if (k === 'tiling' || k === 'angle' || k === 'scale')
       return t.fill === 'pattern' || t.ground === 'pattern' || t.spandrels === 'pattern';
     if (k === 'reach') return t.terminal !== 'none';
