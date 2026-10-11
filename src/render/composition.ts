@@ -233,6 +233,20 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
       case 'rule':
         out = `<path d="${dRing(it.path)}" fill="none" stroke="${it.colour === 'accent' ? accent : o.ink}" stroke-width="${f2(it.width * U)}"/>`;
         break;
+      case 'ribbon':
+        out = `<path d="${it.paths
+          .map(
+            q =>
+              'M' +
+              q
+                .map(P)
+                .map(([x, y]) => f2(x) + ' ' + f2(y))
+                .join('L'),
+          )
+          .join(
+            '',
+          )}" fill="none" stroke="${accent}" stroke-width="${f2(it.width * U)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+        break;
     }
     layers[layer] += out;
   }

@@ -52,7 +52,9 @@ export type PlacedItem =
   | { type: 'abjad'; style: number; value: number; centre: Pt; maxW: number; maxH: number; frame: Pt[] | null }
   | { type: 'pattern'; style: number; area: Area; pattern: PatternSpec; centre: Pt; radius: number; strength: number }
   | { type: 'fill'; style: number; kind: 'solid' | 'vine'; area: Area }
-  | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' };
+  | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' }
+  /** Edges of interlaced ribbons: open polylines (broken where a ribbon passes under another). */
+  | { type: 'ribbon'; style: number; paths: Pt[][]; width: number };
 
 /** Draw order, back to front. */
 export const LAYER_ORDER = ['ground', 'pattern', 'spandrels', 'letters', 'separators', 'features'] as const;
@@ -66,7 +68,7 @@ export const layerOf = (it: PlacedItem): Layer =>
         ? 'spandrels'
         : it.type === 'strip' || it.type === 'grid' || it.type === 'abjad' || it.type === 'rule'
           ? 'letters'
-          : it.type === 'separator'
+          : it.type === 'separator' || it.type === 'ribbon'
             ? 'separators'
             : 'features';
 

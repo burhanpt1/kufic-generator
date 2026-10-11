@@ -39,5 +39,7 @@ export function translateItem(it: PlacedItem, d: Pt): PlacedItem {
       return { ...it, centre: mv(it.centre, d), frame: it.frame && mvs(it.frame, d) };
     case 'rule':
       return { ...it, path: mvs(it.path, d) };
+    case 'ribbon':
+      return { ...it, paths: it.paths.map(q => mvs(q, d)) };
   }
 }

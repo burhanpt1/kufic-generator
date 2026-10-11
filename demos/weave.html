@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interlaced maze</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+select,input{font:inherit;padding:4px 8px}
+</style>
+</head>
+<body>
+<h1>Interlaced maze</h1>
+<p>Phase 6.4. Ribbons of text on a knot lattice, in the manner of an orthogonal Celtic knot: at each node the ribbons cross straight through, alternately over and under, or turn back on rounded corners. Text sits on the straight stretches long enough for a word; the ribbon edges are drawn as walls, broken where a ribbon passes under another, so letters never overlap. The corridor setting is the chance of a crossing.</p>
+<label>Shape <select id="shape"><option value="sq">Square</option><option value="ci">Circle</option><option value="oc">Octagon</option><option value="te">Teardrop</option></select></label>
+<label>Seed <input id="seed" type="number" value="7" style="width:6em"></label>
+<div class="g" id="g" style="margin-top:12px"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const OUT = { sq: { kind: 'polygon', sides: 4 }, ci: { kind: 'circle' }, oc: { kind: 'polygon', sides: 8 }, te: { kind: 'preset', name: 'teardrop' } };
+let n = 0;
+function draw() {
+  const g = document.getElementById('g'); g.innerHTML = '';
+  for (const [cap, corridors, interlace] of [['Plain maze', 0.7, false], ['Interlaced, few crossings', 0.1, true], ['Interlaced, many crossings', 0.9, true]])
+    setTimeout(() => {
+      const c = structuredClone(preset('kufic-maze-tile'));
+      c.root.child.outline = OUT[document.getElementById('shape').value];
+      c.root.child.fill = { ...c.root.child.fill, corridors, interlace, seed: +document.getElementById('seed').value };
+      const p = resolve(c), f = document.createElement('figure');
+      f.innerHTML = renderPlaced(p, { idPrefix: 'w' + n++ }) + `<figcaption>${cap} · ${p.meta.fill?.note ?? ''}</figcaption>`;
+      g.append(f);
+    }, 10);
+}
+document.getElementById('shape').onchange = draw; document.getElementById('seed').oninput = draw; draw();
+</script>
+</body>
+</html>
