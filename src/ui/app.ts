@@ -8,6 +8,10 @@ import { initialState, lookup, setSeg, wireControls } from './controls';
 import { loadOverrides, wireEditor } from './editor';
 import { savePNG, saveSVG } from './export';
 import { NOTES, PALETTES } from './presets';
+import type { Settings } from './settings';
+import { applySettings, diffSettings, readSettings } from './settings';
+import { codeToHash, decodeSettings, encodeSettings, hashToCode } from './url';
+import { setOverrides } from '../engine';
 
 type Composition = Extract<ComposeResult, { kind: 'square' | 'circle' }>;
 
@@ -137,6 +141,42 @@ export function start(doc: Document = document) {
     $('art').innerHTML = last.svg;
     $('meta').textContent = meta;
     $('warn').textContent = warn;
+    syncURL();
+  }
+
+  // ---- state in the URL ----
+  const win = doc.defaultView;
+  let defaults: Settings | null = null, // control values at start-up, before any link is applied
+    urlReady = false, // don't overwrite an incoming link before it has been read
+    lastCode: string | null = null,
+    seq = 0;
+  function syncURL() {
+    if (!urlReady || !defaults || !win) return;
+    const n = ++seq,
+      diff = diffSettings(readSettings($, state), defaults);
+    encodeSettings(diff).then(code => {
+      if (n !== seq) return; // a newer render already won
+      const c = Object.keys(diff).length ? code : '';
+      if (c === lastCode) return;
+      lastCode = c;
+      const { pathname, search } = win.location;
+      win.history.replaceState(null, '', pathname + search + codeToHash(c));
+    });
+  }
+  async function loadFromURL() {
+    const code = win ? hashToCode(win.location.hash) : null;
+    if (code && code !== lastCode) {
+      const s = await decodeSettings(code);
+      if (s) {
+        applySettings($, state, s);
+        setOverrides(state.ovr);
+        lastCode = code;
+        drawEditor();
+        render();
+      }
+    }
+    urlReady = true;
+    syncURL();
   }
 
   wireControls($, doc, state, render);
@@ -173,5 +213,9 @@ export function start(doc: Document = document) {
 
   drawEditor();
   render();
-  return { state, render, last };
+  defaults = readSettings($, state);
+  delete defaults.glyphs; // letter edits always travel with the link
+  win?.addEventListener('hashchange', () => void loadFromURL());
+  const ready = loadFromURL();
+  return { state, render, last, ready, settings: () => readSettings($, state) };
 }

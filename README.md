@@ -2,6 +2,8 @@
 
 Generative square and Fatimid-style Kufic calligraphy in the browser. Type Arabic text and it is shaped into grid letterforms, wound into square or circular rings, and ornamented — floriated stems, geometric star patterns, braided bands, and the abjad value as a centrepiece. Exports SVG and PNG.
 
+Every option, the text and any letter edits are kept in the URL fragment (`#s=…`, compressed), so the address bar is always a shareable link to the current composition.
+
 Run `npm run dev` and open the printed URL, or use the GitHub Pages build. See `CLAUDE.md` for the architecture and migration plan.
 
 ## Development
