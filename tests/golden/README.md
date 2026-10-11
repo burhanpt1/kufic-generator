@@ -1,6 +1,6 @@
 # Golden snapshots
 
-Reference output of the prototype (`index.html`), captured before any code is moved. Later migration steps must
+Reference output of the prototype (`legacy/index.html`, a copy of the original `index.html`), captured before any code is moved. Later migration steps must
 reproduce these exactly.
 
 - `cases.mjs` — the fixed case list: each case is a set of UI settings applied on top of the page defaults.

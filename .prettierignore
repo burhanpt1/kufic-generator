@@ -1,0 +1,8 @@
+dist/
+legacy/
+index.html
+package-lock.json
+tests/golden/svg/
+tests/golden/engine/
+tests/golden/manifest.json
+CLAUDE.md

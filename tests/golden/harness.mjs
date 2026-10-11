@@ -4,7 +4,24 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 // Segmented button groups: case key -> element id (the id is also the state key, except rotation).
-const SEGS = ['layout', 'center', 'corners', 'bandStyle', 'ground', 'tiling', 'terminal', 'reach', 'letterStyle', 'colourMode', 'ra', 'ayn', 'la', 'marks', 'vowels', 'rot'];
+const SEGS = [
+  'layout',
+  'center',
+  'corners',
+  'bandStyle',
+  'ground',
+  'tiling',
+  'terminal',
+  'reach',
+  'letterStyle',
+  'colourMode',
+  'ra',
+  'ayn',
+  'la',
+  'marks',
+  'vowels',
+  'rot',
+];
 const INPUTS = ['text', 'asc', 'gap', 'weight', 'soft', 'rings', 'taper', 'centreSize', 'geoAngle', 'geoScale'];
 const CHECKS = ['grid', 'contrast', 'repeat', 'rhythm'];
 
@@ -36,7 +53,8 @@ function click(el) {
 
 // Apply a case's UI settings in the order a user would: preset, then segmented choices, sliders, checkboxes, palette.
 export function applyUI(dom, ui) {
-  const doc = dom.window.document, $ = id => doc.getElementById(id);
+  const doc = dom.window.document,
+    $ = id => doc.getElementById(id);
   if (ui.preset === 'fatimid') click($('fatimid'));
   for (const k of SEGS) {
     if (ui[k] == null) continue;
@@ -82,14 +100,16 @@ export function runCase(htmlPath, c) {
 // digit per cell, so a 100×100 grid is one readable 10 kB string instead of 10,000 array entries.
 const DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz';
 export function serialize(value) {
-  return JSON.parse(JSON.stringify(value, (k, v) => {
-    if (v && typeof v === 'object' && ArrayBuffer.isView(v)) {
-      const name = v.constructor.name;
-      if (name !== 'Uint8Array') throw new Error(`unexpected ${name} in engine output`);
-      if (v.some(n => n >= DIGITS.length)) return { $u8: Array.from(v) };
-      return { $u8: Array.from(v, n => DIGITS[n]).join('') };
-    }
-    if (typeof v === 'number' && !Number.isFinite(v)) return { $num: String(v) };
-    return v;
-  }));
+  return JSON.parse(
+    JSON.stringify(value, (k, v) => {
+      if (v && typeof v === 'object' && ArrayBuffer.isView(v)) {
+        const name = v.constructor.name;
+        if (name !== 'Uint8Array') throw new Error(`unexpected ${name} in engine output`);
+        if (v.some(n => n >= DIGITS.length)) return { $u8: Array.from(v) };
+        return { $u8: Array.from(v, n => DIGITS[n]).join('') };
+      }
+      if (typeof v === 'number' && !Number.isFinite(v)) return { $num: String(v) };
+      return v;
+    }),
+  );
 }

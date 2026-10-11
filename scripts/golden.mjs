@@ -1,4 +1,4 @@
-// Writes golden snapshots of the prototype (index.html) into tests/golden/, or with --check verifies them.
+// Writes golden snapshots of the prototype (legacy/index.html) into tests/golden/, or with --check verifies them.
 //   node scripts/golden.mjs            regenerate all snapshots
 //   node scripts/golden.mjs --check    regenerate in memory and fail on any difference
 //   node scripts/golden.mjs <filter>   only cases whose id contains <filter>
@@ -9,9 +9,11 @@ import { CASES } from '../tests/golden/cases.mjs';
 import { runCase } from '../tests/golden/harness.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE = join(root, 'index.html');
+const SOURCE = join(root, 'legacy/index.html');
 const OUT = join(root, 'tests/golden');
-const args = process.argv.slice(2), check = args.includes('--check'), filter = args.find(a => !a.startsWith('--'));
+const args = process.argv.slice(2),
+  check = args.includes('--check'),
+  filter = args.find(a => !a.startsWith('--'));
 const cases = filter ? CASES.filter(c => c.id.includes(filter)) : CASES;
 
 const files = new Map(); // relative path -> contents
@@ -28,15 +30,29 @@ let bad = 0;
 if (check) {
   for (const [rel, s] of files) {
     const p = join(OUT, rel);
-    if (!existsSync(p)) { console.error(`missing  ${rel}`); bad++; }
-    else if (readFileSync(p, 'utf8') !== s) { console.error(`differs  ${rel}`); bad++; }
+    if (!existsSync(p)) {
+      console.error(`missing  ${rel}`);
+      bad++;
+    } else if (readFileSync(p, 'utf8') !== s) {
+      console.error(`differs  ${rel}`);
+      bad++;
+    }
   }
-  if (!filter) for (const dir of ['svg', 'engine']) for (const f of readdirSync(join(OUT, dir))) {
-    if (!files.has(`${dir}/${f}`)) { console.error(`stale    ${dir}/${f}`); bad++; }
-  }
+  if (!filter)
+    for (const dir of ['svg', 'engine'])
+      for (const f of readdirSync(join(OUT, dir))) {
+        if (!files.has(`${dir}/${f}`)) {
+          console.error(`stale    ${dir}/${f}`);
+          bad++;
+        }
+      }
   console.log(`${files.size} files checked, ${bad} problem${bad === 1 ? '' : 's'}`);
   process.exit(bad ? 1 : 0);
 }
 if (!filter) for (const dir of ['svg', 'engine']) rmSync(join(OUT, dir), { recursive: true, force: true });
-for (const [rel, s] of files) { const p = join(OUT, rel); mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, s); }
+for (const [rel, s] of files) {
+  const p = join(OUT, rel);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, s);
+}
 console.log(`wrote ${files.size} files for ${cases.length} cases`);
