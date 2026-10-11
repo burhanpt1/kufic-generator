@@ -67,6 +67,8 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
       return { type: 'pattern', pattern: patternOf(t) };
     case 'lines':
       return { type: 'lines', text, lineGap: 1, vary: (t.vary as number) ?? 0.5 };
+    case 'flow':
+      return { type: 'flow', text, lineGap: 1, strength: 0.8 };
     case 'maze':
       return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed() };
     default:

@@ -83,6 +83,8 @@ export type FillerNode =
       vary?: number;
     }
   | { type: 'maze'; text: string; corridors: number; wall: boolean; seed?: number }
+  /** Lines along streamlines that follow the outline near its edge; strength 0 = level lines, 1 = hug the edge. */
+  | { type: 'flow'; text: string; lineGap: number; strength?: number }
   | { type: 'monogram'; text: string; method: MonogramMethod; params: Record<string, number | string | boolean> }
   | { type: 'abjad'; text: string }
   | { type: 'pattern'; pattern: PatternSpec }
@@ -236,6 +238,12 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       lineGap: z.number().min(0).max(6),
       minWords: z.number().int().min(1).optional(),
       vary: z.number().min(0).max(1).optional(),
+    }),
+    z.object({
+      type: z.literal('flow'),
+      text: slotName,
+      lineGap: z.number().min(0).max(6),
+      strength: z.number().min(0).max(1).optional(),
     }),
     z.object({
       type: z.literal('maze'),

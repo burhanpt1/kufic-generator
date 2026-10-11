@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow fill</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+select{font:inherit;padding:4px 8px}
+</style>
+</head>
+<body>
+<h1>Flow fill</h1>
+<p>Phase 6.3. Text lines follow streamlines of a field aligned to the outline: parallel to the edge near the boundary, relaxing to level lines inside, like engraving hatching. Lines are seeded down the middle and then wherever a long line still fits; each keeps a full line pitch from every other, bends no tighter than its letters allow, and never climbs a wall. Strength 0 gives level lines.</p>
+<label>Shape <select id="shape"><option value="circle">Circle</option><option value="teardrop">Teardrop</option><option value="heart">Heart</option><option value="mihrab">Mihrab</option><option value="onion">Onion dome</option></select></label>
+<div class="g" id="g" style="margin-top:12px"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { SILHOUETTES } from '../src/model/silhouettes.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const OUT = { circle: { kind: 'circle' }, teardrop: { kind: 'preset', name: 'teardrop' }, heart: { kind: 'preset', name: 'heart' }, mihrab: { kind: 'preset', name: 'mihrab' }, onion: { kind: 'svg', path: SILHOUETTES.onion } };
+let n = 0;
+function draw() {
+  const g = document.getElementById('g'); g.innerHTML = '';
+  const o = OUT[document.getElementById('shape').value];
+  const cases = [['Level lines (line fill)', { type: 'lines', text: 'ayat', lineGap: 1 }], ['Flow, strength 0.5', { type: 'flow', text: 'ayat', lineGap: 1, strength: 0.5 }], ['Flow, strength 1', { type: 'flow', text: 'ayat', lineGap: 1, strength: 1 }]];
+  for (const [cap, fill] of cases)
+    setTimeout(() => {
+      const c = structuredClone(preset('mihrab-ayat-al-kursi'));
+      c.root.child.outline = o; c.root.child.fill = fill;
+      const t0 = performance.now(), p = resolve(c), f = document.createElement('figure');
+      f.innerHTML = renderPlaced(p, { idPrefix: 'f' + n++ }) + `<figcaption>${cap} · ${p.meta.fill?.note ?? ''} · ${(performance.now() - t0).toFixed(0)} ms</figcaption>`;
+      g.append(f);
+    }, 10);
+}
+document.getElementById('shape').onchange = draw; draw();
+</script>
+</body>
+</html>

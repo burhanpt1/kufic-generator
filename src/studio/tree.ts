@@ -153,6 +153,8 @@ export function defaultFill(type: FillerNode['type'], c: Composition): FillerNod
   switch (type) {
     case 'lines':
       return { type, text: slot, lineGap: 1 };
+    case 'flow':
+      return { type, text: slot, lineGap: 1, strength: 0.8 };
     case 'maze':
       return { type, text: slot, corridors: 0.7, wall: true };
     case 'monogram':
