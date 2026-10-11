@@ -38,10 +38,12 @@ if (update) {
 }
 
 describe('UI reproduces the golden cases', () => {
-  it.each(CASES.map(c => [c.id, c] as const))('%s', (id, c) => {
+  it.each(CASES.map(c => [c.id, c] as const))('%s', async (id, c) => {
     localStorage.clear();
+    history.replaceState(null, '', '/');
     document.body.innerHTML = body;
     const app = start(document);
+    await app.ready;
     applyUI({ window } as never, c.ui);
     app.render();
     const { last } = app;
