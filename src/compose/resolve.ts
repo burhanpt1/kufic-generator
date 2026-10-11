@@ -12,7 +12,7 @@ import { parseComposition } from '../model/schema';
 import type { BorderNode, Composition, FillerNode, RegionNode, Separator, Style, TextBorder } from '../model/schema';
 import { inherit } from '../model/style';
 import { kufi } from '../script/kufi';
-import type { LayoutOptions, ScriptEngine } from '../script/types';
+import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
 import { bandGeom, fitRing, fitsAtFullSize, layRing } from './textBorder';
@@ -76,7 +76,11 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
     sep = (border.separator ?? DEFAULT_SEPARATOR).width;
   const fits = (L: number) => {
     const bg = bandGeom(shape, L, sep);
-    return !!bg && fitsAtFullSize(bg, ctx.script, prepared, slot.wordGap) && ringArea(shape, L, sep + prepared.Hb) > 0;
+    return (
+      !!bg &&
+      fitsAtFullSize(bg, ctx.script, prepared, slot.wordGap, bandRoom(prepared, style)) &&
+      ringArea(shape, L, sep + bandRoom(prepared, style)) > 0
+    );
   };
   let lo = Math.max(4, prepared.Hb * 2),
     hi = lo;
@@ -93,6 +97,20 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
   }
   return fits(lo) ? lo : hi;
 }
+
+/** A text band's depth in cells (owner's feedback): clear space above the tallest ink, so stems never run into the
+ *  separator beyond. Tall stems end at about 83% of the band, and whatever rises above them (leaf and palmette
+ *  endings, marks) keeps at least a cell clear. */
+export function bandRoom(p: Prepared, style: Style): number {
+  const t = style.terminals.kind,
+    k = 0.8 + 0.4 * style.stroke.weight, // as the renderer sizes leaf and palmette endings
+    reach = t === 'leaf' ? 0.3 + 1.05 * k - 0.5 : t === 'palmette' ? 0.3 + k - 0.5 : t === 'none' ? 0 : 0.25,
+    stem = p.base + p.ascenders,
+    top = Math.max(p.Hb, stem + reach);
+  return Math.max(top + 1, stem / 0.83);
+}
+/** Clear margin on each side of a separator, in cells of the band beside it. */
+export const SEP_MARGIN = 0.5;
 
 /** Largest letter scale (≤ hi) at which a band starting at `inset` still has an inner edge. */
 function maxScale(shape: ShapeGeometry, size: number, inset: number, Hb: number, hi: number): number {
@@ -196,8 +214,14 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
             ? (size - inset) / size
             : Math.sqrt(ringArea(shape, size, inset) / ringArea(shape, size, 0));
       const sT = typeof b.scale === 'number' ? b.scale : Math.max(0.4, Math.pow(Math.max(ratio, 1e-6), b.taper ?? 0));
-      const dBand = inset + sep.width * sT,
-        sMax = maxScale(shape, size, dBand, p.Hb, typeof b.scale === 'number' ? b.scale : Math.min(1.15, sT * 1.3));
+      // the separator sits in a gap with half a cell clear on each side (cells of the largest scale this band may
+      // take), then the band, deep enough to leave headroom above the letters
+      const room = bandRoom(p, style),
+        sHi = typeof b.scale === 'number' ? b.scale : Math.min(1.15, sT * 1.3),
+        sepW = sep.kind !== 'none' && sep.width > 0 ? sep.width * sT : 0,
+        margin = SEP_MARGIN * sHi,
+        dBand = inset + sepW + 2 * margin,
+        sMax = maxScale(shape, size, dBand, room, sHi);
       const bg = sMax > 0 ? bandGeom(shape, size, dBand) : null;
       const fit = bg
         ? fitRing(bg, ctx.script, p, {
@@ -206,6 +230,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
             once: slot.repeat === 'once',
             wordGap: slot.wordGap,
             sMax,
+            room,
           })
         : null;
       if (!bg || !fit) {
@@ -216,22 +241,22 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         break;
       }
       // separator outside the band, then the band
-      if (sep.kind !== 'none' && sep.width > 0) {
-        const path = ringPts(shape, size, inset + (sep.width * sT) / 2);
+      if (sepW > 0) {
+        const path = ringPts(shape, size, inset + margin + sepW / 2);
         if (path)
           ctx.items.push({
             type: 'separator',
             style: sid,
             kind: sep.kind,
             path,
-            width: sep.width * sT,
-            ...circ(shape, size, inset + (sep.width * sT) / 2),
+            width: sepW,
+            ...circ(shape, size, inset + margin + sepW / 2),
           });
       }
       const ringNo = ++ctx.ring;
       if (b.ground && b.ground.kind !== 'plain') {
         const o = ringPts(shape, size, dBand),
-          i = ringPts(shape, size, dBand + p.Hb * fit.s);
+          i = ringPts(shape, size, dBand + room * fit.s);
         if (o && i) {
           const area: Area = [o, i],
             dp = deepestPoint(outer);
@@ -264,7 +289,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
       // features at this band's corners
       if (shape.kind !== 'circle') {
         const ring = shape.ring(size, dBand);
-        const h = p.Hb * fit.s;
+        const h = room * fit.s;
         ring?.corners.forEach(cn => {
           if (!cn.convex) return;
           if (cn.clearance >= 1.1) {
@@ -293,7 +318,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
           }
         });
       }
-      inset = dBand + p.Hb * fit.s;
+      inset = dBand + room * fit.s;
       lastSep = { sep, s: fit.s };
     }
     if (meta.rings.length) ctx.borders.push(meta);
@@ -301,7 +326,8 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
   // closing separator inside the last text band
   if (lastSep && lastSep.sep.kind !== 'none' && lastSep.sep.width > 0) {
     const w = lastSep.sep.width * lastSep.s,
-      path = ringPts(shape, size, inset + w / 2);
+      m = SEP_MARGIN * lastSep.s,
+      path = ringPts(shape, size, inset + m + w / 2);
     if (path)
       ctx.items.push({
         type: 'separator',
@@ -309,10 +335,10 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         kind: lastSep.sep.kind,
         path,
         width: w,
-        ...circ(shape, size, inset + w / 2),
+        ...circ(shape, size, inset + m + w / 2),
       });
-    inset += w;
-  } else if (lastSep) inset += lastSep.sep.width * lastSep.s;
+    inset += w + 2 * m;
+  } else if (lastSep) inset += lastSep.sep.width * lastSep.s + SEP_MARGIN * lastSep.s;
   const inner = shape.ring(size, inset);
   const res: RegionResult = {
     size,
