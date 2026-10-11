@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seal block penalty</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6;--bad:#B8432B}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B;--bad:#E07A5F}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.head{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<h1>Seal search: solid-block penalty</h1>
+<p>Taller (reshaped) seal letters let the search pack letters into each other as solid 2×2 blocks, which the critic counts as collisions and the search did not. The search now pays 20 per block (both the WebAssembly kernel and the JS fallback). Blocks are marked in red. Best of six seeds, mirror symmetry.</p>
+<div class="row head"><div>Before: no penalty, reshaping on</div><div>Penalty, reshaping off</div><div>Penalty, reshaping on (default)</div></div>
+<div id="g"></div>
+<script type="module">
+import { buildMonogram, clearMonogramCache } from '../src/monogram/methods.ts';
+import { kufi } from '../src/script/kufi.ts';
+import { DEFAULT_STYLE } from '../src/model/style.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+const engine = (await loadSealWasm()) ? 'WebAssembly' : 'JS';
+const draw = g => {
+  const at = (x, y) => x >= 0 && y >= 0 && x < g.w && y < g.h && g.data[y * g.w + x];
+  const inBlock = (x, y) => [[0, 0], [-1, 0], [0, -1], [-1, -1]].some(([dx, dy]) => at(x + dx, y + dy) && at(x + dx + 1, y + dy) && at(x + dx, y + dy + 1) && at(x + dx + 1, y + dy + 1));
+  let r = '', blocks = 0;
+  for (let y = 0; y < g.h; y++)
+    for (let x = 0; x < g.w; x++) {
+      if (at(x, y) && at(x + 1, y) && at(x, y + 1) && at(x + 1, y + 1)) blocks++;
+      if (at(x, y)) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${inBlock(x, y) ? 'var(--bad)' : 'currentColor'}"/>`;
+    }
+  return { svg: `<svg viewBox="-1 -1 ${g.w + 2} ${g.h + 2}">${r}</svg>`, blocks };
+};
+const cases = [['محمد علي', 9], ['فاطمة الزهراء', 9], ['الحسن الحسين', 7], ['يا علي مدد', 7]];
+for (const [text, H] of cases) {
+  const h = document.createElement('h2');
+  h.textContent = `${text} · ascenders ${H}`;
+  const row = document.createElement('div');
+  row.className = 'row';
+  for (const extra of [{ blocks: 0 }, { reshape: false }, {}]) {
+    clearMonogramCache();
+    const m = buildMonogram('seal', { H, sym: 'mirror', tries: 6, ...extra }, text, kufi, DEFAULT_STYLE.letter);
+    const d = draw(m.grid), f = document.createElement('figure');
+    f.innerHTML = d.svg + `<figcaption>score ${(m.metrics.total * 100).toFixed(0)} · shared ${m.stats.shared} · blocks ${d.blocks}</figcaption>`;
+    row.append(f);
+  }
+  document.getElementById('g').append(h, row);
+}
+document.querySelector('p').append(` Engine: ${engine}.`);
+</script>
+</body>
+</html>

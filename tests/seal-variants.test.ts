@@ -67,7 +67,7 @@ describe('taller seal variants', () => {
     expect(j.stats?.engine).toBe('js');
     expect(Array.from(j.grid.data)).toEqual(Array.from(w.grid.data));
   });
-  it('with reshaping off, the seals still match the old references', () => {
+  it('with reshaping and the block penalty off, the seals still match the old references', () => {
     // the scores recorded for these cases before reshaping existed (tests/golden-lab/reviewed.json before §6)
     const old: Record<string, number> = {
       'mono--seal': 0.098,
@@ -79,10 +79,71 @@ describe('taller seal variants', () => {
       const comp = labCaseToComposition(LAB_CASES.find(c => c.id === id)!),
         f = comp.root.child.fill;
       if (f?.type !== 'monogram') throw new Error('monogram case expected');
-      f.params = { ...f.params, reshape: false };
+      f.params = { ...f.params, reshape: false, blocks: 0 };
       clearMonogramCache();
       const r = comparePNG(readFileSync(join(dir, `${id}.png`)), toPNG(renderPlaced(resolve(comp), { idPrefix: id })));
       expect(Math.round(r.ratio * 1000) / 1000, id).toBe(score);
     }
   });
+});
+
+const blocks = (g: { w: number; h: number; data: ArrayLike<number> }) => {
+  let b = 0;
+  const at = (x: number, y: number) => g.data[y * g.w + x];
+  for (let y = 0; y < g.h - 1; y++)
+    for (let x = 0; x < g.w - 1; x++) if (at(x, y) && at(x + 1, y) && at(x, y + 1) && at(x + 1, y + 1)) b++;
+  return b;
+};
+
+describe('solid-block penalty in the seal search', () => {
+  // neutral words and names, at both ascender heights the decision was measured at
+  const TEXTS = ['محمد علي', 'الحسن الحسين', 'فاطمة الزهراء', 'يا علي مدد'];
+  const seal = (p: Record<string, unknown>, text: string) => {
+    clearMonogramCache();
+    return buildMonogram('seal', { sym: 'mirror', tries: 6, ...p }, text, kufi, DEFAULT_STYLE.letter)!;
+  };
+  it('is on by default and gives the same seal in the kernel and the JS fallback', () => {
+    const p = { H: 9, sym: 'mirror' as const, tries: 1, seed: 4243 },
+      text = 'محمد علي';
+    clearMonogramCache();
+    const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
+    unloadSealWasm();
+    clearMonogramCache();
+    const j = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
+    loadSealWasmSync();
+    expect([w.stats?.engine, j.stats?.engine]).toEqual(['wasm', 'js']);
+    expect(Array.from(j.grid.data)).toEqual(Array.from(w.grid.data));
+    clearMonogramCache();
+    const off = buildMonogram('seal', { ...p, blocks: 0 }, text, kufi, DEFAULT_STYLE.letter)!;
+    expect(Array.from(off.grid.data)).not.toEqual(Array.from(w.grid.data));
+  });
+  it('packs fewer solid blocks into reshaped seals while they share more cells', () => {
+    for (const H of [7, 9]) {
+      let on = 0,
+        off = 0,
+        sharedOn = 0,
+        sharedOff = 0,
+        old = 0,
+        blocksOn = 0,
+        blocksOld = 0;
+      for (const text of TEXTS) {
+        const a = seal({ H }, text),
+          b = seal({ H, reshape: false }, text),
+          c = seal({ H, blocks: 0 }, text);
+        blocksOn += blocks(a.grid);
+        blocksOld += blocks(c.grid);
+        on += a.metrics.total;
+        off += b.metrics.total;
+        old += c.metrics.total;
+        sharedOn += a.stats!.shared!;
+        sharedOff += b.stats!.shared!;
+      }
+      // some letters' own designs hold a block (a doubled wall), so blocks fall rather than vanish
+      expect(blocksOn, `H${H}`).toBeLessThan(blocksOld);
+      expect(sharedOn, `H${H}`).toBeGreaterThan(sharedOff);
+      // within seed noise of reshaping off, and clearly better than the search without the penalty
+      expect(on, `H${H}`).toBeGreaterThan(off - 0.02 * TEXTS.length);
+      expect(on, `H${H}`).toBeGreaterThan(old);
+    }
+  }, 120_000);
 });

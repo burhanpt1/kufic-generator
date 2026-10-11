@@ -27,6 +27,8 @@ export interface SealInput {
   seed: number;
   shareMilli: number;
   ink0: number;
+  /** Energy per solid 2×2 ink block, ×1000 (0: blocks are not counted, as before). */
+  blockMilli?: number;
 }
 export interface SealOutput {
   P: number[];
@@ -68,6 +70,7 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
   let nt = 0,
     nok = 0,
     seed = inp.seed;
+  const blockW = (inp.blockMilli ?? 0) / 1000.0;
   const rnd = () => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647.0;
@@ -135,7 +138,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
       clash = 0,
       touch = 0,
       joined = 0,
-      dangling = 0;
+      dangling = 0,
+      blocks = 0;
     for (let q = 0; q < nt; q++) {
       const k = touched[q];
       if (cnt[k] >= 2) {
@@ -145,6 +149,12 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
         } else clash += cnt[k] - 1;
       }
     }
+    // solid 2×2 ink blocks mean letters have collided (single-stroke Kufic never has them); count each by its top-left cell
+    if (blockW > 0)
+      for (let q = 0; q < nt; q++) {
+        const k = touched[q];
+        if (k % N < N - 1 && (k - (k % N)) / N < N - 1 && cnt[k + 1] && cnt[k + N] && cnt[k + N + 1]) blocks++;
+      }
     if (detail) for (let i = 0; i < n; i++) m[St + 8 + i] = 0;
     for (let t = 0; t < copies; t++)
       for (let i = 0; i < n; i++) {
@@ -226,7 +236,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
       share * 6 * joined +
       (22.0 * (area - ink)) / ink0 +
       2.5 * d +
-      0.3 * cost * copies;
+      0.3 * cost * copies +
+      blockW * blocks;
     if (detail) {
       m[St] = shared;
       m[St + 1] = clash;
@@ -369,6 +380,7 @@ export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'
         o.offJ,
         o.offP,
         o.offS,
+        inp.blockMilli ?? 0,
       )
     : runJS(m, inp, o);
   if (rc !== 0) return null;

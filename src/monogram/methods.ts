@@ -61,11 +61,13 @@ export interface MonoParams {
   tries: number;
   /** Seals: offer letters grown 3 rows taller by repeating a body row (lab port §6). */
   reshape: boolean;
+  /** Seals: search energy per solid 2×2 ink block (letters packed into each other); 0 ignores blocks. */
+  blocks: number;
 }
 export const MONO_DEFAULTS: MonoParams = {
   H: 9, stretch: 4, overlap: 2, nest: true, lines: 0, lineGap: 1, alternate: false, spiralRings: 3, corners: false, core: 'none',
   spineH: 15, flags: 1, loops: 1, loopW: 0.5, armLen: 10, arms: 1, stretchy: true, joins: false, sym: 'none', box: 0.7, share: 2,
-  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: true,
+  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: true, blocks: 20,
 }; // prettier-ignore
 
 export interface MonoStats {
@@ -226,6 +228,7 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
   const res = runSeal({
     L: Lf, V: Vf, C: Cf, J: Jf, P: pos.flatMap(([x, y], i) => [x, y, vi[i]]), n, N, copies,
     sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0),
+    blockMilli: Math.round(p.blocks * 1000),
   }); // prettier-ignore
   if (!res) return null;
   pos.forEach((q, i) => {
