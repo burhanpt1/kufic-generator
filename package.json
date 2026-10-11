@@ -13,8 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "golden": "node scripts/golden.mjs",
-    "golden:check": "node scripts/golden.mjs --check"
+    "golden": "UPDATE_GOLDEN=1 vitest run tests/ui.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

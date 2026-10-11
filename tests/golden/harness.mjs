@@ -1,9 +1,6 @@
-// Loads the prototype page in jsdom, drives its real controls, and captures what the page computed:
-// the KUFI.compose() / KUFI.alphabet() call (input and output) and the render call (function, options, SVG).
-import { readFileSync } from 'node:fs';
-import { JSDOM } from 'jsdom';
+// Helpers shared by the golden tests: applying a case's UI settings to the page, and serialising engine output.
 
-// Segmented button groups: case key -> element id (the id is also the state key, except rotation).
+// Segmented button groups (element id = case key), sliders and checkboxes, as in index.html.
 const SEGS = [
   'layout',
   'center',
@@ -24,28 +21,6 @@ const SEGS = [
 ];
 const INPUTS = ['text', 'asc', 'gap', 'weight', 'soft', 'rings', 'taper', 'centreSize', 'geoAngle', 'geoScale'];
 const CHECKS = ['grid', 'contrast', 'repeat', 'rhythm'];
-
-// Instrumentation evaluated inside the page after its script has run. Function declarations and KUFI's methods
-// are looked up at call time, so wrapping them records every call without changing behaviour.
-const HOOK = `(() => {
-  const rec = window.__rec = { reset() { this.engine = null; this.render = null; } };
-  rec.reset();
-  for (const fn of ['compose', 'alphabet']) {
-    const orig = KUFI[fn];
-    KUFI[fn] = (...args) => { const output = orig(...args); rec.engine = { fn, args: JSON.parse(JSON.stringify(args)), output }; return output; };
-  }
-  for (const fn of ['renderSquare', 'renderCircle', 'renderGrid']) {
-    const orig = window[fn];
-    window[fn] = (...args) => { rec.render = { fn, opt: JSON.parse(JSON.stringify(args[1])), margin: args[2] }; return orig(...args); };
-  }
-})()`;
-
-export function loadPage(htmlPath) {
-  const html = readFileSync(htmlPath, 'utf8');
-  const dom = new JSDOM(html, { url: 'http://localhost/', runScripts: 'dangerously', pretendToBeVisual: true });
-  dom.window.eval(HOOK);
-  return dom;
-}
 
 function click(el) {
   el.dispatchEvent(new el.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }));
@@ -73,27 +48,6 @@ export function applyUI(dom, ui) {
     $(k).dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   }
   if (ui.palette != null) click($('swatches').children[ui.palette]);
-}
-
-// Run one case on a fresh page and return everything needed for the snapshot files.
-export function runCase(htmlPath, c) {
-  const dom = loadPage(htmlPath);
-  try {
-    applyUI(dom, c.ui);
-    const w = dom.window;
-    w.__rec.reset();
-    w.eval('render()');
-    const rec = w.__rec;
-    return {
-      svg: w.eval('lastSVG'),
-      engine: rec.engine && { fn: rec.engine.fn, args: rec.engine.args, output: serialize(rec.engine.output) },
-      render: rec.render,
-      meta: w.document.getElementById('meta').textContent,
-      warn: w.document.getElementById('warn').textContent,
-    };
-  } finally {
-    dom.window.close();
-  }
 }
 
 // JSON form of engine output. Typed arrays (grid cells, tags, ring ids) become {"$u8": "..."} with one base-36

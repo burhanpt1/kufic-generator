@@ -2,7 +2,7 @@
 
 Generative square and Fatimid-style Kufic calligraphy in the browser. Type Arabic text and it is shaped into grid letterforms, wound into square or circular rings, and ornamented — floriated stems, geometric star patterns, braided bands, and the abjad value as a centrepiece. Exports SVG and PNG.
 
-Open `index.html` in a browser to use the current prototype. See `CLAUDE.md` for the architecture and migration plan.
+Run `npm run dev` and open the printed URL, or use the GitHub Pages build. See `CLAUDE.md` for the architecture and migration plan.
 
 ## Development
 
@@ -11,13 +11,14 @@ Needs Node 22.12 or later.
 ```sh
 npm install
 npm run dev          # Vite dev server
-npm run build        # static site in dist/ (index.html and legacy/index.html)
-npm test             # Vitest, including the golden-snapshot check of legacy/index.html
+npm run build        # static site in dist/
+npm test             # Vitest: engine, renderer and UI against the golden snapshots
 npm run lint         # ESLint
 npm run format       # Prettier
 npm run typecheck    # tsc
-npm run golden       # regenerate tests/golden/ from legacy/index.html (only when the prototype changes)
+npm run golden       # rewrite tests/golden/ from the current app (only for intentional output changes)
 ```
 
-`legacy/index.html` is the reference prototype; `index.html` is kept identical to it until the new UI replaces it.
+The original single-file prototype is in git history (`legacy/index.html` before the UI rebuild); the golden
+snapshots in `tests/golden/` were captured from it.
 Pushes to `main` deploy `dist/` to GitHub Pages (enable Pages with source "GitHub Actions" in the repository settings).
