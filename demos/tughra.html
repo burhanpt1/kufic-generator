@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curved tughra</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+input,select{font:inherit;padding:4px 8px}input[type=text]{direction:rtl;width:14em}
+</style>
+</head>
+<body>
+<h1>Curved tughra</h1>
+<p>Phase 6.5. After the Ottoman imperial monogram: the tall letters are the spines and flags cross them on the grid, while the loops (beyze) are nested curves hanging to the left, passing alternately over and under the spines they cross, and the arms (kol) sweep out to the right. The grid tughra is shown for comparison. Short names suit it best.</p>
+<label>Name <input type="text" id="t" value="علي"></label>
+<label>Loops <select id="loops"><option>1</option><option selected>2</option><option>3</option></select></label>
+<div class="g" id="g" style="margin-top:12px"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+let n = 0;
+function draw() {
+  const g = document.getElementById('g'); g.innerHTML = '';
+  const text = document.getElementById('t').value.trim() || 'علي', loops = +document.getElementById('loops').value;
+  for (const [cap, curved, arms] of [['Grid tughra', false, 1], ['Curved, one arm', true, 1], ['Curved, two arms', true, 2]]) {
+    const c = structuredClone(preset('basmala-seal'));
+    c.texts.mono = { text, repeat: 'fill', wordGap: 2 };
+    c.root.child.fill = { type: 'monogram', text: 'mono', method: 'tughra', params: { curved, loops, arms } };
+    const f = document.createElement('figure');
+    f.innerHTML = renderPlaced(resolve(c), { idPrefix: 't' + n++ }) + `<figcaption>${cap}</figcaption>`;
+    g.append(f);
+  }
+}
+document.getElementById('t').oninput = draw; document.getElementById('loops').onchange = draw; draw();
+</script>
+</body>
+</html>

@@ -59,7 +59,13 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
         type: 'monogram',
         text,
         method: ((t.monogram as MonogramMethod) ?? 'seal') as MonogramMethod,
-        params: { H: 7, sym: 'mirror', tries: 2, seed: rng.seed() },
+        params: {
+          H: 7,
+          sym: 'mirror',
+          tries: 2,
+          seed: rng.seed(),
+          ...(t.monogram === 'tughra' ? { curved: true } : {}),
+        },
       };
     case 'abjad':
       return { type: 'abjad', text };
@@ -145,7 +151,12 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
       if (r.fill?.type === 'maze') r.fill = { ...r.fill, interlace: v as boolean };
       break;
     case 'monogram':
-      if (r.fill?.type === 'monogram') r.fill = { ...r.fill, method: v as MonogramMethod };
+      if (r.fill?.type === 'monogram')
+        r.fill = {
+          ...r.fill,
+          method: v as MonogramMethod,
+          params: v === 'tughra' ? { ...r.fill.params, curved: true } : r.fill.params,
+        };
       break;
     case 'spandrels':
       c.root.spandrels =
