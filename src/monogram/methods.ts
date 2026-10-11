@@ -6,7 +6,22 @@ import { compose as classicCompose } from '../layout/compose';
 import type { SquareRing } from '../types';
 import type { LetterStyle, ScriptEngine } from '../script/types';
 import type { CellGrid } from './grid';
-import { G, dotFill, flipX, flipY, frameIt, gAt, gPut, isL, markEnds, rot180, rot90, square, trim } from './grid';
+import {
+  G,
+  dotFill,
+  flipX,
+  flipY,
+  frameIt,
+  gAt,
+  gPut,
+  isL,
+  markEnds,
+  rot180,
+  rot90,
+  square,
+  trim,
+  trimAt,
+} from './grid';
 import type { LetterShape } from './words';
 import { letterShape, wordGrid } from './words';
 
@@ -38,6 +53,8 @@ export interface MonoParams {
   fourfold: boolean;
   dots: boolean;
   frame: 'none' | 'square' | 'double';
+  /** Tughra: loops and arms as true curves wrapping the spines (over and under) instead of grid lines. */
+  curved: boolean;
   seed: number;
   /** Try this many seeds (alternating joins, like the lab's automatic centre monogram) and keep the best. */
   tries: number;
@@ -45,7 +62,7 @@ export interface MonoParams {
 export const MONO_DEFAULTS: MonoParams = {
   H: 9, stretch: 4, overlap: 2, nest: true, lines: 0, lineGap: 1, alternate: false, spiralRings: 3, corners: false, core: 'none',
   spineH: 15, flags: 1, loops: 1, loopW: 0.5, armLen: 10, arms: 1, stretchy: true, joins: false, sym: 'none', box: 0.7, share: 2,
-  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1,
+  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false,
 }; // prettier-ignore
 
 export interface MonoStats {
@@ -66,6 +83,8 @@ export interface MonoStats {
 export interface MonoResult {
   grid: CellGrid;
   stats: MonoStats | null;
+  /** Vector strokes drawn with the grid (cell units, y down, in the grid's own coordinates). */
+  curves?: [number, number][][];
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -288,6 +307,7 @@ function tughraCompose(p: MonoParams, text: string, script: ScriptEngine, letter
     for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) set(x, y);
   };
   const chosen = spines.slice(-Math.max(1, Math.min(spines.length, 3)));
+  if (p.curved) return curvedTughra(p, A, out, X0, top, b, spines, chosen, loopW, armLen, hline, vline);
   for (let f = 0; f < p.flags; f++) {
     const y = top + Math.round((b - top) * (0.22 + 0.2 * f)),
       x0 = X0 + chosen[0],
@@ -323,6 +343,107 @@ function tughraCompose(p: MonoParams, text: string, script: ScriptEngine, letter
     vline(xr + armLen - 2, y2 - 3, y2);
   }
   return { grid: markEnds(trim(out, 1)), stats: { spines: spines.length } };
+}
+
+type Curve = [number, number][];
+/** The tughra with true curves: the flags stay on the grid; the loops (beyze) are nested ellipses round the spines'
+ *  feet, passing alternately over and under each spine they cross, and the arms (kol) sweep out to the right. */
+function curvedTughra(
+  p: MonoParams,
+  A: CellGrid,
+  out: CellGrid,
+  X0: number,
+  top: number,
+  b: number,
+  spines: number[],
+  chosen: number[],
+  loopW: number,
+  armLen: number,
+  hline: (x0: number, x1: number, y: number) => void,
+  vline: (x: number, y0: number, y1: number) => void,
+): MonoResult {
+  for (let f = 0; f < p.flags; f++) {
+    const y = top + Math.round((b - top) * (0.22 + 0.2 * f)),
+      x0 = X0 + chosen[0],
+      x1 = X0 + A.w - 1 + Math.round(armLen * (0.5 + 0.25 * f));
+    hline(x0, x1, y);
+    vline(x1, y, y + 2);
+  }
+  const curves: Curve[] = [],
+    spineX = spines.map(s => X0 + s + 0.5),
+    first = spineX[0] ?? X0 + A.w / 2,
+    h = b - top;
+  // loops: nested ellipses hanging to the left of the text, their right sides reaching in across the nearest spines
+  void first;
+  for (let k = 0; k < Math.max(1, p.loops); k++) {
+    const rx = Math.max(4, Math.min(loopW * 0.9, h * 1.1) * (1 - 0.24 * k)),
+      ry = Math.max(3, h * (0.6 - 0.12 * k)),
+      cx = X0 - rx * 0.3,
+      cy = b + 0.5 - ry * 0.6,
+      N = 120,
+      E: Curve = [];
+    for (let i = 0; i <= N; i++) {
+      const th = (2 * Math.PI * i) / N;
+      E.push([cx + rx * Math.cos(th), cy + ry * Math.sin(th)]);
+    }
+    // crossings with spines (between their top and the baseline), alternately over and under
+    const cuts: number[] = [];
+    let n = k;
+    for (let i = 0; i < N; i++)
+      for (const sx of spineX) {
+        const [x1, y1] = E[i],
+          [x2, y2] = E[i + 1];
+        if ((x1 - sx) * (x2 - sx) > 0 || x1 === x2) continue;
+        const y = y1 + ((sx - x1) * (y2 - y1)) / (x2 - x1);
+        if (y < top || y > b + 0.5) continue;
+        if (n++ % 2 === 1) cuts.push(i);
+      }
+    // split the ellipse where it passes under, leaving a gap a little wider than the spine
+    let piece: Curve = [];
+    const pieces: Curve[] = [];
+    const near = (i: number) => cuts.some(c => Math.hypot(E[i][0] - E[c][0], E[i][1] - E[c][1]) < 1.3);
+    for (let i = 0; i <= N; i++) {
+      if (near(i)) {
+        if (piece.length > 1) pieces.push(piece);
+        piece = [];
+      } else piece.push(E[i]);
+    }
+    if (piece.length > 1) {
+      // join the last piece to the first when the ellipse closes without a gap at its seam
+      if (pieces.length && !near(0)) pieces[0] = [...piece, ...pieces[0]];
+      else pieces.push(piece);
+    }
+    curves.push(...pieces);
+  }
+  // arms: sweeping curves out of the baseline to the right (quadratic Béziers)
+  let xr = X0 + A.w - 1;
+  while (xr > X0 && !isL(out, xr, b)) xr--;
+  const bez = (a: [number, number], c: [number, number], e: [number, number]): Curve =>
+    Array.from({ length: 33 }, (_, i) => {
+      const t = i / 32;
+      return [
+        (1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * e[0],
+        (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * e[1],
+      ] as [number, number];
+    });
+  curves.push(bez([xr + 0.5, b + 0.5], [xr + armLen * 0.8, b + 3], [xr + armLen + 3, b - armLen * 0.4]));
+  if (p.arms > 1) {
+    const xs = spineX[spineX.length - 1] ?? xr;
+    curves.push(bez([xs, b - 2.5], [xr + armLen * 0.7, b - 1], [xr + armLen + 1, b - 3 - armLen * 0.5]));
+  }
+  // trim the cells, then grow the grid to hold the curves too
+  const t = trimAt(out, 1);
+  let cs = curves.map(c => c.map(([x, y]) => [x + t.dx, y + t.dy] as [number, number]));
+  const xs = cs.flat().map(q => q[0]),
+    ys = cs.flat().map(q => q[1]),
+    ox = Math.max(0, Math.ceil(1 - Math.min(...xs))),
+    oy = Math.max(0, Math.ceil(1 - Math.min(...ys))),
+    W = Math.max(t.g.w + ox, Math.ceil(Math.max(...xs) + ox + 1)),
+    H = Math.max(t.g.h + oy, Math.ceil(Math.max(...ys) + oy + 1)),
+    g = G(W, H);
+  gPut(g, t.g, ox, oy);
+  cs = cs.map(c => c.map(([x, y]) => [x + ox, y + oy] as [number, number]));
+  return { grid: markEnds(g), stats: { spines: spines.length }, curves: cs };
 }
 
 // ---- stacked block: the text in justified lines filling a square ----
@@ -488,6 +609,6 @@ function build(
   if (!r) return null;
   if (p.dots && (method === 'seal' || method === 'pinwheel' || method === 'pinwheelIn')) r.grid = dotFill(r.grid);
   const metrics = monoMetrics(r.grid, r.stats),
-    grid = metrics.squareness > 0.8 ? frameIt(r.grid, p.frame) : r.grid;
-  return { grid, metrics, stats: r.stats };
+    grid = metrics.squareness > 0.8 && !r.curves ? frameIt(r.grid, p.frame) : r.grid;
+  return { grid, metrics, stats: r.stats, curves: r.curves };
 }

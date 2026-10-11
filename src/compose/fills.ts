@@ -664,6 +664,15 @@ function monogramFill(
     colour: 'accent',
     ring: ++ctx.ring,
   });
+  if (m.curves?.length) {
+    const at: Pt = [cr.c[0] - (g.w * cell) / 2, cr.c[1] - (g.h * cell) / 2];
+    ctx.items.push({
+      type: 'ribbon',
+      style: sid,
+      paths: m.curves.map(c => c.map(([x, y]) => [at[0] + x * cell, at[1] + y * cell] as Pt)),
+      width: style.stroke.weight * cell * 0.8,
+    });
+  }
   const { total: _t, ...mm } = m.metrics;
   void _t;
   ctx.fill = {
