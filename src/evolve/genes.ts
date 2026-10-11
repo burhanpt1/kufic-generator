@@ -8,6 +8,8 @@ export interface TraitSpec {
   values: readonly (string | number | boolean)[];
   ordinal?: boolean;
   label: string;
+  /** Relative likelihood of values when picked at random (default 1), before taste. */
+  prior?: Record<string, number>;
 }
 export const TRAITS = {
   outline: { values: ['circle', 'polygon', 'star', 'teardrop', 'heart', 'mihrab'], label: 'Shape' },
@@ -22,7 +24,12 @@ export const TRAITS = {
   separatorWidth: { values: [1, 2, 3, 4], ordinal: true, label: 'Ring spacing' },
   ground: { values: ['plain', 'tint', 'vine', 'pattern'], label: 'Ground' },
   // the flow fill stays available in the layers panel but isn't evolved or offered by default (owner's feedback)
-  fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze', 'strapwork'], label: 'Centre' },
+  // the woven lattice starts at half the likelihood of the others, for taste to raise or lower
+  fill: {
+    values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze', 'strapwork', 'lattice'],
+    label: 'Centre',
+    prior: { lattice: 0.5 },
+  },
   vary: { values: [0, 0.5, 1], ordinal: true, label: 'Line height follows shape' },
   interlace: { values: [false, true], label: 'Interlaced maze' },
   monogram: {

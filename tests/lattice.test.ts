@@ -8,6 +8,9 @@ import { preset } from '../src/model/presets';
 import { isValidComposition } from '../src/model/schema';
 import { DEFAULT_STYLE } from '../src/model/style';
 import { kufi } from '../src/script/kufi';
+import { pickValue, randomComposition } from '../src/evolve/operators';
+import { Rng } from '../src/evolve/rng';
+import { TRAIT_FEATURES } from '../src/evolve/trainer';
 
 const TEXT = 'بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين';
 const square: Pt[] = [
@@ -115,5 +118,30 @@ describe('lattice in compositions', () => {
     const a = resolve(c);
     expect(a.meta.fill).toMatchObject({ type: 'lattice', ok: true });
     expect(JSON.stringify(resolve(c))).toBe(JSON.stringify(a));
+  });
+});
+
+describe('lattice in evolution', () => {
+  it('is picked at half the likelihood of the other fills', () => {
+    const rng = new Rng(11),
+      n: Record<string, number> = {};
+    for (let i = 0; i < 20000; i++) {
+      const v = String(pickValue('fill', rng));
+      n[v] = (n[v] ?? 0) + 1;
+    }
+    const others = Object.entries(n).filter(([k]) => k !== 'lattice'),
+      mean = others.reduce((a, [, c]) => a + c, 0) / others.length;
+    expect(n.lattice / mean).toBeGreaterThan(0.42);
+    expect(n.lattice / mean).toBeLessThan(0.58);
+  });
+  it('makes valid random compositions that the trainer can learn about', () => {
+    const c = randomComposition(
+      { main: { text: TEXT, repeat: 'fill', wordGap: 2 } },
+      { rng: new Rng(2), locks: { fill: 'lattice' } },
+    );
+    expect(isValidComposition(c)).toBe(true);
+    expect(c.root.child.fill).toEqual({ type: 'lattice', text: 'main' });
+    expect(resolve(c).meta.fill?.ok).toBe(true);
+    expect(TRAIT_FEATURES.some(f => f.key === 'fill=lattice')).toBe(true);
   });
 });

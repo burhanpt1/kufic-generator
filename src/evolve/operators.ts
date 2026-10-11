@@ -13,7 +13,7 @@ import type {
 import { isValidComposition } from '../model/schema';
 import { DEFAULT_STYLE } from '../model/style';
 import { PALETTE_LIST, TRAITS, traitsOf } from './genes';
-import type { Trait, Traits } from './genes';
+import type { Trait, TraitSpec, Traits } from './genes';
 import type { Rng } from './rng';
 import type { Taste } from './taste';
 
@@ -32,11 +32,12 @@ const mainSlot = (c: Composition) => textBorders(c)[0]?.text ?? Object.keys(c.te
 
 /** Taste-biased choice among a trait's values (lab pickPref). */
 export function pickValue(trait: Trait, rng: Rng, taste?: Taste): V {
-  const vals = TRAITS[trait].values as readonly V[],
+  const spec: TraitSpec = TRAITS[trait],
+    vals = spec.values as readonly V[],
     p = taste?.pref[trait] ?? {};
   return rng.weighted(
     vals,
-    vals.map(v => 1 + 0.7 * (p[String(v)] ?? 0)),
+    vals.map(v => (spec.prior?.[String(v)] ?? 1) * (1 + 0.7 * (p[String(v)] ?? 0))),
   );
 }
 
@@ -79,6 +80,8 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
       return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed(), interlace: !!t.interlace };
     case 'strapwork':
       return { type: 'strapwork', text, tiling: patternOf(t).tiling };
+    case 'lattice':
+      return { type: 'lattice', text };
     default:
       return { type: kind as 'rings' };
   }
