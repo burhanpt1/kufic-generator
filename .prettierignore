@@ -11,3 +11,4 @@ demos/golden-lab.html
 COMPOSITION_ENGINE.md
 demos/*.html
 src/kernels/*.wasm.ts
+tests/golden-lab/reviewed.json

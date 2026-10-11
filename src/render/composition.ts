@@ -44,6 +44,8 @@ export function renderOptions(s: Style, label = ''): RenderOptions {
     geoAngle: 67,
     geoScale: 5,
     letterStyle: s.stroke.banded ? 'banded' : 'solid',
+    stroke: s.stroke.kind,
+    curve: s.stroke.corner,
   };
 }
 

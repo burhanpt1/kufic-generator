@@ -1,9 +1,10 @@
 // resolve(composition) -> Placed (COMPOSITION_ENGINE.md §3.3): regions, then their borders outermost first (each
 // yields the inner outline for the next), then the fill, with features on every ring.
-import { EndType, JoinType, differenceD, inflatePathsD } from '@countertype/clipper2-ts';
+import { EndType, FillRule, JoinType, differenceD, inflatePathsD, intersectD } from '@countertype/clipper2-ts';
+import polylabel from 'polylabel';
 import { deepestPoint } from '../geometry/deepest';
 import { insetRing } from '../geometry/offset';
-import { bounds, dedupe, orientCCW } from '../geometry/poly';
+import { area, bounds, dedupe, orientCCW } from '../geometry/poly';
 import { shapeOf } from '../geometry/shape';
 import type { ShapeGeometry } from '../geometry/shape';
 import type { Pt, Ring } from '../geometry/types';
@@ -335,7 +336,7 @@ const add = (p: Pt, v: Pt, k: number): Pt => [p[0] + v[0] * k, p[1] + v[1] * k];
 const circ = (shape: ShapeGeometry, size: number, inset: number) =>
   shape.kind === 'circle' ? { circle: { C: [0, 0] as Pt, r: size - inset } } : {};
 
-/** Canvas rect minus the outline, as an even-odd area; and the clear spots in its corners for stars. */
+/** Canvas rect minus the outline, as an even-odd area; and the clear spot in each corner of it, for stars. */
 function spandrelArea(
   outer: Pt[],
   w: number,
@@ -343,24 +344,31 @@ function spandrelArea(
   origin: Pt,
   inset: number,
 ): { area: Area; pockets: { c: Pt; r: number }[] } {
-  const rect: Pt[] = [
-    [inset - origin[0], inset - origin[1]],
-    [w - inset - origin[0], inset - origin[1]],
-    [w - inset - origin[0], h - inset - origin[1]],
-    [inset - origin[0], h - inset - origin[1]],
+  const x0 = inset - origin[0],
+    y0 = inset - origin[1],
+    x1 = w - inset - origin[0],
+    y1 = h - inset - origin[1];
+  const box = (a: number, b: number, c: number, d: number): Pt[] => [
+    [a, b],
+    [c, b],
+    [c, d],
+    [a, d],
   ];
-  const pieces = differenceD(
-    [rect.map(([x, y]) => ({ x, y }))],
-    [outer.map(([x, y]) => ({ x, y }))],
-    1 /* NonZero */,
-    4,
-  )
-    .map(p => orientCCW(dedupe(p.map(q => [q.x, q.y] as Pt))))
-    .filter(p => p.length >= 3);
-  const pockets = pieces.map(p => {
-    const d = deepestPoint(p);
-    return { c: d.p, r: d.r };
-  });
+  const rect = box(x0, y0, x1, y1),
+    D = (P: Pt[]) => P.map(([x, y]) => ({ x, y }));
+  // the spandrel region (outer boundary plus the outline as a hole, by winding), clipped to each canvas quadrant
+  const region = differenceD([D(rect)], [D(outer)], FillRule.NonZero, 4);
+  const mx = (x0 + x1) / 2,
+    my = (y0 + y1) / 2;
+  const pockets = [box(x0, y0, mx, my), box(mx, y0, x1, my), box(x0, my, mx, y1), box(mx, my, x1, y1)]
+    .map(q => intersectD(region, [D(q)], FillRule.NonZero, 4))
+    .filter(ps => ps.length)
+    .map(ps => {
+      // polylabel wants the outer ring first, then holes
+      const rings = ps.map(p => dedupe(p.map(v => [v.x, v.y] as Pt))).sort((a, b) => area(b) - area(a));
+      const d = polylabel(rings, 0.05);
+      return { c: [d[0], d[1]] as Pt, r: d.distance };
+    });
   return { area: [orientCCW(rect), outer], pockets };
 }
 
