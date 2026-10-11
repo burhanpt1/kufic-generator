@@ -22,6 +22,7 @@
       </div>
       <nav class="tabs" role="tablist" aria-label="Sections">
         <button role="tab" data-tab="gallery" aria-selected="true">Gallery</button>
+        <button role="tab" data-tab="trainer" aria-selected="false">Trainer</button>
         <button role="tab" data-tab="editor" aria-selected="false">Editor</button>
         <button role="tab" data-tab="chrono" aria-selected="false">Chronogram</button>
         <button role="tab" data-tab="letters" aria-selected="false">Letters</button>
@@ -64,6 +65,44 @@
           ><button id="tasteReset" class="quiet">Forget learned taste</button><span id="tasteNote" class="note"></span>
         </div>
         <div class="cards small" id="favs"></div>
+      </section>
+
+      <!-- Taste trainer: rate one composition at a time -->
+      <section class="panel hidden" id="trainer" role="tabpanel">
+        <div class="split">
+          <div class="side">
+            <div class="lab">Rate what you see</div>
+            <input type="text" id="trText" class="ar" dir="rtl" aria-label="Text to train with" />
+            <div class="rate" role="group" aria-label="Rating">
+              <button id="trVeto" title="Veto (3 or ←)">Veto <kbd>3</kbd></button
+              ><button id="trMeh" title="Meh (2 or ↓)">Meh <kbd>2</kbd></button
+              ><button id="trLike" class="primary" title="Like (1 or →)">Like <kbd>1</kbd></button
+              ><button id="trSkip" class="quiet" title="Skip (space)">Skip <kbd>␣</kbd></button>
+            </div>
+            <p id="trStatus" class="note" aria-live="polite"></p>
+            <p class="note">
+              Veto what should never come up again; Like what you would keep. After six ratings the trainer shows what
+              it is least sure about, and breeding in the gallery screens out likely vetoes and ranks by what you like.
+            </p>
+            <h3>What it has learned</h3>
+            <div id="trLearned" class="learned"></div>
+            <div class="bar">
+              <button id="trCopy">Copy ratings</button><button id="trForget" class="quiet">Forget ratings</button>
+            </div>
+            <details class="group">
+              <summary>Paste lab ratings</summary>
+              <textarea
+                id="trLab"
+                rows="5"
+                spellcheck="false"
+                placeholder="Paste the Kufic Lab's exported ratings (a JSON array of { g, text, r, m })."
+              ></textarea>
+              <div class="bar"><button id="trImport">Import</button></div>
+              <p id="trImportNote" class="note"></p>
+            </details>
+          </div>
+          <div class="stage"><div id="trPic" class="preview" aria-live="polite"></div></div>
+        </div>
       </section>
 
       <!-- Editor: guided controls, layers, preview -->

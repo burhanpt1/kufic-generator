@@ -2,6 +2,8 @@
 // tree, the chronogram helper and the letter editor. The current composition lives in the URL.
 import { EvalPool } from '../../evolve/pool';
 import type { Taste } from '../../evolve/taste';
+import { train } from '../../evolve/trainer';
+import type { Rating, TasteModel } from '../../evolve/trainer';
 import { loadSealWasm } from '../../kernels/seal';
 import { resolve } from '../../compose';
 import type { Composition } from '../../model/schema';
@@ -11,20 +13,24 @@ import { saveSVG, savePNG } from '../../ui/export';
 import type { Placed } from '../../compose/placed';
 import { laserSVG, plotterSVG, reliefSVG } from '../../fabricate';
 import { compositionFromHash, hashFor } from '../state';
-import { loadTaste, saveTaste } from '../storage';
+import { loadRatings, loadTaste, saveTaste } from '../storage';
 import { wireChrono } from './chrono';
 import { wireCritic } from './critic';
 import { wireEditor } from './editor';
 import { wireGallery } from './gallery';
 import { wireLetters } from './letters';
+import { wireTrainer } from './trainer';
 
-export type Tab = 'gallery' | 'editor' | 'chrono' | 'letters';
+export type Tab = 'gallery' | 'trainer' | 'editor' | 'chrono' | 'letters';
 export interface App {
   readonly comp: Composition;
   /** Replace the current composition (pushes undo unless replace is set). */
   set(c: Composition, o?: { replace?: boolean }): void;
   taste: Taste;
   saveTaste(): void;
+  /** Trainer ratings and the models trained on them (null below six ratings). */
+  ratings: Rating[];
+  model: TasteModel | null;
   pool: EvalPool;
   showTab(t: Tab): void;
   /** Called after every change of the composition. */
@@ -77,11 +83,15 @@ const app: App = {
   },
   taste: loadTaste(),
   saveTaste: () => saveTaste(app.taste),
+  ratings: loadRatings(),
+  model: null,
   pool: new EvalPool(),
   showTab,
   onChange: f => listeners.push(f),
   glyphsChanged: () => changed(),
 };
+
+app.model = train(app.ratings);
 
 // ---- preview, URL ----
 let renderTimer = 0,
@@ -176,6 +186,7 @@ $('fab').onchange = () => {
 
 // ---- start ----
 wireGallery(app);
+wireTrainer(app);
 wireEditor(app);
 wireChrono(app);
 wireLetters(app);

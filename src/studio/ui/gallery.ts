@@ -4,8 +4,10 @@ import type { Evaluated } from '../../evolve/breed';
 import { EvalPool } from '../../evolve/pool';
 import { TRAITS, traitsOf } from '../../evolve/genes';
 import type { Trait, Traits } from '../../evolve/genes';
+import { crossover, mutate, randomComposition } from '../../evolve/operators';
 import { Rng } from '../../evolve/rng';
 import { learn, newTaste, score } from '../../evolve/taste';
+import { blendScore, screenGeneration } from '../../evolve/trainer';
 import type { Composition, TextBorder } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
 import { loadFavourites, saveFavourites } from '../storage';
@@ -120,6 +122,11 @@ export function wireGallery(app: App) {
   const status = (s: string) => ($('breedStatus').textContent = s);
   const tasteNote = () =>
     ($('tasteNote').textContent = app.taste.picks ? `Taste learned from ${app.taste.picks} picks.` : '');
+  // with a trained model (six or more trainer ratings): 0.4 × critic + 0.6 × predicted liking
+  const rank = (i: number) => {
+    const m = results[i]?.metrics ?? null;
+    return m ? blendScore(score(m, app.taste), app.model, gen[i], m) : 0;
+  };
 
   function drawLocks() {
     const box = $('locks');
@@ -154,7 +161,7 @@ export function wireGallery(app: App) {
     c.innerHTML = r ? r.svg : '<p class="note">…</p>';
     if (!r) return;
     c.append(
-      h('div', { class: 'cap' }, `${score(r.metrics, app.taste).toFixed(2)} · ${r.ms.toFixed(0)} ms`),
+      h('div', { class: 'cap' }, `${rank(i).toFixed(2)} · ${r.ms.toFixed(0)} ms`),
       h(
         'div',
         { class: 'tools' },
@@ -191,9 +198,7 @@ export function wireGallery(app: App) {
   }
   function drawCands() {
     const box = $('cands');
-    const order = gen
-      .map((_, i) => i)
-      .sort((a, b) => score(results[b]?.metrics ?? null, app.taste) - score(results[a]?.metrics ?? null, app.taste));
+    const order = gen.map((_, i) => i).sort((a, b) => rank(b) - rank(a));
     order.forEach((i, k) => {
       const c = cards[i];
       c.classList.toggle('picked', picks.has(i));
@@ -201,7 +206,15 @@ export function wireGallery(app: App) {
       if (box.children[k] !== c) box.insertBefore(c, box.children[k] ?? null);
     });
   }
-  async function run(comps: Composition[]) {
+  /** Evaluate a generation. With a trained model, candidates after the first `keep` that it expects to be vetoed
+   *  are re-made with `make` (up to 25 tries each). */
+  async function run(comps: Composition[], keep = 0, make?: () => Composition) {
+    let swapped = 0;
+    if (app.model && make) {
+      const s = screenGeneration(comps.slice(keep), app.model, make);
+      comps = [...comps.slice(0, keep), ...s.comps];
+      swapped = s.swapped;
+    }
     gen = comps;
     results = comps.map(() => null);
     picks = new Set();
@@ -219,13 +232,25 @@ export function wireGallery(app: App) {
       fillCard(i);
       drawCands();
     });
-    if (n === comps.length) status(`${N} candidates in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+    if (n === comps.length)
+      status(
+        `${N} candidates in ${((performance.now() - t0) / 1000).toFixed(1)} s` +
+          (swapped ? ` · ${swapped} likely veto${swapped === 1 ? '' : 'es'} swapped out` : ''),
+      );
   }
   const texts = (): Composition['texts'] => {
     const t = $<HTMLInputElement>('breedText').value.trim() || 'بسم الله الرحمن الرحيم';
     return { main: { text: t, repeat: 'fill', wordGap: 2 } };
   };
-  $('fresh').onclick = () => run(freshGeneration(N, texts(), { rng, taste: app.taste, locks }));
+  $('fresh').onclick = () => {
+    const o = { rng, taste: app.taste, locks },
+      t = texts();
+    run(freshGeneration(N, t, o), 0, () => randomComposition(t, o));
+  };
+  const mutant = (parents: Composition[], rate: number) => {
+    const o = { rng, taste: app.taste, locks };
+    return () => mutate(parents.length > 1 ? crossover(parents[0], parents[1], o) : parents[0], rate, o);
+  };
   $('breed').onclick = () => {
     if (!picks.size) return status('Pick one or two candidates first.');
     const ps = [...picks].map(i => ({ comp: gen[i], m: results[i]?.metrics ?? null }));
@@ -236,16 +261,11 @@ export function wireGallery(app: App) {
     );
     app.saveTaste();
     tasteNote();
-    run(
-      breedFrom(
-        ps.map(p => p.comp),
-        N,
-        0.5,
-        { rng, taste: app.taste, locks },
-      ),
-    );
+    const parents = ps.map(p => p.comp);
+    run(breedFrom(parents, N, 0.5, { rng, taste: app.taste, locks }), parents.length, mutant(parents, 0.7));
   };
-  $('vary').onclick = () => run(breedFrom([app.comp], N, 0.4, { rng, taste: app.taste, locks }));
+  $('vary').onclick = () =>
+    run(breedFrom([app.comp], N, 0.4, { rng, taste: app.taste, locks }), 1, mutant([app.comp], 0.56));
   $('tasteReset').onclick = () => {
     app.taste = newTaste();
     app.saveTaste();

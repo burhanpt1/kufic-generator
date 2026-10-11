@@ -2,12 +2,15 @@
 // windows, blocked site data); everything falls back to defaults.
 import type { Taste } from '../evolve/taste';
 import { newTaste } from '../evolve/taste';
+import { capRatings } from '../evolve/trainer';
+import type { Rating } from '../evolve/trainer';
 import type { Composition } from '../model/schema';
 import { isValidComposition } from '../model/schema';
 
 const TASTE = 'kufi-taste',
   FAVS = 'kufi-favourites',
-  CATS = 'kufi-chrono-cats';
+  CATS = 'kufi-chrono-cats',
+  RATINGS = 'kufi-ratings';
 
 function get<T>(key: string, fallback: T): T {
   try {
@@ -45,3 +48,10 @@ export const saveFavourites = (fs: Favourite[]) => set(FAVS, fs);
 
 export const loadCategories = (fallback: string[]) => get<string[]>(CATS, fallback);
 export const saveCategories = (cs: string[]) => set(CATS, cs);
+
+/** Trainer ratings (the newest 600). Records that no longer validate are dropped. */
+export const loadRatings = (): Rating[] =>
+  get<Rating[]>(RATINGS, []).filter(
+    r => r && (r.r === 0 || r.r === 0.5 || r.r === 1) && typeof r.m === 'object' && isValidComposition(r.comp),
+  );
+export const saveRatings = (rs: Rating[]) => set(RATINGS, capRatings(rs));
