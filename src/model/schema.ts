@@ -95,6 +95,8 @@ export type FillerNode =
   | { type: 'flow'; text: string; lineGap: number; strength?: number }
   | { type: 'monogram'; text: string; method: MonogramMethod; params: Record<string, number | string | boolean> }
   | { type: 'abjad'; text: string }
+  /** Text along the interlaced strands of a star pattern (lab port §4). */
+  | { type: 'strapwork'; text: string; tiling: 'square' | '488' | 'hex' | '31212' }
   | { type: 'pattern'; pattern: PatternSpec }
   | { type: 'rings' }
   | { type: 'vine' }
@@ -279,6 +281,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       params: z.record(z.string(), param),
     }),
     z.object({ type: z.literal('abjad'), text: slotName }),
+    z.object({ type: z.literal('strapwork'), text: slotName, tiling: z.enum(['square', '488', 'hex', '31212']) }),
     z.object({ type: z.literal('pattern'), pattern }),
     z.object({ type: z.literal('rings') }),
     z.object({ type: z.literal('vine') }),

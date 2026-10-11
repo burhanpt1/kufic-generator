@@ -22,7 +22,7 @@ export const TRAITS = {
   separatorWidth: { values: [1, 2, 3, 4], ordinal: true, label: 'Ring spacing' },
   ground: { values: ['plain', 'tint', 'vine', 'pattern'], label: 'Ground' },
   // the flow fill stays available in the layers panel but isn't evolved or offered by default (owner's feedback)
-  fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze'], label: 'Centre' },
+  fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze', 'strapwork'], label: 'Centre' },
   vary: { values: [0, 0.5, 1], ordinal: true, label: 'Line height follows shape' },
   interlace: { values: [false, true], label: 'Interlaced maze' },
   monogram: {
@@ -94,7 +94,8 @@ export function traitsOf(c: Composition): Traits {
   if (r.fill?.type === 'lines') t.vary = r.fill.vary ?? 0;
   if (r.fill?.type === 'maze') t.interlace = !!r.fill.interlace;
   t.spandrels = c.root.spandrels?.type ?? 'none';
-  if (pat) {
+  if (r.fill?.type === 'strapwork') t.tiling = r.fill.tiling;
+  else if (pat) {
     t.tiling = pat.tiling;
     t.angle = pat.angle;
     t.scale = pat.scale;
