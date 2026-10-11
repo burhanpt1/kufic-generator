@@ -2,7 +2,7 @@
 // number of times; the fit is found by searching letter scale and repeat count together for the least slack, never
 // by cutting the text. Groups go round the outline clockwise from the bottom: runs are stored counter-clockwise, so
 // group g sits on run (G − g) % G.
-import { frameAt } from '../geometry/runs';
+import { frameAt, runMinRadius } from '../geometry/runs';
 import type { ShapeGeometry } from '../geometry/shape';
 import type { Pt, Run } from '../geometry/types';
 import { greedyOK, partition } from '../layout/solvers';
@@ -29,6 +29,9 @@ export function bandGeom(shape: ShapeGeometry, size: number, inset: number): Ban
   return { kind: runs.length === 1 && !runs[0].start ? 'closed' : 'runs', R: 0, runs };
 }
 
+/** A run may curve no tighter than this many band heights (radius of curvature). */
+export const MIN_CURVE = 1.25;
+
 /** Capacity (strip width in cells) of each run at letter scale s, or null if the band doesn't fit. */
 export function capacities(bg: BandGeom, Hb: number, s: number): number[] | null {
   if (bg.kind === 'circle') {
@@ -36,6 +39,8 @@ export function capacities(bg: BandGeom, Hb: number, s: number): number[] | null
     if (r - Hb < Math.max(3, Hb * 0.9)) return null;
     return [Math.round(2 * Math.PI * (r - Hb / 2)) - 1];
   }
+  // letters fan out on a curve tighter than the band is tall: no ring there at this size
+  if (bg.runs.some(rn => runMinRadius(rn) < Hb * s * MIN_CURVE)) return null;
   if (bg.kind === 'closed') return [Math.floor(bg.runs[0].len / s) - 1];
   return bg.runs.map(rn => Math.floor((rn.len - Hb * s * (rn.start!.clearance + rn.end!.clearance) - s) / s));
 }

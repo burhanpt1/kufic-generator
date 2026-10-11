@@ -54,7 +54,7 @@ export type PlacedItem =
   | { type: 'fill'; style: number; kind: 'solid' | 'vine'; area: Area }
   | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' }
   /** Edges of interlaced ribbons: open polylines (broken where a ribbon passes under another). */
-  | { type: 'ribbon'; style: number; paths: Pt[][]; width: number };
+  | { type: 'ribbon'; style: number; paths: Pt[][]; width: number; pen?: boolean };
 
 /** Draw order, back to front. */
 export const LAYER_ORDER = ['ground', 'pattern', 'spandrels', 'letters', 'separators', 'features'] as const;

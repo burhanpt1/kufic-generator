@@ -670,7 +670,9 @@ function monogramFill(
       type: 'ribbon',
       style: sid,
       paths: m.curves.map(c => c.map(([x, y]) => [at[0] + x * cell, at[1] + y * cell] as Pt)),
-      width: style.stroke.weight * cell * 0.8,
+      // the same width as the letters' strokes, and the same nib when they're drawn with a pen
+      width: style.stroke.weight * cell,
+      pen: style.stroke.kind === 'pen',
     });
   }
   const { total: _t, ...mm } = m.metrics;
