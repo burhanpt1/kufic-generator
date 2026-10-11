@@ -96,18 +96,9 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
 
 /** Largest letter scale (≤ hi) at which a band starting at `inset` still has an inner edge. */
 function maxScale(shape: ShapeGeometry, size: number, inset: number, Hb: number, hi: number): number {
-  const outer = ringArea(shape, size, 0),
-    ok = (s: number) => ringArea(shape, size, inset + Hb * s) > outer * 0.05;
-  if (ok(hi)) return hi;
-  let a = 0.2,
-    b = hi;
-  if (!ok(a)) return 0;
-  for (let i = 0; i < 8; i++) {
-    const m = (a + b) / 2;
-    if (ok(m)) a = m;
-    else b = m;
-  }
-  return a;
+  // the band's inner edge (inset + Hb·s) must leave more than 5% of the outline's area
+  const s = (shape.depthFor(0.05) * size - inset) / Hb;
+  return s >= hi ? hi : s >= 0.2 ? s : 0;
 }
 
 export interface RegionResult {
