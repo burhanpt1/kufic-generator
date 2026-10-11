@@ -81,6 +81,29 @@
           <div class="stage">
             <div id="preview" class="preview" aria-live="polite"></div>
             <p id="info" class="note"></p>
+            <details class="group critic" id="critic">
+              <summary>Ask a critic (optional, uses your Claude API key)</summary>
+              <p class="note">
+                Sends a picture of this composition to the Claude API for a calligraphy teacher's critique, with
+                suggested changes you can apply. Nothing is sent until you press Ask. Your key stays in this browser.
+              </p>
+              <div class="bar">
+                <input
+                  type="password"
+                  id="criticKey"
+                  placeholder="API key (sk-ant-…)"
+                  autocomplete="off"
+                  aria-label="Claude API key"
+                />
+                <select id="criticModel" aria-label="Model"></select>
+              </div>
+              <div class="bar">
+                <label><input type="checkbox" id="criticRemember" /> Remember the key in this browser</label>
+                <button id="criticAsk" class="primary">Ask</button>
+                <span id="criticStatus" class="note"></span>
+              </div>
+              <div id="criticOut"></div>
+            </details>
           </div>
         </div>
       </section>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual critic</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+pre{white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px;max-height:260px;overflow:auto}
+input,select,button{font:inherit;padding:4px 8px}
+</style>
+</head>
+<body>
+<h1>Visual critic</h1>
+<p>Phase 6.9, off by default. The studio can send a picture of a composition to the Claude API (with your own key) and ask for a calligraphy teacher's critique. The reply's suggestions are checked against the evolvable traits, so they can only change what the guided controls can, and each becomes a one-click mutation.</p>
+<h2>The request</h2>
+<pre id="prompt"></pre>
+<h2>An example reply, applied</h2>
+<p>This reply was written by hand to show the format; it is not model output.</p>
+<pre id="reply"></pre>
+<div class="g" id="g"></div>
+<h2>Try it live</h2>
+<p>Your key is used from this page only and is not stored. <input type="password" id="key" placeholder="API key" autocomplete="off"> <select id="model"></select> <button id="ask">Ask about the first picture</button> <span id="st"></span></p>
+<pre id="live"></pre>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { critiquePrompt, parseCritique, applySuggestions, askCritic, CRITIC_MODELS } from '../src/critic/visual.ts';
+import { svgToPngBase64 } from '../src/critic/raster.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const comp = preset('octagon-panel');
+document.getElementById('prompt').textContent = critiquePrompt(comp);
+const example = JSON.stringify({
+  critique: 'The outer band is crowded: tall stems nearly touch the corners, and the small inner rings compete with the star pattern at the centre.',
+  suggestions: [
+    { trait: 'separatorWidth', value: 3, reason: 'give the bands more air' },
+    { trait: 'taper', value: 0.25, reason: 'keep inner rings closer in size to the outer one' },
+    { trait: 'banded', value: true, reason: 'lighten the heavy strokes' },
+  ],
+}, null, 1);
+document.getElementById('reply').textContent = example;
+const c = parseCritique(example), after = applySuggestions(comp, c.suggestions);
+const svgBefore = renderPlaced(resolve(comp), { idPrefix: 'b' });
+for (const [name, svg] of [['Before', svgBefore], ['After the suggestions', renderPlaced(resolve(after), { idPrefix: 'a' })]]) {
+  const f = document.createElement('figure');
+  f.innerHTML = svg + `<figcaption>${name}</figcaption>`;
+  document.getElementById('g').append(f);
+}
+CRITIC_MODELS.forEach(m => document.getElementById('model').append(new Option(m, m)));
+document.getElementById('ask').onclick = async () => {
+  const k = document.getElementById('key').value.trim(), st = document.getElementById('st');
+  if (!k) return (st.textContent = 'Enter a key first.');
+  st.textContent = 'Asking…';
+  try {
+    const r = await askCritic(comp, await svgToPngBase64(svgBefore), { apiKey: k, model: document.getElementById('model').value });
+    document.getElementById('live').textContent = JSON.stringify(r, null, 1);
+    st.textContent = '';
+  } catch (e) { st.textContent = e.message; }
+};
+</script>
+</body>
+</html>

@@ -13,6 +13,7 @@ import { laserSVG, plotterSVG, reliefSVG } from '../../fabricate';
 import { compositionFromHash, hashFor } from '../state';
 import { loadTaste, saveTaste } from '../storage';
 import { wireChrono } from './chrono';
+import { wireCritic } from './critic';
 import { wireEditor } from './editor';
 import { wireGallery } from './gallery';
 import { wireLetters } from './letters';
@@ -178,6 +179,7 @@ wireGallery(app);
 wireEditor(app);
 wireChrono(app);
 wireLetters(app);
+wireCritic(app);
 
 async function fromHash() {
   const c = await compositionFromHash(location.hash);
