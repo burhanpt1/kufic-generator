@@ -7,7 +7,7 @@ const NAMES: Record<string, string> = {
   polygon: 'Polygon', circle: 'Circle', star: 'Star', teardrop: 'Teardrop', heart: 'Heart', mihrab: 'Mihrab',
   custom: 'Custom', none: 'None', lines: 'Lines', pearls: 'Pearls', chevron: 'Chevron', braid: 'Braid',
   plain: 'Plain', tint: 'Tinted', vine: 'Vine', pattern: 'Star pattern', monogram: 'Monogram', abjad: 'Abjad number',
-  rings: 'Rings', solid: 'Solid', maze: 'Maze', seal: 'Seal', mirror: 'Mirror', quad: 'Four-way mirror',
+  rings: 'Rings', solid: 'Solid', maze: 'Maze', flow: 'Flowing lines', seal: 'Seal', mirror: 'Mirror', quad: 'Four-way mirror',
   pinwheel: 'Pinwheel', pinwheelIn: 'Pinwheel inward', block: 'Stacked block', spiral: 'Spiral', tughra: 'Tughra',
   below: 'Above and below', pair: 'Facing pair', stars: 'Stars', square: 'Square', '488': '8-fold',
   hex: '6-fold', '31212': '12-fold', finial: 'Finials', diamond: 'Diamonds', notch: 'Notched', bevel: 'Bevelled',

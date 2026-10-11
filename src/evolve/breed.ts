@@ -53,6 +53,7 @@ export function costOf(c: Composition): number {
   if (f?.type === 'monogram') k += f.method === 'seal' || f.method === 'tughra' ? 6 : 1;
   if (f?.type === 'maze') k += 4;
   if (f?.type === 'lines') k += 1 + (f.vary ?? 0);
+  if (f?.type === 'flow') k += 3;
   if (f?.type === 'region') k += 2;
   if (c.style.stroke.kind === 'pen') k += 1;
   if (c.root.spandrels?.type === 'pattern') k += 0.5;

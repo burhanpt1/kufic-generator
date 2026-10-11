@@ -21,7 +21,7 @@ export const TRAITS = {
   separator: { values: ['none', 'lines', 'pearls', 'chevron', 'braid'], label: 'Between rings' },
   separatorWidth: { values: [1, 2, 3, 4], ordinal: true, label: 'Ring spacing' },
   ground: { values: ['plain', 'tint', 'vine', 'pattern'], label: 'Ground' },
-  fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'maze'], label: 'Centre' },
+  fill: { values: ['monogram', 'abjad', 'pattern', 'rings', 'solid', 'lines', 'flow', 'maze'], label: 'Centre' },
   vary: { values: [0, 0.5, 1], ordinal: true, label: 'Line height follows shape' },
   monogram: {
     values: ['seal', 'mirror', 'quad', 'pinwheel', 'pinwheelIn', 'block', 'spiral', 'tughra'],

@@ -96,7 +96,7 @@ registerCritic('maze', p => (p.meta.fill?.type === 'maze' && p.meta.fill.metrics
 registerCritic('lines', p => {
   const f = p.meta.fill,
     b = p.meta.borders[p.meta.borders.length - 1]?.rings.at(-1);
-  if (f?.type !== 'lines' || !f.scale || !b) return none;
+  if ((f?.type !== 'lines' && f?.type !== 'flow') || !f.scale || !b) return none;
   return { legibility: clamp(f.scale / b.scale / 0.65) };
 });
 
