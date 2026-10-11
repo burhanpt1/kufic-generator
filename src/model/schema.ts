@@ -63,6 +63,8 @@ export interface TextBorder {
   taper?: number;
   separator?: Separator;
   ground?: Ground;
+  /** Plaited tall stems (needs ascenders of 9 or more). */
+  plait?: boolean;
 }
 export interface OrnamentBorder {
   type: 'ornamentBorder';
@@ -81,6 +83,7 @@ export type FillerNode =
       minWords?: number;
       /** Variable line height, 0–1: lines shrink where the region narrows (0 = one letter size throughout). */
       vary?: number;
+      plait?: boolean;
     }
   | {
       type: 'maze';
@@ -90,6 +93,7 @@ export type FillerNode =
       seed?: number;
       /** Interlaced: ribbons that cross over and under on a lattice instead of one corridor. */
       interlace?: boolean;
+      plait?: boolean;
     }
   /** Lines along streamlines that follow the outline near its edge; strength 0 = level lines, 1 = hug the edge. */
   | { type: 'flow'; text: string; lineGap: number; strength?: number }
@@ -215,6 +219,7 @@ const border = z.discriminatedUnion('type', [
     taper: z.number().min(0).max(2).optional(),
     separator: separator.optional(),
     ground: ground.optional(),
+    plait: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('ornamentBorder'),
@@ -248,6 +253,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       lineGap: z.number().min(0).max(6),
       minWords: z.number().int().min(1).optional(),
       vary: z.number().min(0).max(1).optional(),
+      plait: z.boolean().optional(),
     }),
     z.object({
       type: z.literal('flow'),
@@ -262,6 +268,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       wall: z.boolean(),
       seed: z.number().int().optional(),
       interlace: z.boolean().optional(),
+      plait: z.boolean().optional(),
     }),
     z.object({
       type: z.literal('monogram'),

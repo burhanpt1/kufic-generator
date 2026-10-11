@@ -3,6 +3,7 @@ import { abjad as abjadBase } from '../abjad';
 import { setVariants } from '../glyphs/overrides';
 import { repeatSegs } from '../layout/solvers';
 import { RHY, strip } from '../layout/strip';
+import { plaitStrip } from '../layout/plait';
 import { markTerminals } from '../layout/terminals';
 import { breakSegs, prepare, wordSegs } from '../shaping/prepare';
 import { shape } from '../shaping/shape';
@@ -58,6 +59,7 @@ export const kufi: ScriptEngine = {
     RHY.on = opts.rhythm;
     const st = strip(segments as Seg[], Hb, base, opts.wordGap, width, opts.wrap);
     if (!st) return null;
+    if (opts.plait) plaitStrip(st, Hb, base, ascenders);
     const t = opts.terminals,
       minTop = t === 'tall' || t === 'tails' ? base + ascenders - 1 : t === 'all' ? base + 2 : Infinity;
     markTerminals(st, Hb, minTop, t === 'tails', base);

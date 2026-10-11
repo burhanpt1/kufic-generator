@@ -293,7 +293,7 @@ export function weaveFill(f: MazeNode, res: RegionResult, style: Style, ctx: Ctx
   if (!best) return false;
   const { s, wr, D, ox, oy, R, cut } = best,
     w = Hb * s,
-    o = { ...layoutOpts(style, wg), rhythm: true },
+    o = { ...layoutOpts(style, wg), rhythm: true, plait: !!f.plait },
     ring = ++ctx.ring;
   best.edges.forEach((e, i) => {
     const st = script.layout(best!.groups[i], prep, e.W, { ...o, wrap: false });

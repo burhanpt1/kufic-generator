@@ -222,7 +222,7 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     return;
   }
   const ring = ++ctx.ring,
-    o = layoutOpts(style, wg);
+    o = { ...layoutOpts(style, wg), plait: !!f.plait };
   best.ivs.forEach((v, i) => {
     const st = script.layout(best!.groups[i], prep, v.W, { ...o, wrap: false });
     if (!st) return;
@@ -462,7 +462,7 @@ function mazeFill(f: Extract<FillerNode, { type: 'maze' }>, res: RegionResult, s
   const seed = f.seed ?? ctx.comp.seed,
     straight = f.corridors,
     minCells = 6;
-  const o = { ...layoutOpts(style, wg), rhythm: true };
+  const o = { ...layoutOpts(style, wg), rhythm: true, plait: !!f.plait };
   let best: { sc: number; S: number; runs: MazeRun[]; groups: Segs[]; rep: number; minC: number } | null = null;
   for (let S = 3; S <= 26; S++) {
     const ok = (i: number, j: number) =>

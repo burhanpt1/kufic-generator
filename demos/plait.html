@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plaited stems</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Plaited stems</h1>
+<p>Lab port §5. As on Fatimid bands, neighbouring tall stems an even 2–8 cells apart, with nothing between them near the top, cross in an X and each carries on in the other's column. The crossing cell has four diagonal neighbours, so the renderer's over/under at diagonal crossings draws the plait. It runs after justification and before stem endings are marked. It is an option on text borders, line fills and mazes, and an evolvable trait; it is off by default and needs ascenders of 9 or more.</p>
+<div class="g" id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const set = (c, on) => {
+  c.root.child.borders.forEach(b => b.type === 'textBorder' && (b.plait = on));
+  const f = c.root.child.fill;
+  if (f && (f.type === 'lines' || f.type === 'maze')) f.plait = on;
+  return c;
+};
+const cases = [
+  ['Octagon panel', c => { c.style.letter.ascenders = 11; return c; }, 'octagon-panel'],
+  ['Mihrab, curved strokes, lines fill', c => { c.style.letter.ascenders = 11; return c; }, 'mihrab-ayat-al-kursi'],
+  ['Maze tile', c => { c.style.letter.ascenders = 11; return c; }, 'kufic-maze-tile'],
+];
+let i = 0;
+for (const [name, tweak, id] of cases)
+  for (const on of [false, true]) {
+    const c = set(tweak(structuredClone(preset(id))), on), f = document.createElement('figure');
+    f.innerHTML = renderPlaced(resolve(c), { idPrefix: 'pl' + i++ }) + `<figcaption>${name} · ${on ? 'plaited' : 'plain'}</figcaption>`;
+    document.getElementById('g').append(f);
+  }
+</script>
+</body>
+</html>
