@@ -25,12 +25,13 @@ describe('stroke modes', () => {
       /fill="none" stroke="#[0-9A-Fa-f]{6}" stroke-width="[\d.]+" stroke-linecap="round" stroke-linejoin="round"/,
     );
   });
-  it('draws the broad nib as one filled outline per stroke, not stacked copies', () => {
+  it('draws the broad nib as one swept outline per stroke, not stacked copies', () => {
     const l = letters(pen);
     expect(l).not.toMatch(/transform="translate/);
-    expect(l).toMatch(/<path d="M[^"]+Z" fill="#[0-9A-Fa-f]{6}"\/>/);
-    // thick and thin: the nib's outline is wider across some strokes than others, so it isn't a constant-width stroke
-    expect(l).not.toMatch(/stroke-linecap="round" stroke-linejoin="round"\/>/);
+    // the nib's Minkowski sweep: parallelograms filled and stroked (the nib's round thickness) in one colour
+    expect(l).toMatch(
+      /<path d="M[^"]+Z" fill="(#[0-9A-Fa-f]{6})" stroke="\1" stroke-width="[\d.]+" stroke-linejoin="round"\/>/,
+    );
   });
   it('banded letters add a paper-coloured inner line in every mode', () => {
     const paper = withStroke('blocks').style.palette.paper;

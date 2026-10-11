@@ -101,3 +101,36 @@ export function resample(P: Pt[], step: number, keep: Set<number> = new Set()): 
   }
   return { pts: out, kept };
 }
+
+/** Closed-polyline simplification (Ramer–Douglas–Peucker), keeping points that deviate more than tol. */
+export function simplifyClosed(P: Pt[], tol: number): Pt[] {
+  if (P.length < 8) return P;
+  // split at the point farthest from P[0], simplify both halves as open chains
+  let far = 0;
+  for (let i = 1; i < P.length; i++) if (dist(P[0], P[i]) > dist(P[0], P[far])) far = i;
+  const chain = (Q: Pt[]) => {
+    const keep = new Uint8Array(Q.length);
+    keep[0] = keep[Q.length - 1] = 1;
+    const st: [number, number][] = [[0, Q.length - 1]];
+    while (st.length) {
+      const [a, b] = st.pop()!;
+      let best = -1,
+        bd = tol;
+      for (let i = a + 1; i < b; i++) {
+        const d = segDist(Q[i], Q[a], Q[b]);
+        if (d > bd) {
+          bd = d;
+          best = i;
+        }
+      }
+      if (best >= 0) {
+        keep[best] = 1;
+        st.push([a, best], [best, b]);
+      }
+    }
+    return Q.filter((_, i) => keep[i]);
+  };
+  const a = chain(P.slice(0, far + 1)),
+    b = chain(P.slice(far).concat([P[0]]));
+  return a.concat(b.slice(1, -1));
+}

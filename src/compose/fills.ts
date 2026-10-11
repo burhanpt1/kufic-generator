@@ -38,6 +38,22 @@ const ivIntersect = (A: [number, number][], B: [number, number][]) => {
   return out;
 };
 
+/** A short text in a large region: keep only the middle lines it needs (about 1.25× its length), so it is set at full
+ *  size in a centred block instead of being stretched thin or forcing the composition larger. */
+function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: number): T[] {
+  const rows = [...new Set(ivs.map(v => v.yb))];
+  const cap = (rs: number[]) => ivs.filter(v => rs.includes(v.yb)).reduce((a, v) => a + v.W, 0);
+  if (cap(rows) <= total * 1.9) return ivs;
+  const mid = (rows.length - 1) / 2;
+  const order = rows.map((r, i) => [r, Math.abs(i - mid)] as const).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  const keep: number[] = [];
+  for (const [r] of order) {
+    keep.push(r);
+    if (cap(keep) >= total * 1.25) break;
+  }
+  return ivs.filter(v => keep.includes(v.yb));
+}
+
 function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult, style: Style, ctx: Ctx, sid: number) {
   const slot = ctx.comp.texts[f.text],
     pts = res.inner!.pts,
@@ -76,9 +92,10 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     const segs = script.segments(prep, mode, wg) as Segs;
     const total = segs.reduce((a, x) => a + x.minW, 0) + wg * (segs.length - 1);
     for (let i = 0; i < 90; i++) {
-      const s = sMax * Math.pow(0.97, i),
-        ivs = lay(s);
+      const s = sMax * Math.pow(0.97, i);
+      let ivs = lay(s);
       if (!ivs || !ivs.length) continue;
+      if (i === 0) ivs = middleLines(ivs, total);
       const caps = ivs.map(v => v.W),
         sum = caps.reduce((a, c) => a + c, 0);
       if (sum < total) continue; // too big: the text doesn't fit yet
@@ -480,7 +497,19 @@ function mazeFill(f: Extract<FillerNode, { type: 'maze' }>, res: RegionResult, s
     c = cell * k;
   }
   ctx.items.push({ type: 'grid', style: sid, grid: t.g, at, cell: c, colour: 'ink', ring: ++ctx.ring });
-  ctx.fill = { type: 'maze', ok: true, scale: c, note: `${best.runs.length} turns, text ×${best.rep}` };
+  let ink = 0;
+  for (const v of t.g.data) if (v) ink++;
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+  ctx.fill = {
+    type: 'maze',
+    ok: true,
+    scale: c,
+    note: `${best.runs.length} turns, text ×${best.rep}`,
+    metrics: {
+      rep: clamp(1 - Math.max(0, best.rep - 4) / 10),
+      density: clamp(1 - Math.abs(ink / (t.g.w * t.g.h) - 0.3) / 0.25),
+    },
+  };
 }
 
 // ---------- monogram ----------
@@ -519,7 +548,14 @@ function monogramFill(
     colour: 'accent',
     ring: ++ctx.ring,
   });
-  ctx.fill = { type: 'monogram', ok: true, note: `${f.method}, overall ${Math.round(m.metrics.total * 100)}` };
+  const { total: _t, ...mm } = m.metrics;
+  void _t;
+  ctx.fill = {
+    type: 'monogram',
+    ok: true,
+    note: `${f.method}, overall ${Math.round(m.metrics.total * 100)}`,
+    metrics: mm as Record<string, number>,
+  };
 }
 
 registerFiller('lines', (f, res, style, ctx, sid) =>

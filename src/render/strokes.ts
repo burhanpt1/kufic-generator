@@ -3,7 +3,6 @@
 // ends; straight runs through a crossing continue straight, so strands pass over and under. Chains are drawn as
 // smooth paths with rounded corners, or with a slanted broad nib. The pen is a true outline (the Minkowski sum of
 // the path with the nib), one filled shape per stroke, instead of the prototype's seven stroked copies.
-import { FillRule, minkowskiSumD, unionD } from '@countertype/clipper2-ts';
 import type { Source } from './letters';
 import { termCmds } from './prims';
 import type { RenderOptions } from './svg';
@@ -16,21 +15,63 @@ export interface StrokeOptions {
   curve: number;
 }
 
-/** A broad nib: a slanted stadium of length L and thickness t, centred on the origin. */
-function nibShape(L: number, t: number, angle: number): { x: number; y: number }[] {
-  const ca = Math.cos(angle),
-    sa = Math.sin(angle),
-    r = t / 2,
-    pts: { x: number; y: number }[] = [];
-  for (let k = 0; k <= 6; k++) {
-    const a = -Math.PI / 2 + (Math.PI * k) / 6; // right cap
-    pts.push({ x: L / 2 + r * Math.cos(a), y: r * Math.sin(a) });
+/** Drop points that lie (within tol) on the line between their neighbours (Ramer–Douglas–Peucker). */
+function simplify(P: P2[], tol: number): P2[] {
+  if (P.length < 3) return P;
+  const keep = new Uint8Array(P.length);
+  keep[0] = keep[P.length - 1] = 1;
+  const stack: [number, number][] = [[0, P.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop()!,
+      [ax, ay] = P[a],
+      [bx, by] = P[b],
+      dx = bx - ax,
+      dy = by - ay,
+      l = Math.hypot(dx, dy) || 1e-12;
+    let best = -1,
+      far = tol;
+    for (let i = a + 1; i < b; i++) {
+      const d = Math.abs((P[i][0] - ax) * dy - (P[i][1] - ay) * dx) / l;
+      if (d > far) {
+        far = d;
+        best = i;
+      }
+    }
+    if (best >= 0) {
+      keep[best] = 1;
+      stack.push([a, best], [best, b]);
+    }
   }
-  for (let k = 0; k <= 6; k++) {
-    const a = Math.PI / 2 + (Math.PI * k) / 6; // left cap
-    pts.push({ x: -L / 2 + r * Math.cos(a), y: r * Math.sin(a) });
+  return P.filter((_, i) => keep[i]);
+}
+
+/**
+ * The region a slanted broad nib sweeps along a path, as SVG. The nib is a stadium: a line segment (length L, at
+ * `angle`) thickened by a disc of diameter t. Its Minkowski sum with one path segment is that segment's
+ * parallelogram (the segment swept by the nib line) thickened by the disc, i.e. the parallelogram filled and
+ * stroked with width t and round joins. The union over segments comes from filling them all with one winding
+ * (nonzero), so no polygon union is needed.
+ */
+export function nibSweep(P: P2[], L: number, t: number, angle: number, colour: string): string {
+  const vx = (Math.cos(angle) * L) / 2,
+    vy = (Math.sin(angle) * L) / 2;
+  if (P.length === 1) P = [P[0], P[0]];
+  let d = '';
+  for (let i = 0; i + 1 < P.length; i++) {
+    const [ax, ay] = P[i],
+      [bx, by] = P[i + 1];
+    let q: P2[] = [
+      [ax + vx, ay + vy],
+      [bx + vx, by + vy],
+      [bx - vx, by - vy],
+      [ax - vx, ay - vy],
+    ];
+    // one winding for all quads, so nonzero filling gives their union
+    const area = (q[1][0] - q[0][0]) * (q[2][1] - q[0][1]) - (q[1][1] - q[0][1]) * (q[2][0] - q[0][0]);
+    if (area < 0) q = q.reverse();
+    d += 'M' + q.map(([x, y]) => f2(x) + ' ' + f2(y)).join('L') + 'Z';
   }
-  return pts.map(({ x, y }) => ({ x: x * ca - y * sa, y: x * sa + y * ca }));
+  return `<path d="${d}" fill="${colour}" stroke="${colour}" stroke-width="${f2(t)}" stroke-linejoin="round"/>`;
 }
 
 export function strokeLetters(
@@ -212,14 +253,7 @@ export function strokeLetters(
       return;
     }
     // broad nib: the path swept by a slanted nib gives thick and thin strokes, as one filled outline
-    const path = mapped(pts).map(([x, y]) => ({ x, y }));
-    const nib = nibShape(width * s * 1.25, width * s * 0.32, NIB);
-    const swept =
-      path.length > 1
-        ? unionD(minkowskiSumD(nib, path, closed), FillRule.NonZero)
-        : [nib.map(q => ({ x: q.x + path[0].x, y: q.y + path[0].y }))];
-    const d = swept.map(r => 'M' + r.map(q => f2(q.x) + ' ' + f2(q.y)).join('L') + 'Z').join('');
-    if (d) push(col, `<path d="${d}" fill="${colour}"/>`);
+    push(col, nibSweep(simplify(mapped(pts), 0.15), width * s * 1.25, width * s * 0.32, NIB, colour));
   };
   const banded = opt.letterStyle === 'banded';
   const drawn = chains
