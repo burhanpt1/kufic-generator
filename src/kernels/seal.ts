@@ -27,6 +27,8 @@ export interface SealInput {
   seed: number;
   shareMilli: number;
   ink0: number;
+  /** Energy per solid 2×2 block of ink (letters that collided), ×1000; 0 or absent = no penalty. */
+  blockMilli?: number;
 }
 export interface SealOutput {
   P: number[];
@@ -87,6 +89,7 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
     while (k--) r *= r;
     return r;
   };
+  const blockW = (inp.blockMilli ?? 0) / 1000.0;
   const tf = (x: number, y: number, t: number): [number, number] =>
     !t ? [x, y] : sym === 1 ? [N - 1 - x, y] : [N - 1 - x, N - 1 - y];
   const mark8 = (k: number) => {
@@ -144,6 +147,12 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
           mark8(k);
         } else clash += cnt[k] - 1;
       }
+    }
+    let blocks = 0; // solid 2×2 ink, counted at its top-left cell: letters that have collided
+    for (let q = 0; q < nt; q++) {
+      const k = touched[q],
+        x = k % N;
+      if (x < N - 1 && k + N + 1 < N * N && cnt[k + 1] && cnt[k + N] && cnt[k + N + 1]) blocks++;
     }
     if (detail) for (let i = 0; i < n; i++) m[St + 8 + i] = 0;
     for (let t = 0; t < copies; t++)
@@ -226,7 +235,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
       share * 6 * joined +
       (22.0 * (area - ink)) / ink0 +
       2.5 * d +
-      0.3 * cost * copies;
+      0.3 * cost * copies +
+      blockW * blocks;
     if (detail) {
       m[St] = shared;
       m[St + 1] = clash;
@@ -369,6 +379,7 @@ export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'
         o.offJ,
         o.offP,
         o.offS,
+        inp.blockMilli ?? 0,
       )
     : runJS(m, inp, o);
   if (rc !== 0) return null;
