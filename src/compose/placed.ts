@@ -1,0 +1,107 @@
+// Placed: the resolved composition, renderer-agnostic and serialisable (COMPOSITION_ENGINE.md §3.3). Coordinates are
+// in cells, centred on the region's outline; canvas.origin is where that centre sits on the canvas.
+import type { Pt } from '../geometry/types';
+import type { PatternSpec, SeparatorKind, Style } from '../model/schema';
+import type { CellStrip, Strip } from '../script/types';
+
+/** Where a strip goes: strip (x, y) in cells -> canvas. y runs from the band's outer edge inward. */
+export type StripPlace =
+  /** Straight edge: O + (x·t + y·n)·s. */
+  | { type: 'line'; O: Pt; t: Pt; n: Pt; s: number }
+  /** Curved run: the point at arc length off + x·sx along pts, moved y·s along the inward normal. */
+  | { type: 'run'; pts: Pt[]; cum: number[]; off: number; sx: number; s: number }
+  /** Full circle: angle π/2 + rot + 2π(N − x)/N, radius (R − y)·s; R in strip cells. Text starts at the bottom, clockwise. */
+  | { type: 'arc'; C: Pt; R: number; N: number; s: number; rot: number };
+
+/** A cell grid (monogram, maze), y down, placed with its top-left at `at` and `cell` canvas units per cell. */
+export interface PlacedGrid {
+  w: number;
+  h: number;
+  data: Uint8Array;
+}
+
+/** Areas are lists of closed rings combined even-odd (a band is its outer ring plus its inner ring). */
+export type Area = Pt[][];
+
+export type PlacedItem =
+  | {
+      type: 'ground';
+      style: number;
+      kind: 'tint' | 'vine' | 'pattern';
+      index: number;
+      area: Area;
+      pattern?: PatternSpec;
+      centre: Pt;
+      radius: number;
+    }
+  | {
+      type: 'spandrels';
+      style: number;
+      kind: 'pattern' | 'vine' | 'solid' | 'tint';
+      area: Area;
+      pattern?: PatternSpec;
+      centre: Pt;
+      radius: number;
+    }
+  | { type: 'star'; style: number; centre: Pt; r: number }
+  | { type: 'strip'; style: number; strip: Strip; place: StripPlace; ring: number }
+  | { type: 'grid'; style: number; grid: PlacedGrid; at: Pt; cell: number; colour: 'ink' | 'accent'; ring: number }
+  | { type: 'separator'; style: number; kind: SeparatorKind; path: Pt[]; width: number; circle?: { C: Pt; r: number } }
+  | { type: 'finial'; style: number; p: Pt; bisector: Pt; phi: number; length: number; size: number }
+  | { type: 'diamond'; style: number; p: Pt; r: number }
+  | { type: 'abjad'; style: number; value: number; centre: Pt; maxW: number; maxH: number; frame: Pt[] | null }
+  | { type: 'pattern'; style: number; area: Area; pattern: PatternSpec; centre: Pt; radius: number; strength: number }
+  | { type: 'fill'; style: number; kind: 'solid' | 'vine'; area: Area }
+  | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' };
+
+/** Draw order, back to front. */
+export const LAYER_ORDER = ['ground', 'pattern', 'spandrels', 'letters', 'separators', 'features'] as const;
+export type Layer = (typeof LAYER_ORDER)[number];
+export const layerOf = (it: PlacedItem): Layer =>
+  it.type === 'ground' || it.type === 'fill'
+    ? 'ground'
+    : it.type === 'pattern'
+      ? 'pattern'
+      : it.type === 'spandrels'
+        ? 'spandrels'
+        : it.type === 'strip' || it.type === 'grid' || it.type === 'abjad' || it.type === 'rule'
+          ? 'letters'
+          : it.type === 'separator'
+            ? 'separators'
+            : 'features';
+
+export interface BorderMeta {
+  slot: string;
+  /** Rings this border produced (one per line of its text). */
+  rings: {
+    /** Letter scale and whole repeats of the text. */
+    scale: number;
+    rep: number;
+    /** Text segments in one pass, and per group (run) in reading order. */
+    segsPerRep: number;
+    groupSizes: number[];
+    /** Run index (counter-clockwise from the first run) each group sits on. */
+    groupRun: number[];
+    mode: 'words' | 'breaks';
+    Hb: number;
+    /** Stretched cells / natural width, over the whole ring. */
+    slack: number;
+    strips: number[];
+  }[];
+}
+export interface Placed {
+  version: 1;
+  seed: number;
+  canvas: { w: number; h: number; origin: Pt };
+  /** Resolved styles referenced by items (index). */
+  styles: Style[];
+  items: PlacedItem[];
+  meta: {
+    size: number;
+    outline: Pt[];
+    borders: BorderMeta[];
+    fill: { type: string; scale?: number; ok: boolean; note?: string } | null;
+    warnings: string[];
+  };
+}
+export type { CellStrip };

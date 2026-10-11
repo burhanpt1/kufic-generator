@@ -18,7 +18,23 @@ export interface ShapeGeometry {
 
 const scaleRing = (r: Ring, s: number): Ring => makeRing(r.pts.map(([x, y]) => [x * s, y * s]));
 
+const memo = new Map<string, ShapeGeometry>();
+/** Geometry for an outline; memoised (a small LRU), since resolving retries sizes and nested regions repeat. */
 export function shapeOf(outline: Outline): ShapeGeometry {
+  const k = JSON.stringify(outline);
+  let g = memo.get(k);
+  if (g) {
+    memo.delete(k);
+    memo.set(k, g);
+    return g;
+  }
+  g = makeShape(outline);
+  memo.set(k, g);
+  if (memo.size > 64) memo.delete(memo.keys().next().value!);
+  return g;
+}
+
+function makeShape(outline: Outline): ShapeGeometry {
   const unit = unitRing(outline),
     kind =
       outline.kind === 'circle'

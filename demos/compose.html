@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Composition model</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6;--accent:#17807E}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B;--accent:#45B7B1}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 14px;color:var(--muted);max-width:75ch}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}@media (max-width:860px){.row{grid-template-columns:1fr}}
+textarea{width:100%;box-sizing:border-box;min-height:520px;font:12px/1.4 ui-monospace,monospace;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:10px}
+#out svg,.g svg{display:block;width:100%;height:auto}.box{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px}
+.meta{font-size:12.5px;color:var(--muted);margin-top:8px;white-space:pre-wrap}.err{color:#B7322A}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:16px}
+button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>Composition model</h1>
+<p>A composition is a JSON tree: a frame with spandrels, a region with an outline, a stack of borders (text or ornament, each with a separator and ground) and a fill. Edit the JSON; it is validated, resolved into placed parts and drawn. Click a shape below to load it.</p>
+<div class="row">
+  <textarea id="json" spellcheck="false" aria-label="Composition JSON"></textarea>
+  <div class="box"><div id="out"></div><div class="meta" id="meta"></div></div>
+</div>
+<div class="g" id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { DEFAULT_STYLE } from '../src/model/style.ts';
+const base = outline => ({
+  version: 1, seed: 7, canvas: { shape: 'square', margin: 3 },
+  style: { ...structuredClone(DEFAULT_STYLE), terminals: { kind: 'palmette', reach: 'tails' }, colouring: 'byRing' },
+  texts: { basmala: { text: 'بسم الله الرحمن الرحيم', repeat: 'fill', wordGap: 2 }, names: { text: 'محمد علي فاطمة\nالحسن الحسين', repeat: 'fill', wordGap: 2 } },
+  root: { type: 'frame', spandrels: { type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 5 } },
+    child: { type: 'region', outline, borders: [
+      { type: 'textBorder', text: 'basmala', separator: { kind: 'braid', width: 3 }, ground: { kind: 'vine' } },
+      { type: 'textBorder', text: 'names', taper: 0.5, separator: { kind: 'pearls', width: 2 } }],
+      features: { tips: 'finial', corners: 'diamond' }, fill: { type: 'abjad', text: 'basmala' } } },
+});
+const SHAPES = [{ kind: 'circle' }, { kind: 'polygon', sides: 8 }, { kind: 'star', points: 8, depth: 0.6 }, { kind: 'preset', name: 'teardrop' }, { kind: 'preset', name: 'heart' }, { kind: 'preset', name: 'mihrab' }];
+const ta = document.getElementById('json');
+let timer = 0, n = 0;
+function run() {
+  try {
+    const t0 = performance.now(), p = resolve(JSON.parse(ta.value)), t1 = performance.now();
+    document.getElementById('out').innerHTML = renderPlaced(p, { idPrefix: 'main' + n++ });
+    document.getElementById('meta').textContent = `size ${p.meta.size} cells · ${p.items.length} parts · resolved in ${(t1 - t0).toFixed(0)} ms\n` +
+      p.meta.borders.map(b => `border "${b.slot}": ` + b.rings.map(r => `scale ${r.scale.toFixed(2)}, text ×${r.rep} in ${r.groupSizes.length} group${r.groupSizes.length > 1 ? 's' : ''}`).join('; ')).join('\n') +
+      (p.meta.fill ? `\nfill: ${p.meta.fill.type}${p.meta.fill.ok ? '' : ' (' + p.meta.fill.note + ')'}` : '') + (p.meta.warnings.length ? '\n' + p.meta.warnings.join('\n') : '');
+    document.getElementById('meta').classList.toggle('err', !!p.meta.warnings.length);
+  } catch (e) { document.getElementById('meta').textContent = String(e.message || e); document.getElementById('meta').classList.add('err'); }
+}
+ta.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 250); });
+ta.value = JSON.stringify(base(SHAPES[0]), null, 2); run();
+document.getElementById('g').innerHTML = SHAPES.map((s, i) => `<button class="box" data-i="${i}" aria-label="Load ${s.name || s.kind}" style="border-radius:6px;padding:6px">${renderPlaced(resolve(base(s)), { idPrefix: 'g' + i })}</button>`).join('');
+document.getElementById('g').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ta.value = JSON.stringify(base(SHAPES[+b.dataset.i]), null, 2); run(); });
+</script>
+</body>
+</html>
