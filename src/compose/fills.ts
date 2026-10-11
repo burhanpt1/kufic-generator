@@ -40,12 +40,14 @@ const ivIntersect = (A: [number, number][], B: [number, number][]) => {
 
 /** A short text in a large region: keep only the middle lines it needs (about 1.25× its length), so it is set at full
  *  size in a centred block instead of being stretched thin or forcing the composition larger. */
-function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: number): T[] {
+function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: number, centreY?: number): T[] {
   const rows = [...new Set(ivs.map(v => v.yb))];
   const cap = (rs: number[]) => ivs.filter(v => rs.includes(v.yb)).reduce((a, v) => a + v.W, 0);
   if (cap(rows) <= total * 1.9) return ivs;
-  const mid = (rows.length - 1) / 2;
-  const order = rows.map((r, i) => [r, Math.abs(i - mid)] as const).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  // the middle by row count, or (lines of varying height) by position, since small rows would pull it toward them
+  const mid = (rows.length - 1) / 2,
+    dist = (r: number, i: number) => (centreY === undefined ? Math.abs(i - mid) : Math.abs(r - centreY));
+  const order = rows.map((r, i) => [r, dist(r, i)] as const).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
   const keep: number[] = [];
   for (const [r] of order) {
     keep.push(r);
@@ -67,25 +69,67 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
   const sMax = (res.lastScale ?? 1) * 0.85;
   const b = bounds(pts),
     y0 = b.y0,
-    y1 = b.y1;
+    y1 = b.y1,
+    vary = f.vary ?? 0;
+  // variable line height: a line's scale follows the region's width at its height, from 1 where the region is
+  // widest down to (1 - vary / 2) at the tips, so lines there stay readable instead of being dropped
+  const widthAt = (y: number) => crossings(pts, y).reduce((a, [p, q]) => Math.max(a, q - p), 0);
+  let wMax = 0;
+  if (vary > 0) for (let i = 1; i < 64; i++) wMax = Math.max(wMax, widthAt(y0 + ((y1 - y0) * i) / 64));
+  const kAt = (y: number) =>
+    vary > 0 && wMax > 0 ? 1 - vary * (1 - Math.min(1, Math.max(0.5, Math.sqrt(widthAt(y) / wMax)))) : 1;
+  /** Line bands from `start` downward at base scale s: [top, scale] pairs. */
+  const rows = (s: number, start: number) => {
+    const out: [number, number][] = [];
+    for (let y = start; ;) {
+      // the band's scale follows the width at its middle (a few fixed-point steps); the ends of a band can graze
+      // rounded corners, which would shrink a line that has plenty of room
+      let k = kAt(y);
+      for (let it = 0; it < 3; it++) k = kAt(y + Hb * s * k * 0.5);
+      const h = Hb * s * k;
+      if (y + h > y1 - margin) break;
+      out.push([y, s * k]);
+      y += h + lineGap * s * k;
+    }
+    return out;
+  };
+  const ivsOf = (rs: [number, number][]) => {
+    const ivs: { a: number; b: number; yb: number; W: number; s: number }[] = [];
+    for (const [yt, sl] of rs) {
+      const yb = yt + Hb * sl;
+      let iv = crossings(pts, yt + 0.01);
+      [0.25, 0.5, 0.75, 1].forEach(fr => (iv = ivIntersect(iv, crossings(pts, yt + (yb - yt) * fr - 0.01))));
+      iv.map(([a, bb]) => [a + margin, bb - margin] as [number, number])
+        .filter(([a, bb]) => (bb - a) / sl >= minCells)
+        .sort((p, q) => q[0] - p[0]) // right to left
+        .forEach(([a, bb]) => ivs.push({ a, b: bb, yb, W: Math.floor((bb - a) / sl), s: sl }));
+    }
+    return ivs;
+  };
   const lay = (s: number) => {
+    if (vary > 0) {
+      // rows of varying height land differently against the outline's steps (a dome on a wide base); try several
+      // starting offsets and keep the one that holds the most, the most centred on a tie
+      let best: { ivs: ReturnType<typeof ivsOf>; cap: number; off: number } | null = null;
+      const step = (Hb * s) / 8;
+      for (let k = 0; k < 8; k++) {
+        const rs = rows(s, y0 + margin + k * step);
+        if (!rs.length) continue;
+        const ivs = ivsOf(rs),
+          cap = ivs.reduce((a, v) => a + v.W * v.s, 0),
+          [ly, ls] = rs[rs.length - 1],
+          off = Math.abs(y1 - margin - (ly + Hb * ls) - k * step);
+        if (!best || cap > best.cap + 1e-9 || (Math.abs(cap - best.cap) <= 1e-9 && off < best.off))
+          best = { ivs, cap, off };
+      }
+      return best ? best.ivs : null;
+    }
     const pitch = (Hb + lineGap) * s,
       usableH = y1 - y0 - 2 * margin,
       nLines = Math.floor((usableH + lineGap * s) / pitch);
     if (nLines < 1) return null;
-    const top = y0 + margin + (usableH - (nLines * pitch - lineGap * s)) / 2,
-      ivs: { a: number; b: number; yb: number; W: number }[] = [];
-    for (let L = 0; L < nLines; L++) {
-      const yt = top + L * pitch,
-        yb = yt + Hb * s;
-      let iv = crossings(pts, yt + 0.01);
-      [0.25, 0.5, 0.75, 1].forEach(fr => (iv = ivIntersect(iv, crossings(pts, yt + (yb - yt) * fr - 0.01))));
-      iv.map(([a, bb]) => [a + margin, bb - margin] as [number, number])
-        .filter(([a, bb]) => (bb - a) / s >= minCells)
-        .sort((p, q) => q[0] - p[0]) // right to left
-        .forEach(([a, bb]) => ivs.push({ a, b: bb, yb, W: Math.floor((bb - a) / s) }));
-    }
-    return ivs;
+    const top = y0 + margin + (usableH - (nLines * pitch - lineGap * s)) / 2;
+    return ivsOf(Array.from({ length: nLines }, (_, L) => [top + L * pitch, s] as [number, number]));
   };
   let best: { sc: number; s: number; ivs: NonNullable<ReturnType<typeof lay>>; groups: Segs[] } | null = null;
   for (const mode of ['words', 'breaks'] as const) {
@@ -95,7 +139,7 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
       const s = sMax * Math.pow(0.97, i);
       let ivs = lay(s);
       if (!ivs || !ivs.length) continue;
-      if (i === 0) ivs = middleLines(ivs, total);
+      if (i === 0) ivs = middleLines(ivs, total, vary > 0 ? (y0 + y1) / 2 : undefined);
       const caps = ivs.map(v => v.W),
         sum = caps.reduce((a, c) => a + c, 0);
       if (sum < total) continue; // too big: the text doesn't fit yet
@@ -117,19 +161,21 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
   best.ivs.forEach((v, i) => {
     const st = script.layout(best!.groups[i], prep, v.W, { ...o, wrap: false });
     if (!st) return;
-    const used = v.W * best!.s;
+    const used = v.W * v.s;
     ctx.items.push({
       type: 'strip',
       style: sid,
       strip: st,
-      place: { type: 'line', O: [v.a + (v.b - v.a - used) / 2, v.yb], t: [1, 0], n: [0, -1], s: best!.s },
+      place: { type: 'line', O: [v.a + (v.b - v.a - used) / 2, v.yb], t: [1, 0], n: [0, -1], s: v.s },
       ring,
     });
   });
+  // the reported scale is the width-weighted mean letter scale (equal to s when lines don't vary)
+  const wsum = best.ivs.reduce((a, v) => a + v.W, 0);
   ctx.fill = {
     type: 'lines',
     ok: true,
-    scale: best.s,
+    scale: vary > 0 ? best.ivs.reduce((a, v) => a + v.W * v.s, 0) / (wsum || 1) : best.s,
     note: `${new Set(best.ivs.map(v => v.yb.toFixed(2))).size} lines`,
   };
 }

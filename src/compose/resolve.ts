@@ -123,6 +123,8 @@ export interface RegionResult {
 
 /** Enlargements tried, in order, when the size is automatic and something inside doesn't fit (lab buildFill). */
 const ENLARGE = [1, 1.3, 1.7, 2.2, 2.9, 3.8, 5];
+/** A nested region needs room for its own borders inside the parent's centre, so it may enlarge further. */
+const ENLARGE_NESTED = [...ENLARGE, 6.5, 8.5];
 /** An inner fill's letters may be no smaller than this fraction of the innermost border's (lab: 0.42). */
 export const MIN_FILL_RATIO = 0.42;
 
@@ -138,7 +140,8 @@ export function resolveRegion(node: RegionNode, parentStyle: Style, ctx: Ctx, fi
   if (auto == null && firstText) ctx.warnings.push(`text "${firstText.text}" doesn't fit this outline at any size`);
   const base = (auto ?? 30) * (node.spread ?? 1);
   let res: RegionResult | null = null;
-  for (let i = 0; i < ENLARGE.length; i++) {
+  const steps = node.fill?.type === 'region' ? ENLARGE_NESTED : ENLARGE;
+  for (let i = 0; i < steps.length; i++) {
     const snap = {
       items: ctx.items.length,
       borders: ctx.borders.length,
@@ -146,13 +149,13 @@ export function resolveRegion(node: RegionNode, parentStyle: Style, ctx: Ctx, fi
       ring: ctx.ring,
       fill: ctx.fill,
     };
-    res = placeRegion(node, style, shape, ctx, Math.round(base * ENLARGE[i]));
+    res = placeRegion(node, style, shape, ctx, Math.round(base * steps[i]));
     const fill = ctx.fill as Placed['meta']['fill'];
     const fillOk =
       !node.fill ||
       node.fill.type === 'region' ||
       (fill && fill.ok && (fill.scale == null || fill.scale >= MIN_FILL_RATIO * (res?.lastScale ?? 1)));
-    if ((ctx.warnings.length === snap.warnings && fillOk) || i === ENLARGE.length - 1) break;
+    if ((ctx.warnings.length === snap.warnings && fillOk) || i === steps.length - 1) break;
     ctx.items.length = snap.items;
     ctx.borders.length = snap.borders;
     ctx.warnings.length = snap.warnings;

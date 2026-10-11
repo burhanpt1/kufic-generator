@@ -4,12 +4,14 @@ import { TRAITS, traitsOf } from '../../evolve/genes';
 import type { Trait } from '../../evolve/genes';
 import { applyTrait, relevantTraits } from '../../evolve/operators';
 import { Rng } from '../../evolve/rng';
-import { importSvgPath } from '../../geometry/svgpath';
 import type { Composition, FillerNode, SpandrelNode } from '../../model/schema';
 import { CompositionSchema } from '../../model/schema';
+import { SILHOUETTE_NAMES, SILHOUETTES } from '../../model/silhouettes';
+import type { SilhouetteName } from '../../model/silhouettes';
 import { abjadTable, valueOf } from '../chronogram';
 import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt } from '../tree';
 import type { Path } from '../tree';
+import { svgOutline } from './editor-outline';
 import { valueLabel } from './labels';
 import type { App } from './main';
 import { $, h } from './main';
@@ -17,7 +19,7 @@ import { $, h } from './main';
 const GROUPS: [string, Trait[]][] = [
   ['Shape', ['outline', 'sides', 'points', 'depth', 'spread']],
   ['Borders', ['borders', 'taper', 'separator', 'separatorWidth', 'ground', 'tiling', 'angle', 'scale']],
-  ['Centre and corners', ['fill', 'monogram', 'spandrels', 'tips', 'corners']],
+  ['Centre and corners', ['fill', 'monogram', 'vary', 'spandrels', 'tips', 'corners']],
   ['Letters', ['ascenders', 'ra', 'lamAlif', 'marks', 'terminal', 'reach']],
   ['Style', ['palette', 'colouring', 'stroke', 'corner', 'banded', 'weight', 'softness']],
 ];
@@ -152,18 +154,31 @@ export function wireEditor(app: App) {
       const v = valid(n);
       if (v) app.set(v);
     };
+    // custom outlines go to the region selected in the layers panel (the main region otherwise)
+    const target = (): Path =>
+      (getAt(app.comp, sel) as { type?: string })?.type === 'region' ? sel : ['root', 'child'];
+    const setOutline = (path: string) => {
+      const n = setAt(app.comp, [...target(), 'outline'], { kind: 'svg', path });
+      if (n) app.set(n);
+    };
+    const lib = h('select', { 'aria-label': 'Silhouette' }, h('option', { value: '', textContent: 'Choose…' }));
+    for (const [k, name] of Object.entries(SILHOUETTE_NAMES)) lib.append(h('option', { value: k, textContent: name }));
+    lib.onchange = () => lib.value && setOutline(SILHOUETTES[lib.value as SilhouetteName]);
     const file = h('input', { type: 'file', accept: '.svg,image/svg+xml', 'aria-label': 'Outline from an SVG file' });
     file.onchange = async () => {
       const f = file.files?.[0];
       if (!f) return;
       const d = svgOutline(await f.text());
       if (!d) return alert('No closed shape found in that SVG.');
-      const n = structuredClone(app.comp);
-      n.root.child.outline = { kind: 'svg', path: d };
-      const v = valid(n);
-      if (v) app.set(v);
+      setOutline(d);
     };
-    return [h('label', {}, 'Canvas', canvas), h('label', {}, 'Seed', seed), h('label', {}, 'Outline from SVG', file)];
+    const where = (getAt(app.comp, sel) as { type?: string })?.type === 'region' && sel.length > 2 ? ' (nested)' : '';
+    return [
+      h('label', {}, 'Canvas', canvas),
+      h('label', {}, 'Seed', seed),
+      h('label', {}, 'Silhouette' + where, lib),
+      h('label', {}, 'Outline from SVG' + where, file),
+    ];
   }
   function countingFields(c: Composition) {
     const sys = h(
@@ -211,6 +226,7 @@ export function wireEditor(app: App) {
       row.onclick = () => {
         sel = l.path;
         drawLayers();
+        drawGuided(); // the outline controls follow the selected region
       };
       const btn = (label: string, tip: string, f: () => void) =>
         h('button', {
@@ -304,34 +320,4 @@ export function wireEditor(app: App) {
     drawGuided();
     drawLayers();
   });
-}
-
-/** The outline path data from an SVG file: the path (or polygon) with the largest closed area. */
-export function svgOutline(text: string): string | null {
-  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-  const ds: string[] = [];
-  doc.querySelectorAll('path').forEach(p => p.getAttribute('d') && ds.push(p.getAttribute('d')!));
-  doc.querySelectorAll('polygon').forEach(p => {
-    const pts = (p.getAttribute('points') ?? '').trim();
-    if (pts) ds.push('M' + pts + 'Z');
-  });
-  let best: string | null = null,
-    bestA = 0;
-  for (const d of ds)
-    try {
-      const P = importSvgPath(d);
-      let a = 0;
-      for (let i = 0; i < P.length; i++) {
-        const [x0, y0] = P[i],
-          [x1, y1] = P[(i + 1) % P.length];
-        a += x0 * y1 - x1 * y0;
-      }
-      if (Math.abs(a) > bestA) {
-        bestA = Math.abs(a);
-        best = d;
-      }
-    } catch {
-      /* not a closed path */
-    }
-  return best;
 }

@@ -60,6 +60,33 @@ export interface FitOptions {
   sMax: number;
 }
 
+/** Runs too short to hold any segment may stay empty (just the band) when they add up to no more than this share of
+ *  the ring's length: a silhouette's finial or notch shouldn't force the whole composition larger. */
+const MAX_SKIP = 0.35;
+/** A run counts as a small feature (a finial, a notch) when it is under this share of the ring's length. */
+const TINY_RUN = 0.08;
+/** Score cost per unit of skipped length share. */
+const SKIP_COST = 1.5;
+
+/** The runs (in reading order) that take text at these capacities, and the skipped share of the ring's length; null
+ *  when too much would be skipped. All runs take text whenever every one can hold a segment. */
+function usableRuns(bg: BandGeom, c: number[], minSeg: number): { ord: number[]; skip: number } | null {
+  const G = c.length,
+    ord = Array.from({ length: G }, (_, g) => g),
+    need = Math.max(2, minSeg);
+  if (c.every(x => x >= need)) return { ord, skip: 0 };
+  if (bg.kind !== 'runs') return c.every(x => x >= 2) ? { ord, skip: 0 } : null;
+  const ok = (g: number) => c[(G - g) % G] >= need,
+    total = bg.runs.reduce((a, r) => a + r.len, 0),
+    len = (g: number) => bg.runs[(G - g) % G].len;
+  // only small features of the outline may stay empty, whatever the size: a long run that is merely short at this
+  // scale must take text, as before
+  if (ord.some(g => !ok(g) && len(g) > TINY_RUN * total)) return null;
+  const skipped = ord.filter(g => !ok(g)).reduce((a, g) => a + len(g), 0),
+    use = ord.filter(ok);
+  return use.length && skipped <= MAX_SKIP * total ? { ord: use, skip: skipped / total } : null;
+}
+
 /** Best (scale, repeats) for one ring. */
 export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, o: FitOptions): RingFit | null {
   let best: RingFit | null = null;
@@ -70,14 +97,17 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
   for (const mode of ['words', 'breaks'] as const) {
     const segs0 = script.segments(prepared, mode, o.wordGap) as Segs;
     if (!segs0.length) return null;
-    const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length;
+    const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length,
+      minSeg = Math.min(...segs0.map(x => x.minW));
     for (const s of scales) {
       const c = capacities(bg, prepared.Hb, s);
-      if (!c || c.some(x => !(x >= 2))) continue;
+      if (!c) continue;
+      const use = usableRuns(bg, c, minSeg);
+      if (!use) continue;
       const G = c.length,
-        sum = c.reduce((a, b) => a + b, 0);
-      const cOrd = c.map((_, g) => c[(G - g) % G]);
-      const rep0 = Math.max(1, Math.ceil(G / segs0.length)),
+        cOrd = use.ord.map(g => c[(G - g) % G]),
+        sum = cOrd.reduce((a, b) => a + b, 0);
+      const rep0 = Math.max(1, Math.ceil(cOrd.length / segs0.length)),
         repMax = o.once ? rep0 : 14;
       if (o.once && rep0 > 1) continue;
       for (let rep = rep0; rep <= repMax; rep++) {
@@ -85,8 +115,16 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
         const p = partition(repeat(segs0, rep), cOrd);
         if (!p) continue;
         const score =
-          p.score + (o.fixed ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget) + (mode === 'breaks' ? 0.15 : 0);
-        if (!best || score < best.score) best = { s, rep, groups: p.groups as Segs[], caps: c, mode, score };
+          p.score +
+          (o.fixed ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget) +
+          (mode === 'breaks' ? 0.15 : 0) +
+          SKIP_COST * use.skip;
+        if (!best || score < best.score) {
+          // groups in reading order for every run; skipped runs get none
+          const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
+          use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
+          best = { s, rep, groups, caps: c, mode, score };
+        }
       }
     }
     if (best) break; // whole words worked
@@ -97,11 +135,15 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
 /** Does the text fit once at scale 1 (the auto-size test)? */
 export function fitsAtFullSize(bg: BandGeom, script: ScriptEngine, prepared: Prepared, wordGap: number): boolean {
   const c = capacities(bg, prepared.Hb, 1);
-  if (!c || c.some(x => !(x >= 2))) return false;
+  if (!c) return false;
   for (const mode of ['words', 'breaks'] as const) {
     const segs = script.segments(prepared, mode, wordGap) as Segs,
-      need = Math.max(1, Math.ceil(c.length / segs.length));
-    if (greedyOK(repeat(segs, need), c)) return true;
+      use = usableRuns(bg, c, Math.min(...segs.map(x => x.minW)));
+    if (!use) continue;
+    const G = c.length,
+      cOrd = use.ord.map(g => c[(G - g) % G]),
+      need = Math.max(1, Math.ceil(cOrd.length / segs.length));
+    if (greedyOK(repeat(segs, need), use.skip ? cOrd : c)) return true;
   }
   return false;
 }
@@ -121,6 +163,7 @@ export function layRing(
   for (let gi = 0; gi < G; gi++) {
     const gg = (G - gi) % G,
       W = fit.caps[gi];
+    if (!fit.groups[gg]?.length) continue; // a run too short for text stays empty
     const strip = script.layout(fit.groups[gg] as Segments, prepared, W, { ...opts, wrap: bg.kind !== 'runs' });
     if (!strip) continue;
     let place: StripPlace;
