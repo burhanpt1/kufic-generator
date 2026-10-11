@@ -29,6 +29,12 @@
       <div class="actions">
         <button id="undo" title="Undo (Ctrl+Z)">Undo</button><button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
         <button id="share">Copy link</button><button id="saveSvg">SVG</button><button id="savePng">PNG</button>
+        <select id="fab" aria-label="Fabrication export">
+          <option value="">Make…</option>
+          <option value="plot">Plotter SVG (single line)</option>
+          <option value="laser">Laser / CNC SVG (layers)</option>
+          <option value="relief">Relief depth map (PNG)</option>
+        </select>
         <a href="./index.html" class="quiet">Classic tool</a>
       </div>
     </header>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fabrication</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px}
+figure img{display:block;width:100%;height:auto}figcaption{font-size:12px;color:#56676A;margin-top:4px}
+select,button{font:inherit;padding:4px 8px}
+</style>
+</head>
+<body>
+<h1>Fabrication</h1>
+<p>Phase 6.8. The same composition for three machines. <b>Plotter</b>: single-line paths (letter centrelines, band edges, patterns clipped to their areas), ordered to keep pen-up travel short, one group per pen, sized in millimetres. <b>Laser / CNC</b>: layers by the usual colours (red cut outline, black engraved letters, blue scored bands and patterns), named as Inkscape layers. <b>Relief</b>: a greyscale depth map (white is high) for 3D printing or carving.</p>
+<label>Composition <select id="pick"></select></label>
+<div class="g" id="g" style="margin-top:12px"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { PRESETS } from '../src/model/presets.ts';
+import { plotterSVG, laserSVG, reliefSVG, centrelines, orderForPlotting } from '../src/fabricate/index.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+import { saveSVG, savePNG } from '../src/ui/export.ts';
+await loadSealWasm();
+const pick = document.getElementById('pick');
+PRESETS.forEach((p, i) => pick.append(new Option(p.name, i)));
+const img = svg => `<img alt="" src="data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}">`;
+function draw() {
+  const p = PRESETS[+pick.value], placed = resolve(p.comp), g = document.getElementById('g');
+  const o = orderForPlotting(centrelines(placed));
+  const outs = [
+    ['Plotter', plotterSVG(placed), `${o.lines.length} lines · ${(o.draw / 10).toFixed(0)} cells drawn · ${(o.travel / 10).toFixed(0)} travel`, 'svg'],
+    ['Laser / CNC', laserSVG(placed), 'cut · engrave · score layers', 'svg'],
+    ['Relief', reliefSVG(placed), 'white is high', 'png'],
+  ];
+  g.innerHTML = '';
+  for (const [name, svg, cap, kind] of outs) {
+    const f = document.createElement('figure');
+    f.innerHTML = img(svg) + `<figcaption>${name} · ${cap} · ${(svg.length / 1024).toFixed(0)} KB <button>Download ${kind.toUpperCase()}</button></figcaption>`;
+    f.querySelector('button').onclick = () => (kind === 'svg' ? saveSVG : savePNG)(document, `${p.id}-${name.split(' ')[0].toLowerCase()}`, svg);
+    g.append(f);
+  }
+}
+pick.onchange = draw; draw();
+</script>
+</body>
+</html>
