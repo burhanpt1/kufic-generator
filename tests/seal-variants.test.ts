@@ -5,6 +5,14 @@ import { buildMonogram, clearMonogramCache } from '../src/monogram/methods';
 import { letterShape } from '../src/monogram/words';
 import { DEFAULT_STYLE } from '../src/model/style';
 import { kufi } from '../src/script/kufi';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { resolve } from '../src/compose';
+import { renderPlaced } from '../src/render/composition';
+import { comparePNG } from '../scripts/compare-lab.mjs';
+import { toPNG } from '../scripts/raster.mjs';
+import { LAB_CASES } from './golden-lab/cases.mjs';
+import { labCaseToComposition } from './golden-lab/compositions';
 
 await loadSealWasm();
 const L = { ...DEFAULT_STYLE.letter, ascenders: 9 };
@@ -58,5 +66,23 @@ describe('taller seal variants', () => {
     expect(w.stats?.engine).toBe('wasm');
     expect(j.stats?.engine).toBe('js');
     expect(Array.from(j.grid.data)).toEqual(Array.from(w.grid.data));
+  });
+  it('with reshaping off, the seals still match the old references', () => {
+    // the scores recorded for these cases before reshaping existed (tests/golden-lab/reviewed.json before §6)
+    const old: Record<string, number> = {
+      'mono--seal': 0.098,
+      'mono--seal-joined-mirror': 0.067,
+      'mono--seal-turn-curved': 0.092,
+    };
+    const dir = join(import.meta.dirname, 'golden-lab');
+    for (const [id, score] of Object.entries(old)) {
+      const comp = labCaseToComposition(LAB_CASES.find(c => c.id === id)!),
+        f = comp.root.child.fill;
+      if (f?.type !== 'monogram') throw new Error('monogram case expected');
+      f.params = { ...f.params, reshape: false };
+      clearMonogramCache();
+      const r = comparePNG(readFileSync(join(dir, `${id}.png`)), toPNG(renderPlaced(resolve(comp), { idPrefix: id })));
+      expect(Math.round(r.ratio * 1000) / 1000, id).toBe(score);
+    }
   });
 });
