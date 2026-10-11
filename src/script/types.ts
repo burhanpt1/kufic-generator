@@ -9,6 +9,8 @@ export interface LetterStyle {
   lamAlif: 'plain' | 'knot';
   marks: 'off' | 'dots' | 'all';
   vowels: 'modern' | 'early';
+  /** Long alternates of final letters, used where a line has room (off when absent). */
+  alternates?: boolean;
 }
 
 /** One unbreakable piece of text for the partition solver, with its natural width in cells. */

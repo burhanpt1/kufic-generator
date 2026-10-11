@@ -63,6 +63,22 @@ export const VARIANTS: { ra: Record<string, FormTable>; ayn: Record<string, Form
     },
   },
 };
+/** Long alternates of final letters, chosen by the justifier when a line has room (letter.alternates). Original
+ *  designs for this engine's grid (Fatimid-inspired: upturned and descending tails, a long kaf arm); nothing here is
+ *  copied from a font. */
+export const ALTS: Record<string, Partial<Record<Form, GlyphDef>>> = (() => {
+  // tails rise only part way and curl back toward the letter, so they never read as a final alif
+  const noon = ['##...', '#....', '#...#', '#...#', '#####'],
+    yeh = ['##.....', '#......', '#....##', '#.....#', '#######'],
+    kaf = ['..#####', '..#....', '..#....', '..#....', '#.#....', '#.#....', '#######'],
+    meem: GlyphDef = { rows: ['...###', '#..#.#', '######', '#.....', '#.....'], base: 2 };
+  return {
+    NOON: { fin: noon, iso: noon },
+    YEH: { fin: yeh, iso: yeh },
+    KAF: { fin: kaf, iso: kaf },
+    MEEM: { fin: meem, iso: meem },
+  };
+})();
 export const LAMALEF_KNOT = { iso: ['#...#', '#...#', '.#.#.', '..#..', '.#.#.', '#...#', '#####'] };
 
 // where dots/marks centre, when not the glyph's middle column

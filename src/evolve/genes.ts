@@ -45,6 +45,7 @@ export const TRAITS = {
   lamAlif: { values: ['plain', 'knot'], label: 'Lam-alif' },
   ra: { values: ['desc', 'short'], label: 'Ra' },
   marks: { values: ['dots', 'off'], label: 'Dots' },
+  alternates: { values: [false, true], label: 'Long letter forms' },
 } as const satisfies Record<string, TraitSpec>;
 export type Trait = keyof typeof TRAITS;
 export type Traits = { [K in Trait]?: string | number | boolean };
@@ -108,6 +109,7 @@ export function traitsOf(c: Composition): Traits {
   t.lamAlif = c.style.letter.lamAlif;
   t.ra = c.style.letter.ra;
   t.marks = c.style.letter.marks;
+  t.alternates = !!c.style.letter.alternates;
   return t;
 }
 

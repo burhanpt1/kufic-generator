@@ -66,6 +66,8 @@ export interface BandGlyph {
   form: Form;
   str: { c: number; w: number }[];
   tall: number[];
+  /** A long alternate the justifier may use instead (same band). */
+  alt?: BandGlyph;
 }
 export interface Word {
   glyphs: BandGlyph[];

@@ -1,6 +1,6 @@
 // The engine's mutable glyph state: active letter variants and the user's glyph edits.
 import type { Form, GlyphDef, LetterOptions, LetterVariants, Rows } from '../types';
-import { D, LAMALEF_KNOT, VARIANTS } from './tables';
+import { ALTS, D, LAMALEF_KNOT, VARIANTS } from './tables';
 import { clearBitmapCache } from './bitmap';
 
 /** Active letter variants. compose(), alphabet() and getRows() set these before drawing. */
@@ -47,3 +47,6 @@ export function setOverrides(o: Record<string, Rows | undefined>) {
   epoch++;
   clearBitmapCache();
 }
+
+/** The long alternate of a letter form, if it has one. */
+export const altDef = (key: string, form: Form): GlyphDef | null => ALTS[key]?.[form] ?? null;
