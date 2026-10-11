@@ -163,6 +163,8 @@ export function defaultFill(type: FillerNode['type'], c: Composition): FillerNod
       return { type, text: slot };
     case 'strapwork':
       return { type, text: slot, tiling: '488' };
+    case 'lattice':
+      return { type, text: slot };
     case 'pattern':
       return { type, pattern: { tiling: '488', angle: 67, scale: 5 } };
     case 'region':

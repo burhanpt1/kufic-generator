@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woven lattice</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+figure svg{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Woven lattice</h1>
+<p>Lab port §7. Horizontal and vertical text straps run straight across the region, spaced 3 band pitches apart, and weave in a checkerboard: at row r and column c the horizontal strap is on top when r + c is even. Its edges continue there and the other strap's edges break. Text skips the crossing squares. It flows through the horizontal straps (top to bottom, right to left), then the vertical ones (right to left, top to bottom), which read downwards with the letter tops facing left. Compared with the interlaced maze (first figure), a knot of loops that turn back on rounded corners, the lattice is a plain basket weave clipped by any outline, so it is kept as its own fill.</p>
+<div class="g" id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { preset } from '../src/model/presets.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const FATIHA = 'بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين';
+const cases = [
+  ['Interlaced maze, for comparison', 'kufic-maze-tile', c => { c.root.child.fill.interlace = true; }],
+  ['Woven lattice in a square tile', 'kufic-maze-tile', c => { c.texts.lat = { text: FATIHA, repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
+  ['In a teardrop', 'teardrop-gold', c => { c.texts.lat = { text: 'محمد علي فاطمة الحسن الحسين', repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; c.root.child.borders = c.root.child.borders.slice(0, 1); }],
+  ['In a mihrab', 'mihrab-ayat-al-kursi', c => { c.texts.lat = { text: FATIHA, repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
+];
+cases.forEach(([name, id, tweak], i) => {
+  const c = structuredClone(preset(id));
+  tweak(c);
+  const p = resolve(c), f = document.createElement('figure');
+  f.innerHTML = renderPlaced(p, { idPrefix: 'lt' + i }) + `<figcaption>${name} · ${p.meta.fill.note ?? ''}</figcaption>`;
+  document.getElementById('g').append(f);
+});
+</script>
+</body>
+</html>

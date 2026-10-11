@@ -30,6 +30,7 @@ const FILL_TYPES: FillerNode['type'][] = [
   'flow',
   'maze',
   'strapwork',
+  'lattice',
   'pattern',
   'rings',
   'vine',
