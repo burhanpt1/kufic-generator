@@ -67,7 +67,7 @@ describe('taller seal variants', () => {
     expect(j.stats?.engine).toBe('js');
     expect(Array.from(j.grid.data)).toEqual(Array.from(w.grid.data));
   });
-  it('with reshaping off, the seals still match the old references', () => {
+  it('with reshaping and the block penalty off, the seals still match the old references', () => {
     // the scores recorded for these cases before reshaping existed (tests/golden-lab/reviewed.json before §6)
     const old: Record<string, number> = {
       'mono--seal': 0.098,
@@ -79,10 +79,59 @@ describe('taller seal variants', () => {
       const comp = labCaseToComposition(LAB_CASES.find(c => c.id === id)!),
         f = comp.root.child.fill;
       if (f?.type !== 'monogram') throw new Error('monogram case expected');
-      f.params = { ...f.params, reshape: false };
+      f.params = { ...f.params, reshape: false, blocks: 0 };
       clearMonogramCache();
       const r = comparePNG(readFileSync(join(dir, `${id}.png`)), toPNG(renderPlaced(resolve(comp), { idPrefix: id })));
       expect(Math.round(r.ratio * 1000) / 1000, id).toBe(score);
+    }
+  });
+});
+
+describe('solid-block penalty in the seal search', () => {
+  const text = 'بسم الله الرحمن الرحيم',
+    blocksOf = (g: { w: number; h: number; data: Uint8Array }) => {
+      let n = 0;
+      for (let y = 0; y + 1 < g.h; y++)
+        for (let x = 0; x + 1 < g.w; x++)
+          if (
+            g.data[y * g.w + x] &&
+            g.data[y * g.w + x + 1] &&
+            g.data[(y + 1) * g.w + x] &&
+            g.data[(y + 1) * g.w + x + 1]
+          )
+            n++;
+      return n;
+    };
+  const best = (H: number, reshape: boolean, blocks?: number) => {
+    clearMonogramCache();
+    return buildMonogram(
+      'seal',
+      { H, sym: 'mirror', tries: 6, reshape, ...(blocks === undefined ? {} : { blocks }) },
+      text,
+      kufi,
+      DEFAULT_STYLE.letter,
+    )!;
+  };
+  it('agrees byte for byte between WebAssembly and JS', () => {
+    const p = { H: 7, sym: 'mirror' as const, tries: 2, blocks: 40 };
+    clearMonogramCache();
+    const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
+    unloadSealWasm();
+    clearMonogramCache();
+    const j = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
+    loadSealWasmSync();
+    expect([w.stats?.engine, j.stats?.engine]).toEqual(['wasm', 'js']);
+    expect(Array.from(j.grid.data)).toEqual(Array.from(w.grid.data));
+  });
+  it('removes the collisions reshaping caused', () => {
+    expect(blocksOf(best(7, true).grid)).toBeLessThan(blocksOf(best(7, true, 0).grid));
+  });
+  it('makes reshaping pay: the best of six mirrored basmala seals score at least as high and share more', () => {
+    for (const H of [7, 9]) {
+      const off = best(H, false),
+        on = best(H, true);
+      expect(on.metrics.total, `H${H} score`).toBeGreaterThanOrEqual(off.metrics.total);
+      expect(on.stats!.shared!, `H${H} shared`).toBeGreaterThan(off.stats!.shared!);
     }
   });
 });
