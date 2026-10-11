@@ -178,13 +178,17 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
         seen = new Set<string>();
       formsOf(c).forEach(f =>
         Hs.forEach(H =>
-          Xs.forEach(x => {
-            const s = letterShape(script, c, letterOf(letter, H), x, f);
-            if (s && !seen.has(f + s.w + 'x' + s.h)) {
-              seen.add(f + s.w + 'x' + s.h);
-              vs.push(s);
-            }
-          }),
+          Xs.forEach(x =>
+            // taller by repeating a body row: 0 or 3 rows (lab port §6)
+            [0, 3].forEach(vx => {
+              const s = letterShape(script, c, letterOf(letter, H), x, f, vx),
+                k = f + s?.w + 'x' + s?.h + (vx ? 'v' : '');
+              if (s && !seen.has(k)) {
+                seen.add(k);
+                vs.push(s);
+              }
+            }),
+          ),
         ),
       );
       return vs;
@@ -269,7 +273,7 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
       sharing: clamp((S[0] + 2 * S[3]) / (n * copies * 2.5)),
       letters: V.map(vs => vs[0].c),
       engine: res.engine,
-      stretched: V.filter((_, i) => cur(i).extra || cur(i).H > p.H).length,
+      stretched: V.filter((_, i) => cur(i).extra || cur(i).vext || cur(i).H > p.H).length,
       forms: V.filter((_, i) => cur(i).form !== 'iso').length,
       sym,
     },
