@@ -9,7 +9,53 @@ import { greedyOK, partition } from '../layout/solvers';
 import type { Segs } from '../types';
 import { repeat } from '../script/kufi';
 import type { LayoutOptions, Prepared, ScriptEngine, Segments, Strip } from '../script/types';
+import type { Style } from '../model/schema';
 import type { StripPlace } from './placed';
+
+/** Empty rows a text band keeps below its letters (`bot`) and above them (`top`), in cells at the letter scale. */
+export interface BandPad {
+  bot: number;
+  top: number;
+}
+export const NO_PAD: BandPad = { bot: 0, top: 0 };
+/** Ink may come no nearer a band's edge (its separator, or the outline) than this, in cells. */
+export const EDGE_CLEAR = 0.5;
+/** The tallest ink should end at about this share of the band's height (the rest is headroom). */
+const INK_SHARE = 0.86;
+
+/** How far ink can reach past its cell's edge, in cells: a stem ending rises above its cell (render/prims
+ *  termCmds, upwards only), and strokes wider than a cell overshoot it. */
+export function inkReach(terminal: Style['terminals']['kind'], weight: number): { up: number; out: number } {
+  const out = Math.max(0, weight / 2 - 0.5),
+    k = 0.8 + 0.4 * weight,
+    tip = terminal === 'leaf' ? 0.3 + 1.05 * k : terminal === 'palmette' ? 0.3 + k : terminal === 'bevel' ? 0.72 : terminal === 'notch' ? 0.62 : 0;
+  return { up: Math.max(out, tip - 0.5), out };
+} // prettier-ignore
+
+/** Headroom for a band of Hb letter rows: at least EDGE_CLEAR beyond any ink on both sides, and the tallest ink
+ *  ending at about INK_SHARE of the band's height. */
+export function bandPad(Hb: number, style: Pick<Style, 'terminals' | 'stroke'>): BandPad {
+  const r = inkReach(style.terminals.kind, style.stroke.weight),
+    bot = Math.ceil(EDGE_CLEAR + r.out - 1e-9),
+    top = Math.max(Math.ceil(EDGE_CLEAR + r.up - 1e-9), Math.ceil((bot + Hb) / INK_SHARE - (bot + Hb) - 1e-9));
+  return { bot, top };
+}
+
+/** A prepared line as the band sees it: its height includes the headroom. */
+export const padded = (p: Prepared, pad: BandPad): Prepared =>
+  pad.bot || pad.top ? { ...p, Hb: p.Hb + pad.bot + pad.top } : p;
+
+/** Shift a laid-out strip up by pad.bot rows inside a band pad.top rows taller. */
+export function padStrip(st: Strip, pad: BandPad): Strip {
+  if (!pad.bot && !pad.top) return st;
+  const Hb = st.Hb + pad.bot + pad.top;
+  if (st.kind === 'vector') return { ...st, Hb, base: st.base + pad.bot }; // a cursive engine's paths would shift too
+  const data = new Uint8Array(st.W * Hb),
+    tag = new Uint8Array(st.W * Hb);
+  data.set(st.data, pad.bot * st.W);
+  tag.set(st.tag, pad.bot * st.W);
+  return { ...st, Hb, base: st.base + pad.bot, data, tag };
+}
 
 export interface BandGeom {
   kind: 'circle' | 'closed' | 'runs';
@@ -153,24 +199,27 @@ export function fitsAtFullSize(bg: BandGeom, script: ScriptEngine, prepared: Pre
   return false;
 }
 
-/** Lay out a fitted ring: one strip per run, with its placement. */
+/** Lay out a fitted ring: one strip per run, with its placement. `prepared` is the unpadded line (the fit was made
+ *  with it padded); each strip gets the headroom rows. */
 export function layRing(
   bg: BandGeom,
   fit: RingFit,
   script: ScriptEngine,
   prepared: Prepared,
   opts: Omit<LayoutOptions, 'wrap'>,
+  pad: BandPad = NO_PAD,
 ): { strip: Strip; place: StripPlace; group: number; run: number }[] {
   const G = fit.caps.length,
     s = fit.s,
-    Hb = prepared.Hb,
+    Hb = prepared.Hb + pad.bot + pad.top,
     out: { strip: Strip; place: StripPlace; group: number; run: number }[] = [];
   for (let gi = 0; gi < G; gi++) {
     const gg = (G - gi) % G,
       W = fit.caps[gi];
     if (!fit.groups[gg]?.length) continue; // a run too short for text stays empty
-    const strip = script.layout(fit.groups[gg] as Segments, prepared, W, { ...opts, wrap: bg.kind !== 'runs' });
-    if (!strip) continue;
+    const laid = script.layout(fit.groups[gg] as Segments, prepared, W, { ...opts, wrap: bg.kind !== 'runs' });
+    if (!laid) continue;
+    const strip = padStrip(laid, pad);
     let place: StripPlace;
     if (bg.kind === 'circle') place = { type: 'arc', C: [0, 0], R: bg.R / s, N: W + 1, s, rot: 0 };
     else if (bg.kind === 'closed') {

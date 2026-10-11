@@ -65,6 +65,8 @@ export interface TextBorder {
   ground?: Ground;
   /** Plaited tall stems (needs ascenders of 9 or more). */
   plait?: boolean;
+  /** Keep empty rows above and below the letters so ink stays clear of the separators (default on). */
+  headroom?: boolean;
 }
 export interface OrnamentBorder {
   type: 'ornamentBorder';
@@ -222,6 +224,7 @@ const border = z.discriminatedUnion('type', [
     separator: separator.optional(),
     ground: ground.optional(),
     plait: z.boolean().optional(),
+    headroom: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('ornamentBorder'),

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Band headroom</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px}
+figure img{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Band headroom</h1>
+<p>Tall letters used to fill the whole band, so stems ran into the next separator. Each text band now keeps empty rows above and below its letters: at least half a cell beyond any ink (stem endings such as leaves and palmettes rise above their stems, so they get more), and the tallest ink ends at about 86% of the band. The band grows; the outline grows or the letters shrink to keep the text whole. Left: before. Right: now.</p>
+<div id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { PRESETS } from '../src/model/presets.ts';
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+for (const pr of PRESETS) {
+  if (!pr.comp.root.child.borders.some(b => b.type === 'textBorder')) continue;
+  const h = document.createElement('h2'), row = document.createElement('div');
+  h.textContent = pr.name;
+  row.className = 'row';
+  for (const on of [false, true]) {
+    const c = structuredClone(pr.comp);
+    for (const b of c.root.child.borders) if (b.type === 'textBorder') b.headroom = on;
+    const f = document.createElement('figure');
+    f.innerHTML = `<img alt="${pr.name}, ${on ? 'with' : 'without'} headroom" src="${url(renderPlaced(resolve(c), { idPrefix: pr.id + (on ? '-on' : '-off') }))}"><figcaption>${on ? 'Now' : 'Before'}</figcaption>`;
+    row.append(f);
+  }
+  document.getElementById('g').append(h, row);
+}
+</script>
+</body>
+</html>

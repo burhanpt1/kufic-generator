@@ -15,7 +15,7 @@ import { kufi } from '../script/kufi';
 import type { LayoutOptions, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
-import { bandGeom, fitRing, fitsAtFullSize, layRing } from './textBorder';
+import { NO_PAD, bandGeom, bandPad, fitRing, fitsAtFullSize, layRing, padded } from './textBorder';
 
 export interface ResolveOptions {
   script?: ScriptEngine;
@@ -72,7 +72,8 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
   const slot = ctx.comp.texts[border.text],
     lines = textLines(slot.text);
   if (!lines.length) return null;
-  const prepared = ctx.script.prepareLines(lines, style.letter)[0],
+  const p0 = ctx.script.prepareLines(lines, style.letter)[0],
+    prepared = padded(p0, headroom(border, p0.Hb, style)),
     sep = (border.separator ?? DEFAULT_SEPARATOR).width;
   const fits = (L: number) => {
     const bg = bandGeom(shape, L, sep);
@@ -93,6 +94,9 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
   }
   return fits(lo) ? lo : hi;
 }
+
+/** A text border's headroom (on unless the border turns it off). */
+const headroom = (b: TextBorder, Hb: number, style: Style) => (b.headroom === false ? NO_PAD : bandPad(Hb, style));
 
 /** Largest letter scale (≤ hi) at which a band starting at `inset` still has an inner edge. */
 function maxScale(shape: ShapeGeometry, size: number, inset: number, Hb: number, hi: number): number {
@@ -190,7 +194,9 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
       sep = b.separator ?? DEFAULT_SEPARATOR,
       meta: BorderMeta = { slot: b.text, rings: [] };
     for (let k = 0; k < lines.length; k++) {
-      const p = prepared[k],
+      const p0 = prepared[k],
+        pad = headroom(b, p0.Hb, style),
+        p = padded(p0, pad),
         ratio =
           shape.kind === 'circle'
             ? (size - inset) / size
@@ -247,7 +253,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
           });
         }
       }
-      const laid = layRing(bg, fit, ctx.script, p, { ...layoutOpts(style, slot.wordGap), plait: !!b.plait });
+      const laid = layRing(bg, fit, ctx.script, p0, { ...layoutOpts(style, slot.wordGap), plait: !!b.plait }, pad);
       for (const l of laid) ctx.items.push({ type: 'strip', style: sid, strip: l.strip, place: l.place, ring: ringNo });
       const natural = fit.groups.reduce((a, g) => a + g.reduce((x, sg) => x + sg.minW, 0), 0);
       meta.rings.push({
@@ -257,7 +263,8 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         groupSizes: fit.groups.map(g => g.length),
         groupRun: fit.groups.map((_, g) => (fit.caps.length - g) % fit.caps.length),
         mode: fit.mode,
-        Hb: p.Hb,
+        Hb: p0.Hb,
+        pad,
         slack: fit.caps.reduce((a, c) => a + c, 0) / Math.max(1, natural) - 1,
         strips: laid.map(l => l.strip.W),
       });

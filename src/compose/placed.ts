@@ -86,6 +86,8 @@ export interface BorderMeta {
     groupRun: number[];
     mode: 'words' | 'breaks';
     Hb: number;
+    /** Headroom rows below and above the letters (the band is Hb + bot + top rows tall). */
+    pad: { bot: number; top: number };
     /** Stretched cells / natural width, over the whole ring. */
     slack: number;
     strips: number[];
