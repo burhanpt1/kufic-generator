@@ -101,6 +101,8 @@ export type FillerNode =
   | { type: 'abjad'; text: string }
   /** Text along the interlaced strands of a star pattern (lab port §4). */
   | { type: 'strapwork'; text: string; tiling: 'square' | '488' | 'hex' | '31212' }
+  /** Horizontal and vertical text straps woven in a checkerboard (lab port §7). */
+  | { type: 'lattice'; text: string }
   | { type: 'pattern'; pattern: PatternSpec }
   | { type: 'rings' }
   | { type: 'vine' }
@@ -289,6 +291,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
     }),
     z.object({ type: z.literal('abjad'), text: slotName }),
     z.object({ type: z.literal('strapwork'), text: slotName, tiling: z.enum(['square', '488', 'hex', '31212']) }),
+    z.object({ type: z.literal('lattice'), text: slotName }),
     z.object({ type: z.literal('pattern'), pattern }),
     z.object({ type: z.literal('rings') }),
     z.object({ type: z.literal('vine') }),
