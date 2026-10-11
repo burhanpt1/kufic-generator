@@ -1,0 +1,13 @@
+{
+  "name": "kufic-generator",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "golden": "node scripts/golden.mjs",
+    "golden:check": "node scripts/golden.mjs --check"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
