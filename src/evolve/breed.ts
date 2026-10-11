@@ -44,3 +44,17 @@ export function evaluate(comp: Composition, idPrefix?: string): Evaluated {
   const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
   return { svg, metrics: metrics(placed), meta: placed.meta, ms: t1 - t0 };
 }
+
+/** A rough relative cost of evaluating a composition, for scheduling the slow ones first (seal monograms and mazes
+ *  search; pen strokes and many borders cost more to draw). */
+export function costOf(c: Composition): number {
+  const f = c.root.child.fill;
+  let k = 1 + 0.4 * c.root.child.borders.length;
+  if (f?.type === 'monogram') k += f.method === 'seal' || f.method === 'tughra' ? 6 : 1;
+  if (f?.type === 'maze') k += 4;
+  if (f?.type === 'lines') k += 1 + (f.vary ?? 0);
+  if (f?.type === 'region') k += 2;
+  if (c.style.stroke.kind === 'pen') k += 1;
+  if (c.root.spandrels?.type === 'pattern') k += 0.5;
+  return k;
+}

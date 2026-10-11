@@ -146,35 +146,34 @@ export function wireGallery(app: App) {
       );
     }
   }
-  function drawCands() {
-    const box = $('cands');
-    box.innerHTML = '';
-    const order = gen
-      .map((_, i) => i)
-      .sort((a, b) => score(results[b]?.metrics ?? null, app.taste) - score(results[a]?.metrics ?? null, app.taste));
-    for (const i of order) {
-      const r = results[i],
-        c = h('div', { class: 'card' + (picks.has(i) ? ' picked' : ''), tabIndex: 0, 'aria-pressed': picks.has(i) });
-      c.innerHTML = r ? r.svg : '<p class="note">…</p>';
-      if (r) {
-        c.append(h('div', { class: 'cap' }, `${score(r.metrics, app.taste).toFixed(2)} · ${r.ms.toFixed(0)} ms`));
-        c.append(
-          h(
-            'div',
-            { class: 'tools' },
-            h('button', {
-              textContent: '✎',
-              title: 'Open in the editor',
-              'aria-label': 'Open in the editor',
-              onclick: (e: Event) => {
-                e.stopPropagation();
-                app.set(structuredClone(gen[i]));
-                app.showTab('editor');
-              },
-            }),
-          ),
-        );
-      }
+  // one card element per candidate, filled when its result arrives and moved (not rebuilt) when the order changes
+  let cards: HTMLElement[] = [];
+  function fillCard(i: number) {
+    const r = results[i],
+      c = cards[i];
+    c.innerHTML = r ? r.svg : '<p class="note">…</p>';
+    if (!r) return;
+    c.append(
+      h('div', { class: 'cap' }, `${score(r.metrics, app.taste).toFixed(2)} · ${r.ms.toFixed(0)} ms`),
+      h(
+        'div',
+        { class: 'tools' },
+        h('button', {
+          textContent: '✎',
+          title: 'Open in the editor',
+          'aria-label': 'Open in the editor',
+          onclick: (e: Event) => {
+            e.stopPropagation();
+            app.set(structuredClone(gen[i]));
+            app.showTab('editor');
+          },
+        }),
+      ),
+    );
+  }
+  function makeCards() {
+    cards = gen.map((_, i) => {
+      const c = h('div', { class: 'card', tabIndex: 0, 'aria-pressed': false });
       const toggle = () => {
         if (picks.has(i)) picks.delete(i);
         else {
@@ -186,13 +185,28 @@ export function wireGallery(app: App) {
       };
       c.onclick = toggle;
       c.onkeydown = e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle());
-      box.append(c);
-    }
+      return c;
+    });
+    cards.forEach((_, i) => fillCard(i));
+  }
+  function drawCands() {
+    const box = $('cands');
+    const order = gen
+      .map((_, i) => i)
+      .sort((a, b) => score(results[b]?.metrics ?? null, app.taste) - score(results[a]?.metrics ?? null, app.taste));
+    order.forEach((i, k) => {
+      const c = cards[i];
+      c.classList.toggle('picked', picks.has(i));
+      c.setAttribute('aria-pressed', String(picks.has(i)));
+      if (box.children[k] !== c) box.insertBefore(c, box.children[k] ?? null);
+    });
   }
   async function run(comps: Composition[]) {
     gen = comps;
     results = comps.map(() => null);
     picks = new Set();
+    $('cands').innerHTML = '';
+    makeCards();
     drawCands();
     drawLocks();
     const t0 = performance.now();
@@ -202,6 +216,7 @@ export function wireGallery(app: App) {
       n++;
       results[i] = o.ok ? o.result : null;
       status(`${n} / ${N}`);
+      fillCard(i);
       drawCands();
     });
     if (n === comps.length) status(`${N} candidates in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
@@ -235,6 +250,7 @@ export function wireGallery(app: App) {
     app.taste = newTaste();
     app.saveTaste();
     tasteNote();
+    cards.forEach((_, i) => fillCard(i)); // scores changed
     drawCands();
   };
   // the breeding text follows the current composition's main text

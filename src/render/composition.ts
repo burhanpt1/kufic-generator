@@ -9,7 +9,8 @@ import { frameAt } from '../geometry/runs';
 import { offsetPolyline } from '../geometry/offset';
 import type { Style } from '../model/schema';
 import { numberSVG } from '../ornament/numerals';
-import { patternSVG } from '../ornament/patterns/pic';
+import { picPath } from '../ornament/patterns/pic';
+import { tiles } from '../ornament/patterns/tilings';
 import { starSVG, vineDefs } from '../ornament/stars';
 import type { CellStrip } from '../script/types';
 import { gridSource, letterShapes } from './letters';
@@ -91,6 +92,33 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
   let defs = '',
     nId = 0;
   const id = (k: string) => `${pfx}${k}${nId++}`;
+  // star patterns: one path per pattern (same tiling, angle, scale and centre), drawn once in defs over the largest
+  // radius any item needs and reused under each item's clip, instead of once per band
+  type PatItem = Extract<PlacedItem, { type: 'ground' | 'pattern' | 'spandrels' }>;
+  const patKey = (it: PatItem) => JSON.stringify([it.pattern ? patOpts(it.pattern) : null, it.centre]);
+  const patR = new Map<string, number>();
+  for (const it of placed.items)
+    if ((it.type === 'ground' || it.type === 'spandrels' || it.type === 'pattern') && it.pattern)
+      patR.set(patKey(it), Math.max(patR.get(patKey(it)) ?? 0, it.radius));
+  const patPaths = new Map<string, { pid: string; a: number }>();
+  const pattern = (it: PatItem, o: RenderOptions, clipId: string, strength: number) => {
+    const k = patKey(it),
+      R = patR.get(k)! * U,
+      po = { ...o, ...patOpts(it.pattern) };
+    let e = patPaths.get(k);
+    if (!e) {
+      // keep huge compositions bounded: past PATTERN_TILES tiles, the tiles grow instead of multiplying
+      const tilesAt = (Math.PI * R * R) / (po.geoScale * U) ** 2,
+        a = po.geoScale * U * Math.sqrt(Math.max(1, tilesAt / PATTERN_TILES)),
+        [cx, cy] = P(it.centre);
+      e = { pid: id('pat'), a };
+      defs += `<path id="${e.pid}" d="${picPath(tiles(po.tiling, a, cx, cy, R), (po.geoAngle * Math.PI) / 180)}"/>`;
+      patPaths.set(k, e);
+    }
+    const c = mix(po.paper, acc(po), strength),
+      sw = e.a * 0.16;
+    return `<g clip-path="url(#${clipId})" fill="none" stroke-linejoin="miter" stroke-linecap="butt"><use href="#${e.pid}" stroke="${c}" stroke-width="${f2(sw)}"/><use href="#${e.pid}" stroke="${mix(po.paper, c, 0.25)}" stroke-width="${f2(sw * 0.38)}"/></g>`;
+  };
   const vineId = `${pfx}vine`;
   let vineUsed: Style | null = null;
   const vine = (s: Style) => {
@@ -139,7 +167,7 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
         if (it.kind === 'pattern') {
           const cid = id('g');
           defs += `<clipPath id="${cid}"><path clip-rule="evenodd" d="${dArea(it.area)}"/></clipPath>`;
-          out = patternSVG({ ...o, ...patOpts(it.pattern) }, ...P(it.centre), it.radius * U, cid, 0.16);
+          out = pattern(it, o, cid, 0.16);
         } else
           out = `<path fill-rule="evenodd" fill="${it.kind === 'vine' ? vine(s) : it.index % 2 ? mix(o.paper, o.ink, 0.07) : mix(o.paper, o.ink2, 0.15)}" d="${dArea(it.area)}"/>`;
         break;
@@ -153,7 +181,7 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
       case 'pattern': {
         const cid = id('p');
         defs += `<clipPath id="${cid}"><path clip-rule="evenodd" d="${dArea(it.area)}"/></clipPath>`;
-        out = patternSVG({ ...o, ...patOpts(it.pattern) }, ...P(it.centre), it.radius * U, cid, it.strength);
+        out = pattern(it, o, cid, it.strength);
         break;
       }
       case 'spandrels': {
@@ -163,7 +191,7 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
         else if (it.kind === 'pattern') {
           const cid = id('s');
           defs += `<clipPath id="${cid}"><path clip-rule="evenodd" d="${d}"/></clipPath>`;
-          out = patternSVG({ ...o, ...patOpts(it.pattern) }, ...P(it.centre), it.radius * U, cid, 0.55);
+          out = pattern(it, o, cid, 0.55);
         } else
           out = `<path fill-rule="evenodd" fill="${it.kind === 'solid' ? accent : mix(o.paper, o.ink2, 0.15)}" d="${d}"/>`;
         layers.features += `<path fill-rule="evenodd" fill="none" stroke="${accent}" stroke-width="${f2(0.15 * U)}" d="${d}"/>`;
@@ -227,6 +255,8 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
   return wrap(W, H, { label: opts.label ?? 'Kufic composition', paper: root.palette.paper }, body);
 }
 
+/** Tiles per pattern before they grow instead (a 2400-unit canvas of 5-cell tiles would be ~230k). */
+const PATTERN_TILES = 6000;
 const patOpts = (p?: { tiling: string; angle: number; scale: number }) =>
   p ? { tiling: TILING[p.tiling] ?? '488', geoAngle: p.angle, geoScale: p.scale } : {};
 

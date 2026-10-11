@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generation speed</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6;--accent:#17807E}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B;--accent:#45B7B1}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:78ch}
+button,select{font:inherit;padding:5px 10px}table{border-collapse:collapse;margin-top:12px;background:var(--surface)}
+td,th{border:1px solid var(--line);padding:4px 10px;text-align:right}th{text-align:left}
+.bar{display:inline-block;height:10px;background:var(--accent);vertical-align:middle}
+</style>
+</head>
+<body>
+<h1>Generation speed</h1>
+<p>Phase 6.7. Sixteen random candidates per generation, resolved, rendered and judged in a pool of workers. The pool starts the expensive candidates (seal monograms, mazes) first and its workers warm up when created; the engine samples outline widths once, buckets edges for line crossings, and finds each shape's deepest inset once. Target: under one second per generation.</p>
+<label>Workers <select id="w"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>6</option></select></label>
+<button id="go">Run 5 generations</button>
+<table id="t"><tr><th>Seed</th><th>Time</th><th></th><th>SVG output</th></tr></table>
+<script type="module">
+import { EvalPool, freshGeneration, Rng } from '../src/evolve/index.ts';
+const texts = { main: { text: 'بسم الله الرحمن الرحيم', repeat: 'fill', wordGap: 2 } };
+let pool = null, size = 0;
+document.getElementById('go').onclick = async () => {
+  const w = +document.getElementById('w').value;
+  if (!pool || size !== w) { pool?.terminate(); pool = new EvalPool(w); size = w; }
+  for (const seed of [7, 11, 15, 19, 23]) {
+    const gen = freshGeneration(16, texts, { rng: new Rng(seed) });
+    const t0 = performance.now(); let bytes = 0;
+    await pool.run(gen, (i, o) => { if (o.ok) bytes += o.result.svg.length; });
+    const ms = performance.now() - t0, row = document.getElementById('t').insertRow();
+    row.innerHTML = `<td>${seed} · ${w} worker${w > 1 ? 's' : ''}</td><td>${ms.toFixed(0)} ms</td><td><span class="bar" style="width:${Math.min(400, ms / 5)}px"></span></td><td>${(bytes / 1e6).toFixed(1)} MB</td>`;
+  }
+};
+</script>
+</body>
+</html>

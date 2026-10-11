@@ -14,17 +14,35 @@ import type { Ctx, RegionResult } from './resolve';
 import { layoutOpts } from './resolve';
 
 // ---------- lines ----------
-function crossings(pts: Pt[], y: number): [number, number][] {
-  const xs: number[] = [];
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const [x1, y1] = pts[j],
-      [x2, y2] = pts[i];
-    if (y1 > y !== y2 > y) xs.push(x1 + ((y - y1) * (x2 - x1)) / (y2 - y1));
+/** Horizontal crossings of a closed outline: y -> the inside intervals [x0, x1] along that line. Edges are bucketed
+ *  by height so each query only looks at nearby edges (the results are the same as scanning every edge). */
+export function crossingsOf(pts: Pt[]): (y: number) => [number, number][] {
+  const n = pts.length,
+    ys = pts.map(p => p[1]),
+    Y0 = Math.min(...ys),
+    Y1 = Math.max(...ys),
+    K = Math.max(1, Math.min(512, n >> 1)),
+    h = (Y1 - Y0) / K || 1;
+  const slab = (y: number) => Math.min(K - 1, Math.max(0, Math.floor((y - Y0) / h)));
+  const buckets: number[][] = Array.from({ length: K }, () => []);
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const a = slab(Math.min(pts[i][1], pts[j][1])),
+      b = slab(Math.max(pts[i][1], pts[j][1]));
+    for (let k = a; k <= b; k++) buckets[k].push(j);
   }
-  xs.sort((a, b) => a - b);
-  const iv: [number, number][] = [];
-  for (let k = 0; k + 1 < xs.length; k += 2) iv.push([xs[k], xs[k + 1]]);
-  return iv;
+  return y => {
+    const xs: number[] = [];
+    if (y >= Y0 && y <= Y1)
+      for (const j of buckets[slab(y)]) {
+        const [x1, y1] = pts[j],
+          [x2, y2] = pts[(j + 1) % n];
+        if (y1 > y !== y2 > y) xs.push(x1 + ((y - y1) * (x2 - x1)) / (y2 - y1));
+      }
+    xs.sort((a, b) => a - b);
+    const iv: [number, number][] = [];
+    for (let k = 0; k + 1 < xs.length; k += 2) iv.push([xs[k], xs[k + 1]]);
+    return iv;
+  };
 }
 const ivIntersect = (A: [number, number][], B: [number, number][]) => {
   const out: [number, number][] = [];
@@ -56,6 +74,24 @@ function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: numbe
   return ivs.filter(v => keep.includes(v.yb));
 }
 
+/** For a short text in a shape that cuts rows into many pieces: the widest pieces nearest the middle (ignoring
+ *  slivers under 40% of their row's widest), at most n of them, until they hold about 1.25× the text. */
+function middlePieces<T extends { yb: number; W: number }>(ivs: T[], total: number, n: number, centreY: number): T[] {
+  const widest = new Map<number, number>();
+  for (const v of ivs) widest.set(v.yb, Math.max(widest.get(v.yb) ?? 0, v.W));
+  const order = ivs
+    .filter(v => v.W >= 0.4 * widest.get(v.yb)!)
+    .sort((a, b) => Math.abs(a.yb - centreY) - Math.abs(b.yb - centreY) || b.W - a.W);
+  const keep = new Set<T>();
+  let cap = 0;
+  for (const v of order) {
+    if (keep.size >= n || cap >= total * 1.25) break;
+    keep.add(v);
+    cap += v.W;
+  }
+  return ivs.filter(v => keep.has(v));
+}
+
 function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult, style: Style, ctx: Ctx, sid: number) {
   const slot = ctx.comp.texts[f.text],
     pts = res.inner!.pts,
@@ -70,12 +106,24 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
   const b = bounds(pts),
     y0 = b.y0,
     y1 = b.y1,
-    vary = f.vary ?? 0;
+    vary = f.vary ?? 0,
+    crossings = crossingsOf(pts);
   // variable line height: a line's scale follows the region's width at its height, from 1 where the region is
   // widest down to (1 - vary / 2) at the tips, so lines there stay readable instead of being dropped
-  const widthAt = (y: number) => crossings(pts, y).reduce((a, [p, q]) => Math.max(a, q - p), 0);
+  // the width profile, sampled once (row placement asks for it many times)
+  const N_PROFILE = 1024,
+    profile = new Float64Array(N_PROFILE + 1);
   let wMax = 0;
-  if (vary > 0) for (let i = 1; i < 64; i++) wMax = Math.max(wMax, widthAt(y0 + ((y1 - y0) * i) / 64));
+  if (vary > 0)
+    for (let i = 0; i <= N_PROFILE; i++) {
+      profile[i] = crossings(y0 + ((y1 - y0) * i) / N_PROFILE).reduce((a, [p, q]) => Math.max(a, q - p), 0);
+      wMax = Math.max(wMax, profile[i]);
+    }
+  const widthAt = (y: number) => {
+    const t = Math.min(N_PROFILE, Math.max(0, ((y - y0) / (y1 - y0 || 1)) * N_PROFILE)),
+      i = Math.min(N_PROFILE - 1, Math.floor(t));
+    return profile[i] + (profile[i + 1] - profile[i]) * (t - i);
+  };
   const kAt = (y: number) =>
     vary > 0 && wMax > 0 ? 1 - vary * (1 - Math.min(1, Math.max(0.5, Math.sqrt(widthAt(y) / wMax)))) : 1;
   /** Line bands from `start` downward at base scale s: [top, scale] pairs. */
@@ -97,8 +145,8 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     const ivs: { a: number; b: number; yb: number; W: number; s: number }[] = [];
     for (const [yt, sl] of rs) {
       const yb = yt + Hb * sl;
-      let iv = crossings(pts, yt + 0.01);
-      [0.25, 0.5, 0.75, 1].forEach(fr => (iv = ivIntersect(iv, crossings(pts, yt + (yb - yt) * fr - 0.01))));
+      let iv = crossings(yt + 0.01);
+      [0.25, 0.5, 0.75, 1].forEach(fr => (iv = ivIntersect(iv, crossings(yt + (yb - yt) * fr - 0.01))));
       iv.map(([a, bb]) => [a + margin, bb - margin] as [number, number])
         .filter(([a, bb]) => (bb - a) / sl >= minCells)
         .sort((p, q) => q[0] - p[0]) // right to left
@@ -110,19 +158,30 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     if (vary > 0) {
       // rows of varying height land differently against the outline's steps (a dome on a wide base); try several
       // starting offsets and keep the one that holds the most, the most centred on a tie
-      let best: { ivs: ReturnType<typeof ivsOf>; cap: number; off: number } | null = null;
+      // (offsets are ranked by the sampled width profile; exact intervals are found for the winner only)
+      let best: { rs: [number, number][]; cap: number; off: number } | null = null;
       const step = (Hb * s) / 8;
       for (let k = 0; k < 8; k++) {
         const rs = rows(s, y0 + margin + k * step);
         if (!rs.length) continue;
-        const ivs = ivsOf(rs),
-          cap = ivs.reduce((a, v) => a + v.W * v.s, 0),
-          [ly, ls] = rs[rs.length - 1],
+        let cap = 0;
+        for (const [yt, sl] of rs) {
+          const hh = Hb * sl,
+            w = Math.min(
+              widthAt(yt),
+              widthAt(yt + hh * 0.25),
+              widthAt(yt + hh * 0.5),
+              widthAt(yt + hh * 0.75),
+              widthAt(yt + hh),
+            );
+          cap += Math.max(0, w - 2 * margin);
+        }
+        const [ly, ls] = rs[rs.length - 1],
           off = Math.abs(y1 - margin - (ly + Hb * ls) - k * step);
         if (!best || cap > best.cap + 1e-9 || (Math.abs(cap - best.cap) <= 1e-9 && off < best.off))
-          best = { ivs, cap, off };
+          best = { rs, cap, off };
       }
-      return best ? best.ivs : null;
+      return best ? ivsOf(best.rs) : null;
     }
     const pitch = (Hb + lineGap) * s,
       usableH = y1 - y0 - 2 * margin,
@@ -132,26 +191,31 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     return ivsOf(Array.from({ length: nLines }, (_, L) => [top + L * pitch, s] as [number, number]));
   };
   let best: { sc: number; s: number; ivs: NonNullable<ReturnType<typeof lay>>; groups: Segs[] } | null = null;
-  for (const mode of ['words', 'breaks'] as const) {
-    const segs = script.segments(prep, mode, wg) as Segs;
-    const total = segs.reduce((a, x) => a + x.minW, 0) + wg * (segs.length - 1);
-    for (let i = 0; i < 90; i++) {
-      const s = sMax * Math.pow(0.97, i);
-      let ivs = lay(s);
-      if (!ivs || !ivs.length) continue;
-      if (i === 0) ivs = middleLines(ivs, total, vary > 0 ? (y0 + y1) / 2 : undefined);
-      const caps = ivs.map(v => v.W),
-        sum = caps.reduce((a, c) => a + c, 0);
-      if (sum < total) continue; // too big: the text doesn't fit yet
-      if (sum > total * 1.9) break; // too small: lines would be mostly stretching
-      if (caps.length > segs.length) continue;
-      const p = partition(repeatSegs(segs, 1), caps);
-      if (!p) continue;
-      const sc = p.score + 0.25 * (1 - s / sMax) + (mode === 'breaks' ? 0.12 : 0);
-      if (!best || sc < best.sc) best = { sc, s, ivs, groups: p.groups as Segs[] };
+  // a second pass, only when nothing fits, lets a short text skip the shortest pieces of lines (a star or a mosque
+  // cuts each row into more pieces than the text has words)
+  for (const trim of [false, true])
+    for (const mode of ['words', 'breaks'] as const) {
+      if (best) break;
+      const segs = script.segments(prep, mode, wg) as Segs;
+      const total = segs.reduce((a, x) => a + x.minW, 0) + wg * (segs.length - 1);
+      for (let i = 0; i < 90; i++) {
+        const s = sMax * Math.pow(0.97, i);
+        let ivs = lay(s);
+        if (!ivs || !ivs.length) continue;
+        if (trim) ivs = middlePieces(ivs, total, segs.length, (y0 + y1) / 2);
+        else if (i === 0) ivs = middleLines(ivs, total, vary > 0 ? (y0 + y1) / 2 : undefined);
+        const caps = ivs.map(v => v.W),
+          sum = caps.reduce((a, c) => a + c, 0);
+        if (sum < total) continue; // too big: the text doesn't fit yet
+        if (sum > total * 1.9 && !trim) break; // too small: lines would be mostly stretching
+        if (caps.length > segs.length) continue;
+        const p = partition(repeatSegs(segs, 1), caps);
+        if (!p) continue;
+        const sc = p.score + 0.25 * (1 - s / sMax) + (mode === 'breaks' ? 0.12 : 0);
+        if (!best || sc < best.sc) best = { sc, s, ivs, groups: p.groups as Segs[] };
+      }
+      if (best) break;
     }
-    if (best) break;
-  }
   if (!best) {
     ctx.fill = { type: 'lines', ok: false, note: "the text doesn't fit this region" };
     return;

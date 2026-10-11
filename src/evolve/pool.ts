@@ -1,7 +1,7 @@
 // A pool of evaluation workers that streams results as they finish (COMPOSITION_ENGINE.md §7). Without workers
 // (tests, old browsers) it evaluates in-thread, yielding between candidates so the page stays responsive.
 import type { Composition } from '../model/schema';
-import { evaluate } from './breed';
+import { costOf, evaluate } from './breed';
 import type { Evaluated } from './breed';
 
 export type Outcome = { ok: true; result: Evaluated } | { ok: false; error: string };
@@ -56,6 +56,11 @@ export class EvalPool {
         };
         this.queue.push(job);
       });
+      // longest first: a generation ends when its slowest candidate does, so start those early
+      if (this.threaded) {
+        const cost = new Map(this.queue.map(j => [j, costOf(j.comp)]));
+        this.queue.sort((a, b) => cost.get(b)! - cost.get(a)! || a.id - b.id);
+      }
       if (this.threaded) this.pump();
       else this.inThread(gen, () => res());
     });

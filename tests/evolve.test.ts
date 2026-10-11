@@ -166,3 +166,35 @@ describe('evaluation pool', () => {
     expect(first.length).toBeLessThan(PRESETS.length);
   });
 });
+
+describe('scheduling and speed helpers', () => {
+  it('estimates seal monograms and mazes as the slow ones', async () => {
+    const { costOf } = await import('../src/evolve/breed');
+    const { preset } = await import('../src/model/presets');
+    expect(costOf(preset('basmala-seal'))).toBeGreaterThan(costOf(preset('octagon-panel')));
+    expect(costOf(preset('kufic-maze-tile'))).toBeGreaterThan(costOf(preset('shahada-block')));
+  });
+  it('bucketed crossings equal a scan of every edge', async () => {
+    const { crossingsOf } = await import('../src/compose/fills');
+    const { unitRing } = await import('../src/geometry/outlines');
+    const naive = (P: [number, number][], y: number) => {
+      const xs: number[] = [];
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++)
+        if (P[j][1] > y !== P[i][1] > y) xs.push(P[j][0] + ((y - P[j][1]) * (P[i][0] - P[j][0])) / (P[i][1] - P[j][1]));
+      xs.sort((a, b) => a - b);
+      const iv: [number, number][] = [];
+      for (let k = 0; k + 1 < xs.length; k += 2) iv.push([xs[k], xs[k + 1]]);
+      return iv;
+    };
+    for (const o of [
+      { kind: 'preset', name: 'heart' },
+      { kind: 'star', points: 12, depth: 0.6 },
+      { kind: 'polygon', sides: 4 },
+    ] as const) {
+      const P = unitRing(o).pts.map(([x, y]) => [x * 50, y * 50] as [number, number]),
+        f = crossingsOf(P);
+      for (let y = -60; y <= 60; y += 0.37) expect(f(y)).toEqual(naive(P, y));
+      expect(f(P[0][1])).toEqual(naive(P, P[0][1])); // exactly on a vertex
+    }
+  });
+});

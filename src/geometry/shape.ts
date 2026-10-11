@@ -2,6 +2,7 @@
 import { circlePoints, unitRing } from './outlines';
 import type { Outline } from './outlines';
 import { insetRing, makeRing } from './offset';
+import { deepestPoint } from './deepest';
 import { simplifyClosed } from './poly';
 import { runsOf } from './runs';
 import type { Ring, Run } from './types';
@@ -15,6 +16,9 @@ export interface ShapeGeometry {
   ring(size: number, inset?: number): Ring | null;
   /** Runs of ring(size, inset). Cached with it. */
   runs(size: number, inset?: number): Run[];
+  /** Deepest inset, as a fraction of size, that leaves more than `share` of the outline's area. Offsets scale with
+   *  size, so this is found once per shape (on the unit outline) and cached. */
+  depthFor(share: number): number;
 }
 
 const scaleRing = (r: Ring, s: number): Ring => makeRing(r.pts.map(([x, y]) => [x * s, y * s]));
@@ -67,10 +71,32 @@ function makeShape(outline: Outline): ShapeGeometry {
     }
     return e;
   };
+  const depths = new Map<number, number>();
+  const depthFor = (share: number) => {
+    let d = depths.get(share);
+    if (d === undefined) {
+      // bisection between 0 and the inscribed radius (no inset can go deeper), on a lightly simplified outline
+      const A = unit.area,
+        P = kind === 'curve' ? simplifyClosed(unit.pts, 2e-3) : unit.pts,
+        ring = kind === 'curve' ? makeRing(P) : unit,
+        ok = (r: number) => (kind === 'circle' ? Math.PI * (1 - r) ** 2 : (insetRing(ring, r)?.area ?? 0)) > A * share;
+      let a = 0,
+        b = kind === 'circle' ? 1 : deepestPoint(P).r * 1.001;
+      for (let i = 0; i < 14 && !ok(b); i++) {
+        const m = (a + b) / 2;
+        if (ok(m)) a = m;
+        else b = m;
+      }
+      d = ok(b) ? b : a;
+      depths.set(share, d);
+    }
+    return d;
+  };
   return {
     outline,
     kind,
     unit,
+    depthFor,
     ring: (size, inset = 0) => get(size, inset).ring,
     runs: (size, inset = 0) => {
       const e = get(size, inset);
