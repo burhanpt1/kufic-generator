@@ -8,6 +8,8 @@ import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
 import { renderPlaced } from '../../render/composition';
 import { saveSVG, savePNG } from '../../ui/export';
+import type { Placed } from '../../compose/placed';
+import { laserSVG, plotterSVG, reliefSVG } from '../../fabricate';
 import { compositionFromHash, hashFor } from '../state';
 import { loadTaste, saveTaste } from '../storage';
 import { wireChrono } from './chrono';
@@ -50,7 +52,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 await loadSealWasm();
 
 let comp: Composition = structuredClone(PRESETS[0].comp),
-  svg = '';
+  svg = '',
+  placed: Placed | null = null;
 const undo: Composition[] = [],
   redo: Composition[] = [],
   listeners: (() => void)[] = [];
@@ -94,7 +97,7 @@ function changed() {
 function renderPreview() {
   const t0 = performance.now();
   try {
-    const placed = resolve(comp);
+    placed = resolve(comp);
     svg = renderPlaced(placed, { idPrefix: 'pv' });
     $('preview').innerHTML = svg;
     const m = placed.meta,
@@ -160,6 +163,15 @@ $('share').onclick = async () => {
 };
 $('saveSvg').onclick = () => svg && saveSVG(document, 'kufic', svg);
 $('savePng').onclick = () => svg && savePNG(document, 'kufic', svg);
+$('fab').onchange = () => {
+  const sel = $<HTMLSelectElement>('fab'),
+    v = sel.value;
+  sel.value = '';
+  if (!placed || !v) return;
+  if (v === 'plot') saveSVG(document, 'kufic-plotter', plotterSVG(placed));
+  else if (v === 'laser') saveSVG(document, 'kufic-laser', laserSVG(placed));
+  else savePNG(document, 'kufic-relief', reliefSVG(placed));
+};
 
 // ---- start ----
 wireGallery(app);

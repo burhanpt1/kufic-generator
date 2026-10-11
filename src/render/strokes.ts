@@ -74,19 +74,9 @@ export function nibSweep(P: P2[], L: number, t: number, angle: number, colour: s
   return `<path d="${d}" fill="${colour}" stroke="${colour}" stroke-width="${f2(t)}" stroke-linejoin="round"/>`;
 }
 
-export function strokeLetters(
-  src: Source,
-  opt: RenderOptions & StrokeOptions,
-  mapPt: (x: number, y: number) => number[],
-  isInk: (x: number, y: number) => boolean,
-  col: string,
-  push: (c: string, s: string) => void,
-) {
-  const W = src.w,
-    H = src.h,
-    w = opt.weight,
-    ts = opt.terminal,
-    paper = opt.paper;
+/** A letter grid as a stroke graph: chains of cells between junctions and ends (straight runs continue through
+ *  crossings), and the crossing cells. */
+export function strokeGraph(W: number, H: number, isInk: (x: number, y: number) => boolean) {
   const on = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && isInk(x, y);
   const nbrs = (x: number, y: number): P2[] => {
     const out: P2[] = [];
@@ -174,62 +164,83 @@ export function strokeLetters(
   cells.forEach(([x, y]) => {
     if (crossing(x, y)) crosses.push([x, y]);
   });
-  // corners only, then rounded and densely sampled in cell space, then mapped
-  const corners = (pts: P2[], closed: boolean) => {
-    if (pts.length < 3) return pts.slice();
-    const out = [pts[0]];
-    for (let i = 1; i < pts.length - 1; i++) {
-      const [ax, ay] = pts[i - 1],
-        [bx, by] = pts[i],
-        [cx, cy] = pts[i + 1];
-      if ((bx - ax) * (cy - by) - (by - ay) * (cx - bx) !== 0 || (bx - ax) * (cx - bx) + (by - ay) * (cy - by) < 0)
-        out.push(pts[i]);
-    }
-    out.push(pts[pts.length - 1]);
-    if (closed && out.length > 2) out.pop();
-    return out;
+  return { chains, crosses };
+}
+
+/** The corner cells of a chain (straight stretches collapsed). */
+export function cornerPoints(pts: P2[], closed: boolean): P2[] {
+  if (pts.length < 3) return pts.slice();
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i - 1],
+      [bx, by] = pts[i],
+      [cx, cy] = pts[i + 1];
+    if ((bx - ax) * (cy - by) - (by - ay) * (cx - bx) !== 0 || (bx - ax) * (cx - bx) + (by - ay) * (cy - by) < 0)
+      out.push(pts[i]);
+  }
+  out.push(pts[pts.length - 1]);
+  if (closed && out.length > 2) out.pop();
+  return out;
+}
+/** A chain through cell centres with its corners rounded (radius R cells, 0 = sharp), densely sampled. */
+export function smoothChain(cs: P2[], closed: boolean, R: number): P2[] {
+  const n = cs.length;
+  if (n < 2) return cs.map(([x, y]) => [x + 0.5, y + 0.5]);
+  const P = cs.map(([x, y]) => [x + 0.5, y + 0.5] as P2),
+    out: P2[] = [];
+  const lerp = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const seg = (a: P2, b: P2) => {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]),
+      k = Math.max(1, Math.ceil(l * 2));
+    for (let i = 1; i <= k; i++) out.push(lerp(a, b, i / k));
   };
+  const idx = (i: number) => P[(i + n) % n];
+  const startI = closed ? 0 : 1,
+    endI = closed ? n : n - 1;
+  let prevEnd: P2 | null = closed ? null : P[0];
+  if (!closed) out.push(P[0]);
+  for (let i = startI; i < endI; i++) {
+    const a = idx(i - 1),
+      b = idx(i),
+      c = idx(i + 1),
+      la = Math.hypot(b[0] - a[0], b[1] - a[1]),
+      lc = Math.hypot(c[0] - b[0], c[1] - b[1]);
+    const d = Math.min(R, la / 2, lc / 2),
+      p1 = lerp(b, a, d / la),
+      p2 = lerp(b, c, d / lc);
+    if (prevEnd) seg(prevEnd, p1);
+    else out.push(p1);
+    for (let k = 1; k <= 6; k++) {
+      const t = k / 6;
+      out.push([
+        (1 - t) * (1 - t) * p1[0] + 2 * (1 - t) * t * b[0] + t * t * p2[0],
+        (1 - t) * (1 - t) * p1[1] + 2 * (1 - t) * t * b[1] + t * t * p2[1],
+      ]);
+    }
+    prevEnd = p2;
+  }
+  if (closed) seg(prevEnd!, out[0]);
+  else seg(prevEnd!, P[n - 1]);
+  return out;
+}
+
+export function strokeLetters(
+  src: Source,
+  opt: RenderOptions & StrokeOptions,
+  mapPt: (x: number, y: number) => number[],
+  isInk: (x: number, y: number) => boolean,
+  col: string,
+  push: (c: string, s: string) => void,
+) {
+  const W = src.w,
+    H = src.h,
+    w = opt.weight,
+    ts = opt.terminal,
+    paper = opt.paper;
+  const { chains, crosses } = strokeGraph(W, H, isInk);
   const R = Math.max(0, opt.curve) * 1.6;
-  const smooth = (cs: P2[], closed: boolean): P2[] => {
-    const n = cs.length;
-    if (n < 2) return cs.map(([x, y]) => [x + 0.5, y + 0.5]);
-    const P = cs.map(([x, y]) => [x + 0.5, y + 0.5] as P2),
-      out: P2[] = [];
-    const lerp = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-    const seg = (a: P2, b: P2) => {
-      const l = Math.hypot(b[0] - a[0], b[1] - a[1]),
-        k = Math.max(1, Math.ceil(l * 2));
-      for (let i = 1; i <= k; i++) out.push(lerp(a, b, i / k));
-    };
-    const idx = (i: number) => P[(i + n) % n];
-    const startI = closed ? 0 : 1,
-      endI = closed ? n : n - 1;
-    let prevEnd: P2 | null = closed ? null : P[0];
-    if (!closed) out.push(P[0]);
-    for (let i = startI; i < endI; i++) {
-      const a = idx(i - 1),
-        b = idx(i),
-        c = idx(i + 1),
-        la = Math.hypot(b[0] - a[0], b[1] - a[1]),
-        lc = Math.hypot(c[0] - b[0], c[1] - b[1]);
-      const d = Math.min(R, la / 2, lc / 2),
-        p1 = lerp(b, a, d / la),
-        p2 = lerp(b, c, d / lc);
-      if (prevEnd) seg(prevEnd, p1);
-      else out.push(p1);
-      for (let k = 1; k <= 6; k++) {
-        const t = k / 6;
-        out.push([
-          (1 - t) * (1 - t) * p1[0] + 2 * (1 - t) * t * b[0] + t * t * p2[0],
-          (1 - t) * (1 - t) * p1[1] + 2 * (1 - t) * t * b[1] + t * t * p2[1],
-        ]);
-      }
-      prevEnd = p2;
-    }
-    if (closed) seg(prevEnd!, out[0]);
-    else seg(prevEnd!, P[n - 1]);
-    return out;
-  };
+  const corners = cornerPoints,
+    smooth = (c: P2[], closed: boolean) => smoothChain(c, closed, R);
   const scaleAt = (x: number, y: number) => {
     const a = mapPt(x, y),
       b = mapPt(x + 1, y);
