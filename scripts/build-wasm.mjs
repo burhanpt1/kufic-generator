@@ -17,8 +17,16 @@ for (const k of KERNELS) {
     out = join(tmp, `${k.name}.wasm`);
   const cc = process.env.CC || 'clang';
   execFileSync(cc, [
-    '--target=wasm32', '-O2', '-mbulk-memory', '-nostdlib', '-Wl,--no-entry', '-Wl,--export-memory',
-    ...k.exports.map(e => `-Wl,--export=${e}`), '-o', out, src,
+    '--target=wasm32',
+    '-O2',
+    '-mbulk-memory',
+    '-nostdlib',
+    '-Wl,--no-entry',
+    '-Wl,--export-memory',
+    ...k.exports.map(e => `-Wl,--export=${e}`),
+    '-o',
+    out,
+    src,
   ]);
   const bytes = readFileSync(out),
     hash = createHash('sha256').update(readFileSync(src)).digest('hex');
