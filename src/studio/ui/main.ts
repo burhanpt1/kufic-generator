@@ -4,7 +4,7 @@ import { EvalPool } from '../../evolve/pool';
 import type { Taste } from '../../evolve/taste';
 import { train } from '../../evolve/trainer';
 import type { Rating, TasteModel } from '../../evolve/trainer';
-import { loadSealWasm } from '../../kernels/seal';
+import { loadSealWasm, sealWasmLoaded } from '../../kernels/seal';
 import { resolve } from '../../compose';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
@@ -96,12 +96,20 @@ app.model = train(app.ratings);
 // ---- preview, URL ----
 let renderTimer = 0,
   urlTimer = 0;
+/** Keep the composition in the address bar (refused in some sandboxed pages, where the link button still works). */
+function setUrl(u: string) {
+  try {
+    history.replaceState(null, '', u);
+  } catch {
+    /* no history here */
+  }
+}
 function changed() {
   listeners.forEach(f => f());
   clearTimeout(renderTimer);
   renderTimer = window.setTimeout(renderPreview, 60);
   clearTimeout(urlTimer);
-  urlTimer = window.setTimeout(async () => history.replaceState(null, '', await hashFor(comp)), 300);
+  urlTimer = window.setTimeout(async () => setUrl(await hashFor(comp)), 300);
   $<HTMLButtonElement>('undo').disabled = !undo.length;
   $<HTMLButtonElement>('redo').disabled = !redo.length;
 }
@@ -117,6 +125,7 @@ function renderPreview() {
         `${rings.length} ring${rings.length === 1 ? '' : 's'}`,
         rings.length ? `letter scale ${rings.map(r => r.scale.toFixed(2)).join(', ')}` : '',
         m.fill ? `fill: ${m.fill.type}${m.fill.ok ? '' : ` (${m.fill.note ?? 'failed'})`}` : '',
+        JSON.stringify(comp).includes('"seal"') ? `seal search: ${sealWasmLoaded() ? 'WebAssembly' : 'JS'}` : '',
         `size ${m.size.toFixed(0)}`,
         `${(performance.now() - t0).toFixed(0)} ms`,
       ];
@@ -163,7 +172,7 @@ document.addEventListener('keydown', e => {
 });
 $('share').onclick = async () => {
   const url = location.origin + location.pathname + (await hashFor(comp));
-  history.replaceState(null, '', url);
+  setUrl(url);
   try {
     await navigator.clipboard.writeText(url);
     $('share').textContent = 'Copied';

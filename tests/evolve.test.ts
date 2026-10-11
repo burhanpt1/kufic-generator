@@ -165,6 +165,43 @@ describe('evaluation pool', () => {
     await a;
     expect(first.length).toBeLessThan(PRESETS.length);
   });
+  it('falls back to in-thread evaluation when its workers are refused or fail to start', async () => {
+    // a worker blocked by the page's security policy: it accepts messages but only ever reports an error
+    class DeadWorker {
+      onmessage: ((e: MessageEvent) => void) | null = null;
+      onerror: (() => void) | null = null;
+      postMessage() {}
+      terminate() {}
+      constructor() {
+        setTimeout(() => this.onerror?.(), 0);
+      }
+    }
+    const g = globalThis as { Worker?: unknown },
+      had = 'Worker' in g,
+      old = g.Worker;
+    g.Worker = DeadWorker;
+    try {
+      const comps = PRESETS.slice(0, 3).map(p => p.comp);
+      for (const factory of [
+        () => new DeadWorker() as unknown as Worker,
+        () => {
+          throw new Error('refused');
+        },
+      ]) {
+        const pool = new EvalPool(2, factory),
+          got: number[] = [];
+        await pool.run(comps, (i, o) => {
+          expect(o.ok).toBe(true);
+          got.push(i);
+        });
+        expect(got.sort()).toEqual([0, 1, 2]);
+        expect(pool.threaded).toBe(false);
+      }
+    } finally {
+      if (had) g.Worker = old;
+      else delete g.Worker;
+    }
+  });
 });
 
 describe('scheduling and speed helpers', () => {

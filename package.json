@@ -16,7 +16,8 @@
     "golden": "UPDATE_GOLDEN=1 vitest run tests/ui.test.ts",
     "golden:lab": "node scripts/golden-lab.mjs",
     "compare:lab": "node scripts/compare-lab.mjs",
-    "build:wasm": "node scripts/build-wasm.mjs"
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:single": "node scripts/build-single.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

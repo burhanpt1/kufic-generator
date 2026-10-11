@@ -23,7 +23,12 @@ export class EvalPool {
     if (n > 0 && typeof Worker !== 'undefined') {
       const make = factory ?? (() => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }));
       for (let i = 0; i < n; i++) {
-        const w = make();
+        let w: Worker;
+        try {
+          w = make();
+        } catch {
+          break; // workers refused (a sandboxed page): evaluate in-thread
+        }
         w.onmessage = (e: MessageEvent<{ id: number } & Outcome>) => this.finish(w, e.data);
         w.onerror = () => this.fail(w);
         this.workers.push(w);
@@ -92,8 +97,23 @@ export class EvalPool {
     this.pump();
   }
   private fail(w: Worker) {
-    const id = (w as Worker & { job?: number }).job;
-    if (id != null) this.finish(w, { id, ok: false, error: 'worker error' });
+    // the worker itself broke (failed to start under the page's security policy, or crashed): a job's own errors
+    // come back as messages. Drop it, retry its job elsewhere, and evaluate in-thread when no worker is left.
+    const id = (w as Worker & { job?: number }).job,
+      job = id != null ? this.pending.get(id) : undefined;
+    if (job) {
+      this.pending.delete(job.id);
+      this.queue.unshift(job);
+    }
+    w.terminate();
+    this.workers = this.workers.filter(x => x !== w);
+    this.idle = this.idle.filter(x => x !== w);
+    if (this.workers.length) this.pump();
+    else {
+      this.queue.unshift(...this.pending.values());
+      this.pending.clear();
+      this.inThread(this.generation, () => {});
+    }
   }
   private inThread(gen: number, stop: () => void) {
     const step = () => {
