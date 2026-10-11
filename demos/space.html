@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empty space</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pair svg,.pair canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+figcaption{font-size:12px;color:var(--muted);margin-top:4px}b{color:var(--ink)}
+</style>
+</head>
+<body>
+<h1>Empty space</h1>
+<p>Lab port §2. Each composition is rasterised at 160×160 straight from its placed geometry (workers can't decode SVG): letters, lines and ornaments as ink, pattern and vine areas as texture. On a 40×40 grid, flat paper-light cells count as blank, ignoring a 3-cell frame. The score falls when more than 30% is blank or when the largest enclosed blank patch passes 5% (the red cells). It joins the critic as “Little empty space” with weight 0.3.</p>
+<div class="g" id="g"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { PRESETS, preset } from '../src/model/presets.ts';
+import { rasterise, spaceScore } from '../src/evolve/space.ts';
+import { loadSealWasm } from '../src/kernels/seal.ts';
+await loadSealWasm();
+const m = preset('fatimid-medallion');
+const lonely = { ...m, root: { type: 'frame', child: { type: 'region', outline: { kind: 'circle' },
+  borders: [{ type: 'textBorder', text: 'basmala', separator: { kind: 'lines', width: 2 } }], fill: { type: 'solid' } } } };
+const cases = [['A single ring round an empty centre', lonely], ...PRESETS.map(p => [p.name, p.comp])];
+cases.forEach(([name, comp], i) => {
+  const placed = resolve(comp), lum = rasterise(placed), s = spaceScore(lum);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 160;
+  const cx = cv.getContext('2d'), img = cx.createImageData(160, 160);
+  for (let j = 0; j < lum.length; j++) img.data.set([lum[j], lum[j], lum[j], 255], j * 4);
+  cx.putImageData(img, 0, 0);
+  // mark flat paper cells (the measure's blanks)
+  cx.fillStyle = 'rgba(200,40,40,.35)';
+  for (let y = 3; y < 37; y++) for (let x = 3; x < 37; x++) {
+    let a = 0, b = 0;
+    for (let v = 0; v < 4; v++) for (let u = 0; u < 4; u++) { const l = lum[(y * 4 + v) * 160 + x * 4 + u]; a += l; b += l * l; }
+    if (Math.sqrt(Math.max(0, b / 16 - (a / 16) ** 2)) < 7 && a / 16 > 127) cx.fillRect(x * 4, y * 4, 4, 4);
+  }
+  const f = document.createElement('figure'), pair = document.createElement('div');
+  pair.className = 'pair';
+  pair.innerHTML = renderPlaced(placed, { idPrefix: 's' + i });
+  pair.append(cv);
+  f.append(pair);
+  const cap = document.createElement('figcaption');
+  cap.innerHTML = `${name}: <b>${s.toFixed(2)}</b>`;
+  f.append(cap);
+  document.getElementById('g').append(f);
+});
+</script>
+</body>
+</html>

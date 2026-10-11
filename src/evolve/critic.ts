@@ -3,6 +3,7 @@
 // and monoMetrics.
 import type { Placed, PlacedItem } from '../compose/placed';
 import type { CellStrip } from '../script/types';
+import { emptySpace } from './space';
 
 export type Metrics = Record<string, number>;
 export type Critic = (placed: Placed) => Metrics;
@@ -99,6 +100,16 @@ registerCritic('lines', p => {
   if ((f?.type !== 'lines' && f?.type !== 'flow') || !f.scale || !b) return none;
   return { legibility: clamp(f.scale / b.scale / 0.65) };
 });
+
+// little empty space: blank area and the largest enclosed blank patch, measured on a small raster (lab)
+registerCritic('space', p => ({ space: emptySpace(p) }));
+
+/** Plain-language names for the metrics, for panels that explain the taste. */
+export const METRIC_LABELS: Record<string, string> = {
+  rhythm: 'Even stem rhythm', kashida: 'Even stretching', density: 'Even ink density', rep: 'Little repetition',
+  fill: 'Bands fill the canvas', centre: 'Centre about a quarter', legibility: 'Legible', compact: 'Compact',
+  squareness: 'Square', symmetry: 'Symmetric', sharing: 'Shared strokes', space: 'Little empty space',
+}; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */
 export function metrics(p: Placed): Metrics | null {
