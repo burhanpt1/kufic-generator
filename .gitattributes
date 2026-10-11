@@ -4,3 +4,4 @@ tests/golden/manifest.json linguist-generated=true
 tests/golden-lab/*.svg linguist-generated=true
 tests/golden-lab/*.png binary
 prototypes/** linguist-vendored=true
+src/kernels/*.wasm.ts linguist-generated=true

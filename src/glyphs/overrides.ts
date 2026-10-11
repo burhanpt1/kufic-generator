@@ -6,6 +6,9 @@ import { clearBitmapCache } from './bitmap';
 /** Active letter variants. compose(), alphabet() and getRows() set these before drawing. */
 export const V: LetterVariants = { ra: 'desc', ayn: 'open', la: 'plain' };
 let OVR: Record<string, Rows | undefined> = {}; // user glyph edits: 'KEY.form' -> rows
+let epoch = 0;
+/** Changes whenever the glyph edits change, for caches keyed on letter shapes. */
+export const glyphEpoch = () => epoch;
 
 export function setVariants(opts: LetterOptions) {
   V.ra = opts.ra || 'desc';
@@ -41,5 +44,6 @@ export function getRows(key: string, form: Form, opts: LetterOptions = {}): Rows
 }
 export function setOverrides(o: Record<string, Rows | undefined>) {
   OVR = { ...o };
+  epoch++;
   clearBitmapCache();
 }
