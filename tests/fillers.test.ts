@@ -103,9 +103,10 @@ describe('monograms', () => {
     expect(r.metrics.total).toBeLessThanOrEqual(1);
   });
   it('is deterministic for a seed and changes with it', () => {
-    const a = buildMonogram('seal', { seed: 11 }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!,
-      b = buildMonogram('seal', { seed: 11, tries: 1 }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!,
-      c = buildMonogram('seal', { seed: 12 }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!;
+    // letter seals (a one-word word seal has nothing to arrange)
+    const a = buildMonogram('seal', { seed: 11, words: false }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!,
+      b = buildMonogram('seal', { seed: 11, tries: 1, words: false }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!,
+      c = buildMonogram('seal', { seed: 12, words: false }, 'فاطمة', kufi, DEFAULT_STYLE.letter)!;
     expect(Array.from(a.grid.data)).toEqual(Array.from(b.grid.data));
     expect(Array.from(a.grid.data)).not.toEqual(Array.from(c.grid.data));
   });

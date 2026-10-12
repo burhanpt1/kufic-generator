@@ -55,7 +55,7 @@ describe('taller seal variants', () => {
     expect(letterShape(kufi, 'م', L, 0, 'iso', 0)).not.toBeNull();
   });
   it('are offered to the seal search identically by the kernel and the JS fallback', () => {
-    const p = { H: 7, sym: 'none' as const, box: 0.7, share: 2, tries: 1, seed: 4243, reshape: true },
+    const p = { H: 7, sym: 'none' as const, box: 0.7, share: 2, tries: 1, seed: 4243, reshape: true, words: false },
       text = 'بسم الله الرحمن الرحيم';
     clearMonogramCache();
     const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
@@ -106,14 +106,14 @@ describe('solid-block penalty in the seal search', () => {
     clearMonogramCache();
     return buildMonogram(
       'seal',
-      { H, sym: 'mirror', tries: 6, reshape, ...(blocks === undefined ? {} : { blocks }) },
+      { H, sym: 'mirror', tries: 6, reshape, words: false, ...(blocks === undefined ? {} : { blocks }) },
       text,
       kufi,
       DEFAULT_STYLE.letter,
     )!;
   };
   it('agrees byte for byte between WebAssembly and JS', () => {
-    const p = { H: 7, sym: 'mirror' as const, tries: 2, blocks: 40, reshape: true };
+    const p = { H: 7, sym: 'mirror' as const, tries: 2, blocks: 40, reshape: true, words: false };
     clearMonogramCache();
     const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
     unloadSealWasm();
@@ -139,9 +139,15 @@ describe('solid-block penalty in the seal search', () => {
 describe('reshaping default', () => {
   it('is off: the seal search offers taller letters only when asked', () => {
     clearMonogramCache();
-    const d = buildMonogram('seal', { H: 7, sym: 'none' }, 'يا علي مدد', kufi, DEFAULT_STYLE.letter)!;
+    const d = buildMonogram('seal', { H: 7, sym: 'none', words: false }, 'يا علي مدد', kufi, DEFAULT_STYLE.letter)!;
     clearMonogramCache();
-    const off = buildMonogram('seal', { H: 7, sym: 'none', reshape: false }, 'يا علي مدد', kufi, DEFAULT_STYLE.letter)!;
+    const off = buildMonogram(
+      'seal',
+      { H: 7, sym: 'none', reshape: false, words: false },
+      'يا علي مدد',
+      kufi,
+      DEFAULT_STYLE.letter,
+    )!;
     expect(Array.from(d.grid.data)).toEqual(Array.from(off.grid.data));
   });
 });

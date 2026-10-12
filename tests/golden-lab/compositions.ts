@@ -111,7 +111,7 @@ export function labCaseToComposition(c: { id: string; kind: string; [k: string]:
           }));
     const fill: FillerNode | undefined =
       g.center === 'abjad' ? { type: 'abjad', text: 't' } : g.center === 'geo' ? { type: 'pattern', pattern: pattern(g) } : g.center === 'squares' ? { type: 'rings' } : g.center === 'solid' ? { type: 'solid' }
-        : { type: 'monogram', text: 't', method: 'seal', params: { H: 7, sym: 'mirror', box: 0.7, share: 2, tries: 4, seed: 4243 } }; // prettier-ignore
+        : { type: 'monogram', text: 't', method: 'seal', params: { H: 7, sym: 'mirror', box: 0.7, share: 2, tries: 4, seed: 4243, words: false } }; // prettier-ignore
     const spandrels =
       g.corners === 'none'
         ? undefined
@@ -193,7 +193,8 @@ export function labCaseToComposition(c: { id: string; kind: string; [k: string]:
       outline: { kind: 'polygon', sides: 4 },
       size: 40,
       borders: [],
-      fill: { type: 'monogram', text: 't', method, params: params as Record<string, number> },
+      // the lab's seals interlock the text's distinct letters
+      fill: { type: 'monogram', text: 't', method, params: { ...(params as Record<string, number>), words: false } },
     },
   );
 }
