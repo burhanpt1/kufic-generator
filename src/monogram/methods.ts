@@ -23,7 +23,8 @@ import {
   trimAt,
 } from './grid';
 import type { LetterShape } from './words';
-import { letterShape, wordGrid, wordShape } from './words';
+import { letterShape, wordGrid } from './words';
+import { wordBlock } from './wordBlock';
 import { strokeGraph } from '../geometry/strokegraph';
 
 export type MonoMethod =
@@ -64,20 +65,14 @@ export interface MonoParams {
   reshape: boolean;
   /** Seals: search energy per solid 2×2 block of ink (letters that collided); 0 = no penalty. */
   blocks: number;
-  /** Seals: interlock whole words, joined and in reading order, instead of the text's distinct letters (owner's
-   *  review: a letter-set seal can't be read). */
+  /** Seals: whole words as a square block of justified lines (wordBlock.ts) instead of the text's distinct
+   *  letters interlocked (owner's review: a letter-set seal can't be read). */
   words: boolean;
-  /** Word seals: energy per unit of reading-order violation (next word not to the left on the line, nor below). */
-  order: number;
-  /** Word seals: energy per cell of difference between width and height, so the seal comes out square enough to
-   *  take a frame (owner's review). 12 framed all 48 of eight texts × two heights × three seeds in one try, with
-   *  legibility and reading order as before; 8 still left some wide. Letter seals keep the kernel's 2.5. */
-  square: number;
 }
 export const MONO_DEFAULTS: MonoParams = {
   H: 9, stretch: 4, overlap: 2, nest: true, lines: 0, lineGap: 1, alternate: false, spiralRings: 3, corners: false, core: 'none',
   spineH: 15, flags: 1, loops: 1, loopW: 0.5, armLen: 10, arms: 1, stretchy: true, joins: false, sym: 'none', box: 0.7, share: 2,
-  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: false, blocks: 40, words: true, order: 24, square: 12,
+  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: false, blocks: 40, words: true,
 }; // prettier-ignore
 
 export interface MonoStats {
@@ -94,8 +89,6 @@ export interface MonoStats {
   lines?: number;
   rings?: number;
   spines?: number;
-  /** Word seals: every word reads after the one before (to its left on the line, or on a lower line). */
-  readingOrder?: boolean;
 }
 export interface MonoResult {
   grid: CellGrid;
@@ -188,49 +181,50 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
     Xs = p.stretchy ? [0, 3, 6] : [0];
   const formsOf = (c: string): LetterShape['form'][] =>
     !p.joins || c === 'ء' ? ['iso'] : NONJOIN_NEXT.has(c) ? ['iso', 'fin'] : ['iso', 'ini', 'med', 'fin'];
-  // word seals: one piece per word, in reading order, at two heights and three stretches
-  const wordV = () =>
-    text
-      .normalize('NFC')
-      .split(/\s+/)
-      .filter(w => /[ء-يٱ-ۓ]/.test(w))
-      .map(w => {
-        const vs: LetterShape[] = [];
+  // word seals: justified lines of whole words (wordBlock.ts), no search
+  if (p.words) {
+    const words = text
+        .normalize('NFC')
+        .split(/\s+/)
+        .filter(w => /[ء-يٱ-ۓ]/.test(w)),
+      b = wordBlock(script, words, letter, Hs);
+    if (!b) return null;
+    return {
+      grid: b.grid,
+      stats: {
+        legibility: 1,
+        sharing: 0,
+        letters: words,
+        lines: b.lines.length,
+        stretched: b.stretched,
+        sym: 'none',
+      },
+    };
+  }
+  const V = uniq
+    .map(c => {
+      const vs: LetterShape[] = [],
+        seen = new Set<string>();
+      formsOf(c).forEach(f =>
         Hs.forEach(H =>
-          (p.stretchy ? [0, 2, 4] : [0]).forEach(x => {
-            const s = wordShape(script, w, letterOf(letter, H), x);
-            if (s && !vs.some(o => o.w === s.w && o.h === s.h)) vs.push(s);
-          }),
-        );
-        return vs;
-      });
-  const V = (
-    p.words
-      ? wordV()
-      : uniq.map(c => {
-          const vs: LetterShape[] = [],
-            seen = new Set<string>();
-          formsOf(c).forEach(f =>
-            Hs.forEach(H =>
-              Xs.forEach(x =>
-                // taller by repeating a body row: 0 or 3 rows (lab port §6)
-                (p.reshape === false ? [0] : [0, 3]).forEach(vx => {
-                  const s = letterShape(script, c, letterOf(letter, H), x, f, vx),
-                    k = f + s?.w + 'x' + s?.h + (vx ? 'v' : '');
-                  if (s && !seen.has(k)) {
-                    seen.add(k);
-                    vs.push(s);
-                  }
-                }),
-              ),
-            ),
-          );
-          return vs;
-        })
-  ).filter(vs => vs.length);
+          Xs.forEach(x =>
+            // taller by repeating a body row: 0 or 3 rows (lab port §6)
+            (p.reshape === false ? [0] : [0, 3]).forEach(vx => {
+              const s = letterShape(script, c, letterOf(letter, H), x, f, vx),
+                k = f + s?.w + 'x' + s?.h + (vx ? 'v' : '');
+              if (s && !seen.has(k)) {
+                seen.add(k);
+                vs.push(s);
+              }
+            }),
+          ),
+        ),
+      );
+      return vs;
+    })
+    .filter(vs => vs.length);
   if (!V.length) return null;
-  // a mirrored word reads backwards: word seals stay unmirrored
-  const sym = p.words ? 'none' : p.sym || 'none',
+  const sym = p.sym || 'none',
     copies = sym === 'none' ? 1 : 2,
     n = V.length;
   const ink0 = V.reduce((a, vs) => a + vs[0].cells.length, 0) * copies;
@@ -258,7 +252,7 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
   });
   const res = runSeal({
     L: Lf, V: Vf, C: Cf, J: Jf, P: pos.flatMap(([x, y], i) => [x, y, vi[i]]), n, N, copies,
-    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000), orderMilli: p.words ? Math.round(p.order * 1000) : 0, squareMilli: p.words ? Math.round(p.square * 1000) : 2500,
+    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000),
   }); // prettier-ignore
   if (!res) return null;
   pos.forEach((q, i) => {
@@ -295,26 +289,12 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
     });
     g = out;
   }
-  // the kernel's reading-order rule, checked on the result: each next word to the left on its line, or lower down
-  const inOrder = () =>
-    V.every((_, i) => {
-      if (i + 1 >= V.length) return true;
-      const a = cur(i),
-        b = cur(i + 1),
-        ax = 2 * pos[i][0] + a.w,
-        ay = 2 * pos[i][1] + a.h,
-        bx = 2 * pos[i + 1][0] + b.w,
-        by = 2 * pos[i + 1][1] + b.h,
-        dy = by - ay;
-      return dy >= 0 && !(2 * Math.abs(dy) < a.h + b.h && bx - ax + 2 > 0);
-    });
   const S = res.S,
     hurt = S.slice(8);
   const legible = V.map((_, i) => clamp(1 - hurt[i] / Math.max(4, cur(i).cells.length * 0.5 * copies)));
   return {
     grid: markEnds(trim(g, 1)),
     stats: {
-      ...(p.words ? { readingOrder: inOrder() } : {}),
       legibility: legible.reduce((a, b) => a + b, 0) / legible.length,
       shared: S[0],
       joined: S[3],
@@ -667,16 +647,16 @@ export function buildMonogram(
 ) {
   const k = JSON.stringify([method, params, text, letter, script.id, glyphEpoch()]);
   if (memo.has(k)) return memo.get(k)!;
-  const tries = Math.max(1, Math.min(8, Math.round(params.tries ?? 1))),
+  // word seals are laid out, not searched: one try is all there is
+  const words = method === 'seal' && (params.words ?? MONO_DEFAULTS.words),
+    tries = words ? 1 : Math.max(1, Math.min(8, Math.round(params.tries ?? 1))),
     seed = params.seed ?? MONO_DEFAULTS.seed;
   let r: ReturnType<typeof build> = null;
   for (let t = 0; t < tries; t++) {
     const p =
       tries > 1 ? { ...params, seed: seed + t * 7919, joins: t % 2 === 1 ? !params.joins : !!params.joins } : params;
     const c = build(method, p, text, script, letter);
-    // a word seal that reads in order beats one that doesn't, whatever the scores
-    const ord = (x: NonNullable<typeof c>) => x.stats?.readingOrder !== false;
-    if (c && (!r || ord(c) !== ord(r) ? !r || ord(c) : c.metrics.total > r.metrics.total)) r = c;
+    if (c && (!r || c.metrics.total > r.metrics.total)) r = c;
   }
   memo.set(k, r);
   if (memo.size > 64) memo.delete(memo.keys().next().value!);
@@ -701,9 +681,11 @@ function build(
             ? tughraCompose(p, text, script, letter)
             : symCompose(method, p, text, script, letter);
   if (!r) return null;
-  if (p.dots && (method === 'seal' || method === 'pinwheel' || method === 'pinwheelIn')) r.grid = dotFill(r.grid);
+  // decorative dots in enclosed gaps; never in word seals, where a loose dot reads as a letter's (ر as ز)
+  if (p.dots && ((method === 'seal' && !p.words) || method === 'pinwheel' || method === 'pinwheelIn'))
+    r.grid = dotFill(r.grid);
   const metrics = monoMetrics(r.grid, r.stats),
-    // word seals search for squareness, so a near-square one (two long words) still takes the frame
+    // word seals are laid out square; a near-square one (two long words) still takes the frame
     square = method === 'seal' && p.words ? 0.75 : 0.8,
     grid = metrics.squareness > square && !r.curves ? frameIt(r.grid, p.frame) : r.grid;
   return { grid, metrics, stats: r.stats, curves: r.curves };

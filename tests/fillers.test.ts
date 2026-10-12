@@ -61,10 +61,22 @@ describe('seal kernel', () => {
     expect(j.S).toEqual(w.S);
     // and for a seal built from real letters, through both backends
     clearMonogramCache();
-    const viaWasm = buildMonogram('seal', { H: 7, sym: 'mirror', seed: 99 }, 'علي', kufi, DEFAULT_STYLE.letter)!;
+    const viaWasm = buildMonogram(
+      'seal',
+      { H: 7, sym: 'mirror', seed: 99, words: false },
+      'علي',
+      kufi,
+      DEFAULT_STYLE.letter,
+    )!;
     unloadSealWasm();
     clearMonogramCache();
-    const viaJs = buildMonogram('seal', { H: 7, sym: 'mirror', seed: 99 }, 'علي', kufi, DEFAULT_STYLE.letter)!;
+    const viaJs = buildMonogram(
+      'seal',
+      { H: 7, sym: 'mirror', seed: 99, words: false },
+      'علي',
+      kufi,
+      DEFAULT_STYLE.letter,
+    )!;
     expect(viaWasm.stats?.engine).toBe('wasm');
     expect(viaJs.stats?.engine).toBe('js');
     expect(Array.from(viaJs.grid.data)).toEqual(Array.from(viaWasm.grid.data));
