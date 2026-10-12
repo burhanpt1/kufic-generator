@@ -43,9 +43,11 @@ function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
 }
 
 /** Stems of a new line that stand right under a stem of the line above, a little apart, join it as one stem
- *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close). */
+ *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close; the alif
+ *  of الا shares the right leg of the لا knot above it). */
 export const STEM_GAP = 3;
-/** Straight vertical cells each end needs to count as a stem (a lam-alif knot's short legs don't). */
+/** Straight vertical cells the lower stem needs (the upper end may be a short leg: the alif of الا joins the لا
+ *  knot above it, owner's review round 6). */
 const STEM_RUN = 4;
 function shareStems(out: CellGrid, above: Uint8Array, H: number) {
   const W = out.w,
@@ -64,7 +66,7 @@ function shareStems(out: CellGrid, above: Uint8Array, H: number) {
       while (u >= 0 && !any(x, u) && !any(x - 1, u) && !any(x + 1, u) && t - 1 - u < STEM_GAP) u--;
       let q = 0;
       while (up(x, u - q)) q++;
-      if (u === t - 1 || q < STEM_RUN || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
+      if (u === t - 1 || q < 2 || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
       for (let y = u + 1; y < t; y++) out.data[y * W + x] = 1;
     }
 }

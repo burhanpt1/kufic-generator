@@ -87,12 +87,12 @@ describe('word seals', () => {
     }
     expect(longest).toBeGreaterThan(14);
   });
-  it('leave short strokes alone (the لا knot over الا)', () => {
+  it('join the alif of الا to the لا knot above it', () => {
     const g = wordBlock(kufi, words('لا اله الا الله'), DEFAULT_STYLE.letter, [7, 10])!.grid;
-    // the two lines stay apart: some row between them is empty
+    // no empty row between the two lines any more: the shared stem crosses the gap
     let gap = false;
     for (let y = 3; y < g.h - 3; y++) if (!g.data.subarray(y * g.w, y * g.w + g.w).some(v => v)) gap = true;
-    expect(gap).toBe(true);
+    expect(gap).toBe(false);
   });
   it('are deterministic', () => {
     const a = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!,
