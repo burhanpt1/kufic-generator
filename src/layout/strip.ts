@@ -1,4 +1,4 @@
-import type { Seg, Strip } from '../types';
+import type { BandGlyph, Seg, Strip } from '../types';
 
 /** Stem-rhythm search switch; compose() sets it from opts.rhythm. */
 export const RHY = { on: false };
@@ -162,12 +162,45 @@ export function strip(
   const data = new Uint8Array(width * Hb),
     tag = new Uint8Array(width * Hb);
   let x = width - padR;
+  // where each glyph landed, for the ي cup below
+  const placed: { g: BandGlyph; x: number; col: (gx: number) => number; join: boolean }[][] = [];
   segs.forEach((s, si) => {
     const rt = (s.rep || 0) + 1;
+    placed.push([]);
     s.glyphs.forEach((g, gi) => {
       const ex = g.str.map(st => get('t' + si + ',' + gi + ',' + st.c));
       const gw = g.w + ex.reduce((p, q) => p + q, 0);
       x -= gw;
+      const gx0 = x;
+      placed[si].push({
+        g,
+        x: gx0,
+        col: c => gx0 + c + g.str.reduce((a, st, k) => a + (st.c < c ? ex[k] : 0), 0),
+        join: gi < s.seps.length && s.seps[gi] === 'join',
+      });
+      // marks (vowels, dots) above and below the baseline: each group keeps its shape and its place across the
+      // stretched glyph (owner's review: stretching split the dots of ي, or left them off its widened cup)
+      const markAt = (y: number, gx: number) => {
+          const v = g.data[y * g.w + gx];
+          return v === 2 || v === 3;
+        },
+        markShift = [0, 0];
+      if (gw > g.w)
+        for (const side of [0, 1]) {
+          let lo = Infinity,
+            hi = -Infinity;
+          for (let y = 0; y < Hb; y++)
+            if (y > base === !side)
+              for (let gx = 0; gx < g.w; gx++)
+                if (markAt(y, gx)) {
+                  lo = Math.min(lo, gx);
+                  hi = Math.max(hi, gx);
+                }
+          if (lo <= hi) {
+            const c = (lo + hi + 1) / 2;
+            markShift[side] = Math.round((c * gw) / g.w - c);
+          }
+        }
       for (let gx = 0; gx < g.w; gx++) {
         let sh = 0,
           rep = 1;
@@ -178,6 +211,13 @@ export function strip(
         for (let y = 0; y < Hb; y++) {
           const v = g.data[y * g.w + gx];
           if (!v) continue;
+          if (markAt(y, gx) && gw > g.w) {
+            const X = x + gx + markShift[y > base ? 0 : 1];
+            if (data[y * width + X] === 1) continue; // never over a letter
+            data[y * width + X] = v;
+            tag[y * width + X] = rt;
+            continue;
+          }
           for (let r = 0; r < rep; r++) {
             const v2 = v === 4 ? 1 : v;
             data[y * width + x + gx + sh + r] = v2;
@@ -197,5 +237,37 @@ export function strip(
     });
     if (si < segs.length - 1) x -= gapAfter(si) + get('g' + si);
   });
+  // ي before a tall letter (يا, يل): its dots below centre under the cup between its tooth and that letter's stem
+  // (owner's review, seals round 6)
+  for (const row of placed)
+    row.forEach(({ g, col, join }, i) => {
+      const nx = row[i + 1];
+      if (!g.cup || !join || !nx || !nx.g.tall.length) return;
+      let tooth = -1;
+      for (let gx = 0; gx < g.w; gx++) if (g.data[(base + 1) * g.w + gx] === 1) tooth = gx;
+      if (tooth < 0) return;
+      const t = col(tooth),
+        stem = nx.col(Math.max(...nx.g.tall)),
+        cells: [number, number, number][] = [];
+      // the dots below, as written: inside the glyph's own stretched span
+      const x0 = col(0),
+        x1 = col(g.w - 1);
+      for (let y = 0; y < base; y++)
+        for (let X = x0; X <= x1; X++) {
+          const v = data[y * width + X];
+          if (v === 2 || v === 3) cells.push([X, y, v]);
+        }
+      if (!cells.length) return;
+      const lo = Math.min(...cells.map(c => c[0])),
+        hi = Math.max(...cells.map(c => c[0])),
+        d = Math.round((t + stem) / 2 - (lo + hi) / 2);
+      if (!d || cells.some(([X, y]) => data[y * width + X + d] === 1)) return;
+      const tg = cells.map(([X, y]) => tag[y * width + X]);
+      cells.forEach(([X, y]) => (data[y * width + X] = tag[y * width + X] = 0));
+      cells.forEach(([X, y, v], k) => {
+        data[y * width + X + d] = v;
+        tag[y * width + X + d] = tg[k];
+      });
+    });
   return { W: width, data, tag };
 }

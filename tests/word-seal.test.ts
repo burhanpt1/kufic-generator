@@ -74,6 +74,26 @@ describe('word seals', () => {
         expect(m.grid.data[t] && m.grid.data[(m.grid.h - 1) * m.grid.w + t]).toBeTruthy();
     }
   });
+  it('share a stem where a stem stands right under another (الله over اكبر)', () => {
+    const g = wordBlock(kufi, words('الله اكبر'), DEFAULT_STYLE.letter, [7, 10])!.grid;
+    // a column whose vertical run passes through both lines: longer than any one line is tall
+    let longest = 0;
+    for (let x = 0; x < g.w; x++) {
+      let run = 0;
+      for (let y = 0; y < g.h; y++) {
+        run = at(g, x, y) === 1 || at(g, x, y) === 4 ? run + 1 : 0;
+        longest = Math.max(longest, run);
+      }
+    }
+    expect(longest).toBeGreaterThan(14);
+  });
+  it('join the alif of الا to the لا knot above it', () => {
+    const g = wordBlock(kufi, words('لا اله الا الله'), DEFAULT_STYLE.letter, [7, 10])!.grid;
+    // no empty row between the two lines any more: the shared stem crosses the gap
+    let gap = false;
+    for (let y = 3; y < g.h - 3; y++) if (!g.data.subarray(y * g.w, y * g.w + g.w).some(v => v)) gap = true;
+    expect(gap).toBe(false);
+  });
   it('are deterministic', () => {
     const a = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!,
       b = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!;

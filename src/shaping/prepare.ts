@@ -14,6 +14,27 @@ export interface Prepared {
 // Stretchable columns: a word-final tail (baseline only) or a letter body (every stroke in the column is horizontal).
 export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: VowelStyle, alts = false): Prepared {
   const built = shaped.map(units => units.map(u => buildGlyph(u, H, mode, style)));
+  // ي joined to a tall letter (يا, يل): one more cell of join, so the cup between its tooth and the stem is wide
+  // enough for its two dots to sit centred in it (owner's review, seals round 6; strip() centres them)
+  built.forEach((gs, wi) =>
+    gs.forEach((g, gi) => {
+      const u = shaped[wi][gi],
+        nx = gs[gi + 1];
+      if (u.key !== 'YEH' || (u.form !== 'ini' && u.form !== 'med') || !u.jn || !nx || nx.top < H - 1) return;
+      // one more cell of join on the left; the dots stay put (so they move toward the cup), and a right column
+      // that only held a dot goes
+      let w = g.w + 1,
+        cells: [number, number, number][] = [
+          [0, 0, 1],
+          ...g.cells.map(([x, y, v]) => [v === 1 ? x + 1 : x, y, v] as [number, number, number]),
+        ];
+      if (!cells.some(([x, , v]) => x === w - 1 && v === 1)) {
+        w--;
+        cells = cells.filter(([x]) => x < w);
+      }
+      gs[gi] = { ...g, w, cells };
+    }),
+  );
   // long alternates (opt-in) share the band, so they count toward its height
   const altBuilt = alts
     ? shaped.map(units =>
@@ -65,7 +86,9 @@ export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: Vow
     const tall: number[] = [];
     const tr = down + H - 1;
     if (tr < Hb) for (let x = 0; x < g.w; x++) if (data[tr * g.w + x] === 1) tall.push(x);
-    return { w: g.w, data, form: g.form, str, tall };
+    const b: BandGlyph = { w: g.w, data, form: g.form, str, tall };
+    if (g.key === 'YEH' && (g.form === 'ini' || g.form === 'med')) b.cup = true;
+    return b;
   };
   const words = built.map((gs, wi) => ({
     glyphs: gs.map((g, gi) => {
