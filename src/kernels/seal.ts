@@ -29,6 +29,8 @@ export interface SealInput {
   ink0: number;
   /** Energy per solid 2×2 block of ink (letters that collided), ×1000; 0 or absent = no penalty. */
   blockMilli?: number;
+  /** Energy per unit of reading-order violation between consecutive pieces (word seals), ×1000; 0 = none. */
+  orderMilli?: number;
 }
 export interface SealOutput {
   P: number[];
@@ -89,7 +91,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
     while (k--) r *= r;
     return r;
   };
-  const blockW = (inp.blockMilli ?? 0) / 1000.0;
+  const blockW = (inp.blockMilli ?? 0) / 1000.0,
+    orderW = (inp.orderMilli ?? 0) / 1000.0;
   const tf = (x: number, y: number, t: number): [number, number] =>
     !t ? [x, y] : sym === 1 ? [N - 1 - x, y] : [N - 1 - x, N - 1 - y];
   const mark8 = (k: number) => {
@@ -223,6 +226,21 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
         if (Y < y0) y0 = Y;
         if (Y + 1 > y1) y1 = Y + 1;
       }
+    // reading order (word seals): each next piece reads to the left on the same line, or starts a lower one; in
+    // doubled cell units, integer as in seal.c
+    let order = 0;
+    if (orderW > 0)
+      for (let i = 0; i + 1 < n; i++) {
+        const a = VAR(i),
+          b = VAR(i + 1),
+          ax = 2 * m[Pt + i * 3] + m[a],
+          ay = 2 * m[Pt + i * 3 + 1] + m[a + 1],
+          bx = 2 * m[Pt + (i + 1) * 3] + m[b],
+          by = 2 * m[Pt + (i + 1) * 3 + 1] + m[b + 1],
+          dy = by - ay;
+        if (dy < 0) order -= dy;
+        if (2 * Math.abs(dy) < m[a + 1] + m[b + 1] && bx - ax + 2 > 0) order += bx - ax + 2;
+      }
     const bw = x1 - x0,
       bh = y1 - y0,
       area = bw * bh,
@@ -236,7 +254,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
       (22.0 * (area - ink)) / ink0 +
       2.5 * d +
       0.3 * cost * copies +
-      blockW * blocks;
+      blockW * blocks +
+      orderW * order;
     if (detail) {
       m[St] = shared;
       m[St + 1] = clash;
@@ -380,6 +399,7 @@ export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'
         o.offP,
         o.offS,
         inp.blockMilli ?? 0,
+        inp.orderMilli ?? 0,
       )
     : runJS(m, inp, o);
   if (rc !== 0) return null;
