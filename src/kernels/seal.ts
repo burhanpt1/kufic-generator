@@ -31,6 +31,8 @@ export interface SealInput {
   blockMilli?: number;
   /** Energy per unit of reading-order violation between consecutive pieces (word seals), ×1000; 0 = none. */
   orderMilli?: number;
+  /** Energy per cell of difference between the seal's width and height, ×1000; absent = 2500. */
+  squareMilli?: number;
 }
 export interface SealOutput {
   P: number[];
@@ -92,7 +94,8 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
     return r;
   };
   const blockW = (inp.blockMilli ?? 0) / 1000.0,
-    orderW = (inp.orderMilli ?? 0) / 1000.0;
+    orderW = (inp.orderMilli ?? 0) / 1000.0,
+    squareW = (inp.squareMilli ?? 2500) / 1000.0;
   const tf = (x: number, y: number, t: number): [number, number] =>
     !t ? [x, y] : sym === 1 ? [N - 1 - x, y] : [N - 1 - x, N - 1 - y];
   const mark8 = (k: number) => {
@@ -252,7 +255,7 @@ function runJS(m: Int32Array, inp: SealInput, o: NonNullable<ReturnType<typeof l
       18.0 * dangling -
       share * 6 * joined +
       (22.0 * (area - ink)) / ink0 +
-      2.5 * d +
+      squareW * d +
       0.3 * cost * copies +
       blockW * blocks +
       orderW * order;
@@ -400,6 +403,7 @@ export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'
         o.offS,
         inp.blockMilli ?? 0,
         inp.orderMilli ?? 0,
+        inp.squareMilli ?? 2500,
       )
     : runJS(m, inp, o);
   if (rc !== 0) return null;
