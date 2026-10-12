@@ -66,6 +66,8 @@ export interface BandGlyph {
   form: Form;
   str: { c: number; w: number }[];
   tall: number[];
+  /** Initial or medial ي: before a tall letter its dots sit under the cup between its tooth and that letter. */
+  cup?: boolean;
   /** A long alternate the justifier may use instead (same band). */
   alt?: BandGlyph;
 }
