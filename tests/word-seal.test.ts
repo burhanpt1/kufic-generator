@@ -87,12 +87,25 @@ describe('word seals', () => {
     }
     expect(longest).toBeGreaterThan(14);
   });
-  it('join the alif of الا to the لا knot above it', () => {
-    const g = wordBlock(kufi, words('لا اله الا الله'), DEFAULT_STYLE.letter, [7, 10])!.grid;
-    // no empty row between the two lines any more: the shared stem crosses the gap
-    let gap = false;
-    for (let y = 3; y < g.h - 3; y++) if (!g.data.subarray(y * g.w, y * g.w + g.w).some(v => v)) gap = true;
-    expect(gap).toBe(false);
+  it.each([7, 9])('line up and join the alifs of اله and الله, not the لا knot (Shahada, H %i)', H => {
+    const b = wordBlock(kufi, words('لا اله الا الله'), DEFAULT_STYLE.letter, [H, H + 3])!,
+      g = b.grid,
+      ink = (x: number, y: number) => at(g, x, y) === 1 || at(g, x, y) === 4;
+    expect(b.lines).toEqual([
+      ['لا', 'اله'],
+      ['الا', 'الله'],
+    ]);
+    // a column inked from the top row of the first line to the bottom of the second: the shared alif
+    const runs: number[] = [];
+    for (let x = 0; x < g.w; x++) {
+      let run = 0,
+        best = 0;
+      for (let y = 0; y < g.h; y++) best = Math.max(best, (run = ink(x, y) ? run + 1 : 0));
+      runs.push(best);
+    }
+    expect(Math.max(...runs)).toBeGreaterThan(2 * b.H);
+    // the knot (rightmost strokes) is not joined to the line below: its columns stay shorter than one line
+    expect(runs[g.w - 2]).toBeLessThanOrEqual(b.H + 1);
   });
   it('are deterministic', () => {
     const a = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!,
