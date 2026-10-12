@@ -28,7 +28,8 @@ describe.each([
   ['31212', octagon],
   ['square', circle],
 ] as [StrapTiling, Pt[]][])('strapwork %s', (tiling, region) => {
-  const L = planStrapwork(TEXT, 2, tiling, region, DEFAULT_STYLE, kufi)!;
+  // borders around at letter scale 0.4, as in a composition of this size
+  const L = planStrapwork(TEXT, 2, tiling, region, DEFAULT_STYLE, kufi, false, 0.4)!;
   it('fits the text', () => {
     expect(L).not.toBeNull();
     expect(L.text.length).toBeGreaterThan(2);
@@ -188,5 +189,46 @@ describe('in compositions', () => {
     expect(r.root.child.fill).toMatchObject({ type: 'strapwork', tiling: 'hex' });
     applyTrait(r, 'tiling', 'square', rng);
     expect(traitsOf(r)).toMatchObject({ fill: 'strapwork', tiling: 'square' });
+  });
+});
+
+describe('full straps (owner review)', () => {
+  const L = planStrapwork(TEXT, 2, '488', octagon, DEFAULT_STYLE, kufi, false, 0.4)!,
+    items = strapItems(L, octagon, DEFAULT_STYLE, kufi, 2, 0, 1);
+  it('repeats the text: at least one whole pass, and more when the straps allow', () => {
+    const segs = kufi.segments(kufi.prepareLines([TEXT], DEFAULT_STYLE.letter)[0], 'words', 2).length,
+      poured = L.text.reduce((a, t) => a + t.groups.length, 0);
+    expect(poured).toBeGreaterThanOrEqual(segs);
+  });
+  it('keeps letters to 68% of the strap width', () => {
+    expect(L.prep.Hb * L.s).toBeLessThanOrEqual(0.68 * 2 * L.half + 1e-9);
+  });
+  it('marks where the text starts, on the top-right strap', () => {
+    const stars = items.filter(i => i.type === 'star');
+    expect(L.mark).toBeGreaterThan(0);
+    expect(stars).toHaveLength(1);
+    const first = L.text[0].piece,
+      mid = (p: { P: Pt; Q: Pt }) => [(p.P[0] + p.Q[0]) / 2, (p.P[1] + p.Q[1]) / 2],
+      [fx, fy] = mid(first);
+    // no other text strap sits clearly higher, or level and further right
+    for (const { piece } of L.text.slice(1)) {
+      const [x, y] = mid(piece);
+      expect(y > fy - 2 * L.prep.Hb * L.s || x < fx).toBe(true);
+    }
+  });
+  it('puts small ornaments on straps without text, so none stands empty', () => {
+    const diamonds = items.filter(i => i.type === 'diamond').length;
+    expect(diamonds).toBeGreaterThanOrEqual(L.ornament.length);
+    const textKeys = new Set(L.text.map(t => `${t.piece.P}|${t.piece.Q}`));
+    for (const p of L.ornament) expect(textKeys.has(`${p.P}|${p.Q}`)).toBe(false);
+  });
+  it('keeps the text once when the slot says so, with ornament on the rest', () => {
+    const once = planStrapwork(TEXT, 2, '488', octagon, DEFAULT_STYLE, kufi, true, 0.4)!;
+    const segs = kufi.segments(
+      kufi.prepareLines([TEXT], DEFAULT_STYLE.letter)[0],
+      once.text[0].groups[0].endsWord ? 'words' : 'breaks',
+      2,
+    ).length;
+    expect(once.text.reduce((a, t) => a + t.groups.length, 0)).toBe(segs);
   });
 });

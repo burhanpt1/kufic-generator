@@ -5,7 +5,6 @@
 // (a knot of loops on a lattice), the straps run straight across and are clipped by the region's outline.
 import { bounds } from '../geometry/poly';
 import type { Pt } from '../geometry/types';
-import { partition, repeatSegs } from '../layout/solvers';
 import type { FillerNode, Style } from '../model/schema';
 import type { Prepared, ScriptEngine } from '../script/types';
 import type { Segs } from '../types';
@@ -15,6 +14,8 @@ import type { PlacedItem } from './placed';
 import type { Ctx, RegionResult } from './resolve';
 import { layoutOpts } from './resolve';
 import { clipToRegion, cutPolylines } from './strapwork';
+import { fillStraps, LETTER_FILL, markCells } from './strapText';
+import type { TextMode } from './strapText';
 
 type LatticeNode = Extract<FillerNode, { type: 'lattice' }>;
 
@@ -33,6 +34,10 @@ export interface LatticePlan {
   cols: number[];
   pieces: LatticePiece[];
   text: { piece: LatticePiece; groups: Segs }[];
+  /** Strap stretches inside the region that carry no text: a row of small ornaments each. */
+  ornament: LatticePiece[];
+  /** Cells kept free at the start of the first text strap for the start mark (0 = no mark). */
+  mark: number;
   prep: Prepared;
   score: number;
 }
@@ -48,6 +53,7 @@ export function planLattice(
   style: Style,
   script: ScriptEngine,
   sMax: number,
+  once = false,
 ): LatticePlan | null {
   const prep = script.prepareLines([text.replace(/\n+/g, ' ')], style.letter)[0],
     Hb = prep.Hb,
@@ -56,17 +62,16 @@ export function planLattice(
     cy = (b.y0 + b.y1) / 2,
     rowsAt = crossingsOf(pts),
     colsAt = crossingsOf(transpose(pts));
-  const modes = (['words', 'breaks'] as const).map(mode => {
+  const modes: TextMode[] = (['words', 'breaks'] as const).map(mode => {
     const segs = script.segments(prep, mode, wg) as Segs;
     return { mode, segs, total: segs.reduce((x, g) => x + g.minW, 0) + wg * (segs.length - 1) };
   });
   let best: LatticePlan | null = null;
   for (let i = 0; i < 60; i++) {
+    // letters take LETTER_FILL of the strap's width, centred
     const s = sMax * Math.pow(0.95, i),
-      bh = Hb * s,
-      // half a cell of clear strap above and below the letters, as in strapwork
-      half = bh / 2 + 0.5 * s,
-      spacing = 3 * (Hb + 1) * s; // 3 × band pitch
+      half = (Hb * s) / (2 * LETTER_FILL),
+      spacing = 3 * (2 * half + s); // 3 × band pitch
     const lines = (lo: number, hi: number, c: number) => {
       const out: number[] = [];
       for (let k = Math.ceil((lo - c) / spacing); c + k * spacing <= hi; k++) out.push(c + k * spacing);
@@ -88,7 +93,7 @@ export function planLattice(
         let a = p + s;
         const push = (bb: number) => {
           const W = Math.floor((bb - a) / s);
-          if (W >= 5) pieces.push({ dir, at, a, b: bb, W });
+          if (bb - a > 2 * half) pieces.push({ dir, at, a, b: bb, W });
         };
         for (const x of across)
           if (x + half + s > a && x - half - s < q - s) {
@@ -106,38 +111,31 @@ export function planLattice(
       ...pieces.filter(p => p.dir === 'h').sort((p, q) => p.at - q.at || q.a - p.a),
       ...pieces.filter(p => p.dir === 'v').sort((p, q) => q.at - p.at || p.a - q.a),
     ];
-    const all = order.reduce((x, p) => x + p.W, 0);
-    for (const m of modes) {
-      // spare straps: when there are too many, the longest pieces carry the text (kept in reading order)
-      let chosen = order;
-      if (order.length > m.segs.length || all > 1.9 * m.total) {
-        const keep = new Set<LatticePiece>();
-        let cap = 0;
-        for (const p of [...order].sort((x, y) => y.W - x.W)) {
-          if (cap >= 1.3 * m.total || keep.size >= m.segs.length) break;
-          keep.add(p);
-          cap += p.W;
-        }
-        chosen = order.filter(p => keep.has(p));
-      }
-      const caps = chosen.map(p => p.W),
-        sum = caps.reduce((x, c) => x + c, 0);
-      if (sum < m.total || sum > 2.2 * m.total || caps.length > m.segs.length) continue;
-      const part = partition(repeatSegs(m.segs, 1), caps);
-      if (!part) continue;
-      const score = part.score + (m.mode === 'breaks' ? 0.12 : 0) + 0.25 * (1 - s / sMax) + 0.3 * (1 - sum / all);
-      if (!best || score < best.score)
-        best = {
-          s,
-          half,
-          rows,
-          cols,
-          pieces,
-          prep,
-          score,
-          text: chosen.map((piece, k) => ({ piece, groups: part.groups[k] as Segs })),
-        };
-    }
+    const usable = order.filter(p => p.W >= 5);
+    if (!usable.length) continue;
+    // the first strap (top right) keeps room at its start for the start mark
+    const mk = markCells(half, s),
+      caps = usable.map((p, k) => (k === 0 && p.W - mk >= 5 ? p.W - mk : p.W)),
+      mark = usable[0].W - mk >= 5 ? mk : 0,
+      fill = fillStraps(modes, caps, once);
+    if (!fill || fill.used[0] !== 0) continue;
+    const textCells = fill.used.reduce((x, k) => x + caps[k], 0),
+      allCells = order.reduce((x, p) => x + (p.b - p.a) / s, 0),
+      score = fill.score + 0.25 * (1 - s / sMax) + 0.5 * (1 - textCells / allCells),
+      used = new Set(fill.used.map(k => usable[k]));
+    if (!best || score < best.score)
+      best = {
+        s,
+        half,
+        rows,
+        cols,
+        pieces,
+        prep,
+        score,
+        mark,
+        text: fill.used.map((k, j) => ({ piece: { ...usable[k], W: caps[k] }, groups: fill.groups[j] })),
+        ornament: order.filter(p => !used.has(p)),
+      };
   }
   return best;
 }
@@ -155,17 +153,35 @@ export function latticeItems(
   const items: PlacedItem[] = [],
     o = layoutOpts(style, wg),
     s = L.s;
-  for (const { piece: p, groups } of L.text) {
-    const st = script.layout(groups, L.prep, p.W, { ...o, wrap: false });
-    if (!st) continue;
-    const off = (p.b - p.a - st.W * s) / 2,
-      hb = (st.Hb * s) / 2;
+  L.text.forEach(({ piece: p, groups }, k) => {
+    const mk = k === 0 ? L.mark : 0,
+      st = script.layout(groups, L.prep, p.W, { ...o, wrap: false });
+    if (!st) return;
+    const off = (p.b - p.a - (st.W + mk) * s) / 2,
+      hb = (st.Hb * s) / 2,
+      // where the text starts (it reads from the strip's far end): just beyond it sits the start mark
+      at = off + (st.W + mk / 2) * s;
     // horizontal: baseline below the strap's centre line; vertical: reading down, tops left, baseline right
     const place =
       p.dir === 'h'
         ? { type: 'line' as const, O: [p.a + off, p.at + hb] as Pt, t: [1, 0] as Pt, n: [0, -1] as Pt, s }
         : { type: 'line' as const, O: [p.at + hb, p.b - off] as Pt, t: [0, -1] as Pt, n: [-1, 0] as Pt, s };
     items.push({ type: 'strip', style: sid, strip: st, place, ring });
+    if (mk)
+      items.push({
+        type: 'star',
+        style: sid,
+        centre: p.dir === 'h' ? [p.a + at, p.at] : [p.at, p.b - at],
+        r: 0.62 * L.half,
+      });
+  });
+  // a row of small diamonds along each stretch of strap without text
+  for (const p of L.ornament) {
+    const n = Math.max(1, Math.floor((p.b - p.a) / (2.4 * L.half)));
+    for (let i = 0; i < n; i++) {
+      const v = p.a + ((i + 0.5) * (p.b - p.a)) / n;
+      items.push({ type: 'diamond', style: sid, p: p.dir === 'h' ? [v, p.at] : [p.at, v], r: 0.38 * L.half });
+    }
   }
   const b = bounds(region),
     h = L.half,
@@ -217,7 +233,15 @@ export function latticeItems(
 function lattice(f: LatticeNode, res: RegionResult, style: Style, ctx: Ctx, sid: number) {
   const slot = ctx.comp.texts[f.text],
     pts = res.inner!.pts,
-    L = planLattice(slot.text, slot.wordGap, pts, style, ctx.script, (res.lastScale ?? 1) * 0.85);
+    L = planLattice(
+      slot.text,
+      slot.wordGap,
+      pts,
+      style,
+      ctx.script,
+      (res.lastScale ?? 1) * 0.85,
+      slot.repeat === 'once',
+    );
   if (!L) {
     ctx.fill = { type: 'lattice', ok: false, note: "the text doesn't fit this region's straps" };
     return;

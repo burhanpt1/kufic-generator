@@ -5,13 +5,14 @@
 import { bounds, inside as inPoly, segDist, simplifyClosed } from '../geometry/poly';
 import { crossingsOf } from './fills';
 import type { Pt } from '../geometry/types';
-import { partition, repeatSegs } from '../layout/solvers';
 import type { FillerNode, Style } from '../model/schema';
 import { tiles } from '../ornament/patterns/tilings';
 import type { Tiling } from '../ornament/patterns/tilings';
 import type { Prepared, ScriptEngine } from '../script/types';
 import type { Segs } from '../types';
 import { registerFiller } from './fillers';
+import { fillStraps, markCells, strapScale } from './strapText';
+import type { TextMode } from './strapText';
 import type { PlacedItem } from './placed';
 import type { Ctx, RegionResult } from './resolve';
 import { layoutOpts } from './resolve';
@@ -419,6 +420,10 @@ export interface StrapLayout {
   /** Pieces carrying text, in reading order, with their segment groups. */
   text: { piece: Piece; groups: Segs }[];
   pieces: Piece[];
+  /** Straps inside the region that carry no text: they get a row of small ornaments. */
+  ornament: Piece[];
+  /** Cells kept free at the start of the first text strap for the start mark (0 = no mark). */
+  mark: number;
   score: number;
 }
 
@@ -430,6 +435,9 @@ export function planStrapwork(
   pts: Pt[],
   style: Style,
   script: ScriptEngine,
+  once = false,
+  /** Letter scale of the borders around: strap letters aim for about 0.6–1× of it. */
+  sRef = 1,
 ): (StrapLayout & { prep: Prepared }) | null {
   const prep = script.prepareLines([text.replace(/\n+/g, ' ')], style.letter)[0],
     Hb = prep.Hb,
@@ -444,16 +452,17 @@ export function planStrapwork(
     coarse = simplifyClosed(pts, tol),
     rows = crossingsOf(coarse),
     isIn = (p: Pt) => rows(p[1]).some(([x0, x1]) => p[0] > x0 && p[0] < x1);
-  const modes = (['words', 'breaks'] as const).map(mode => {
+  const modes: TextMode[] = (['words', 'breaks'] as const).map(mode => {
     const segs = script.segments(prep, mode, wg) as Segs;
     return { mode, segs, total: segs.reduce((x, g) => x + g.minW, 0) + wg * (segs.length - 1) };
   });
   let best: StrapLayout | null = null;
   for (let i = 0, a = aMax; i < 18; i++, a *= 0.88) {
-    const bh = 0.15 * a,
-      s = bh / Hb,
-      // half a cell of clear strap above and below the letters (the lab had a quarter, and letters touched)
-      half = bh / 2 + 0.5 * s;
+    // the strap is a little wider than the lab's; letters take LETTER_FILL of it, centred
+    const half = 0.085 * a,
+      s = strapScale(half, Hb),
+      bh = Hb * s;
+    if (s < 0.35 * sRef) break; // letters this small are unreadable beside the borders; smaller patterns only shrink them
     // strands run on past the region's edge and are clipped there; text only goes on pieces well inside
     const close = edgesNear(coarse, a),
       nearMemo = new Map<Pt, boolean>(),
@@ -470,53 +479,47 @@ export function planStrapwork(
         theta,
       ),
       { strands, crossState } = traceStrands(G, near),
-      pieces = strandPieces(strands, half, s),
-      usable = pieces.filter(p => {
-        if (p.W < 5) return false;
-        const t = unit(p.P, p.Q),
-          u = add(p.P, t, p.c0),
-          v = add(p.Q, t, -p.c1);
-        return ok(u) && ok(v) && ok([(u[0] + v[0]) / 2, (u[1] + v[1]) / 2]);
-      }),
-      all = usable.reduce((x, p) => x + p.W, 0);
+      pieces = strandPieces(strands, half, s);
+    const inside = (p: Piece) => {
+      const t = unit(p.P, p.Q),
+        u = add(p.P, t, p.c0),
+        v = add(p.Q, t, -p.c1);
+      return len(p.P, p.Q) - p.c0 - p.c1 > 2 * half && ok(u) && ok(v) && ok([(u[0] + v[0]) / 2, (u[1] + v[1]) / 2]);
+    };
+    // reading order: rows of height 2·bh from the top, right to left within a row (so it starts at the top right)
+    const row = (p: Piece) => Math.floor(((p.P[1] + p.Q[1]) / 2 - b.y0) / (2 * bh)),
+      mx = (p: Piece) => (p.P[0] + p.Q[0]) / 2;
+    const ins = pieces.filter(inside).sort((x, y) => row(x) - row(y) || mx(y) - mx(x)),
+      usable = ins.filter(p => p.W >= 5);
     if (!usable.length) continue;
-    for (const m of modes) {
-      // spare straps: give the text only the longest pieces when there are too many
-      let chosen = usable;
-      if (usable.length > m.segs.length || all > 1.6 * m.total) {
-        chosen = [];
-        let cap = 0;
-        for (const p of [...usable].sort((x, y) => y.W - x.W)) {
-          if (cap >= 1.3 * m.total || chosen.length >= m.segs.length) break;
-          chosen.push(p);
-          cap += p.W;
-        }
-      }
-      const caps = chosen.map(p => p.W),
-        sum = caps.reduce((x, c) => x + c, 0);
-      if (sum < m.total || sum > 2.2 * m.total || caps.length > m.segs.length) continue;
-      // reading order: rows of height 2·bh from the top, right to left within a row
-      const row = (p: Piece) => Math.floor(((p.P[1] + p.Q[1]) / 2 - b.y0) / (2 * bh)),
-        mx = (p: Piece) => (p.P[0] + p.Q[0]) / 2;
-      chosen = [...chosen].sort((x, y) => row(x) - row(y) || mx(y) - mx(x));
-      const part = partition(
-        repeatSegs(m.segs, 1),
-        chosen.map(p => p.W),
-      );
-      if (!part) continue;
-      const score = part.score + (m.mode === 'breaks' ? 0.12 : 0) + 0.7 * (1 - sum / all) + 0.12 * (a / aMax);
-      if (!best || score < best.score)
-        best = {
-          a,
-          s,
-          half,
-          strands,
-          crossState,
-          pieces,
-          score,
-          text: chosen.map((piece, k) => ({ piece, groups: part.groups[k] as Segs })),
-        };
-    }
+    // the first strap keeps room at its start for the start mark
+    const mk = markCells(half, s),
+      caps = usable.map((p, k) => (k === 0 && p.W - mk >= 5 ? p.W - mk : p.W)),
+      mark = usable[0].W - mk >= 5 ? mk : 0,
+      fill = fillStraps(modes, caps, once);
+    if (!fill || fill.used[0] !== 0) continue;
+    const textCells = fill.used.reduce((x, k) => x + caps[k], 0),
+      allCells = ins.reduce((x, p) => x + Math.max(0, (len(p.P, p.Q) - p.c0 - p.c1) / s), 0),
+      // full straps, and letters not much smaller than the borders' (nor larger)
+      score =
+        fill.score +
+        0.7 * (1 - textCells / allCells) +
+        1.2 * Math.max(0, 1 - s / (0.65 * sRef)) +
+        0.3 * Math.max(0, s / sRef - 1),
+      used = new Set(fill.used);
+    if (!best || score < best.score)
+      best = {
+        a,
+        s,
+        half,
+        strands,
+        crossState,
+        pieces,
+        score,
+        mark,
+        text: fill.used.map((k, j) => ({ piece: { ...usable[k], W: caps[k] }, groups: fill.groups[j] })),
+        ornament: ins.filter(p => !usable.includes(p) || !used.has(usable.indexOf(p))),
+      };
   }
   return best ? { ...best, prep } : null;
 }
@@ -524,7 +527,16 @@ export function planStrapwork(
 function strapwork(f: StrapNode, res: RegionResult, style: Style, ctx: Ctx, sid: number) {
   const slot = ctx.comp.texts[f.text],
     pts = res.inner!.pts,
-    L = planStrapwork(slot.text, slot.wordGap, f.tiling, pts, style, ctx.script);
+    L = planStrapwork(
+      slot.text,
+      slot.wordGap,
+      f.tiling,
+      pts,
+      style,
+      ctx.script,
+      slot.repeat === 'once',
+      res.lastScale ?? 1,
+    );
   if (!L) {
     ctx.fill = { type: 'strapwork', ok: false, note: "the text doesn't fit this region's straps" };
     return;
@@ -548,7 +560,8 @@ export function strapItems(
     o = layoutOpts(style, wg),
     prep = L.prep,
     s = L.s;
-  for (const { piece, groups } of L.text) {
+  L.text.forEach(({ piece, groups }, k) => {
+    const mk = k === 0 ? L.mark : 0;
     let P = piece.P,
       Q = piece.Q,
       c0 = piece.c0,
@@ -562,12 +575,15 @@ export function strapItems(
       n = [t[1], -t[0]];
     }
     const st = script.layout(groups, prep, piece.W, { ...o, wrap: false });
-    if (!st) continue;
+    if (!st) return;
     const span = len(P, Q) - c0 - c1,
-      off = c0 + (span - st.W * s) / 2,
+      off = c0 + (span - (st.W + mk) * s) / 2,
       O = add(add(P, t, off), n, (-st.Hb * s) / 2);
     items.push({ type: 'strip', style: sid, strip: st, place: { type: 'line', O, t, n, s }, ring });
-  }
+    // the text reads from the strip's far end (right to left): the start mark sits just beyond it
+    if (mk) items.push({ type: 'star', style: sid, centre: add(P, t, off + (st.W + mk / 2) * s), r: 0.62 * L.half });
+  });
+  items.push(...strapOrnaments(L.ornament, L.half, sid));
   // strap edges: both sides of every strand, cut where it passes under; open ends get a cap
   const lines: Pt[][] = [],
     holes: Pt[][] = [];
@@ -604,6 +620,19 @@ export function strapItems(
     width: Math.max(0.1, s * 0.35),
   });
   return items;
+}
+
+/** A row of small diamonds along each strap that carries no text, so none stands empty. */
+export function strapOrnaments(pieces: Piece[], half: number, sid: number): PlacedItem[] {
+  const out: PlacedItem[] = [];
+  for (const p of pieces) {
+    const t = unit(p.P, p.Q),
+      span = len(p.P, p.Q) - p.c0 - p.c1,
+      n = Math.max(1, Math.floor(span / (2.4 * half)));
+    for (let i = 0; i < n; i++)
+      out.push({ type: 'diamond', style: sid, p: add(p.P, t, p.c0 + ((i + 0.5) * span) / n), r: 0.38 * half });
+  }
+  return out;
 }
 
 registerFiller('strapwork', (f, res, style, ctx, sid) => strapwork(f as StrapNode, res, style, ctx, sid));

@@ -35,7 +35,7 @@ const cases = [
 ];
 cases.forEach(([name, base, tiling, text], i) => {
   const c = structuredClone(preset(base));
-  c.texts.strap = { text, repeat: 'once', wordGap: 2 };
+  c.texts.strap = { text, repeat: 'fill', wordGap: 2 };
   c.root.child.fill = { type: 'strapwork', text: 'strap', tiling };
   const t0 = performance.now(), p = resolve(c), ms = performance.now() - t0;
   const f = document.createElement('figure');

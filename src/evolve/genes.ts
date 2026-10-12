@@ -123,7 +123,7 @@ export function traitsOf(c: Composition): Traits {
   t.ra = c.style.letter.ra;
   t.marks = c.style.letter.marks;
   t.alternates = !!c.style.letter.alternates;
-  t.plait = !!(tb[0]?.plait || ((r.fill?.type === 'lines' || r.fill?.type === 'maze') && r.fill.plait));
+  t.plait = !!tb[0]?.plait;
   return t;
 }
 

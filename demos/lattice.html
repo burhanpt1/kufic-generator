@@ -27,9 +27,9 @@ await loadSealWasm();
 const FATIHA = 'بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين';
 const cases = [
   ['Interlaced maze, for comparison', 'kufic-maze-tile', c => { c.root.child.fill.interlace = true; }],
-  ['Woven lattice in a square tile', 'kufic-maze-tile', c => { c.texts.lat = { text: FATIHA, repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
-  ['In a teardrop', 'teardrop-gold', c => { c.texts.lat = { text: 'محمد علي فاطمة الحسن الحسين', repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; c.root.child.borders = c.root.child.borders.slice(0, 1); }],
-  ['In a mihrab', 'mihrab-ayat-al-kursi', c => { c.texts.lat = { text: FATIHA, repeat: 'once', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
+  ['Woven lattice in a square tile', 'kufic-maze-tile', c => { c.texts.lat = { text: FATIHA, repeat: 'fill', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
+  ['In a teardrop', 'teardrop-gold', c => { c.texts.lat = { text: 'محمد علي فاطمة الحسن الحسين', repeat: 'fill', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; c.root.child.borders = c.root.child.borders.slice(0, 1); }],
+  ['In a mihrab', 'mihrab-ayat-al-kursi', c => { c.texts.lat = { text: FATIHA, repeat: 'fill', wordGap: 2 }; c.root.child.fill = { type: 'lattice', text: 'lat' }; }],
 ];
 cases.forEach(([name, id, tweak], i) => {
   const c = structuredClone(preset(id));

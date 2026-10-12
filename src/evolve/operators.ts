@@ -203,6 +203,7 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
       break;
     case 'stroke':
       s.stroke.kind = v as 'blocks';
+      if (v === 'blocks') tb.forEach(b => b.plait && (b.plait = false));
       break;
     case 'corner':
       s.stroke.corner = v as number;
@@ -228,9 +229,10 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'alternates':
       s.letter.alternates = v as boolean;
       break;
+    // plaits on text bands drawn with curved or pen strokes only (owner's review: they don't read in blocks, mazes or
+    // line fills)
     case 'plait':
-      tb.forEach(b => (b.plait = v as boolean));
-      if (r.fill?.type === 'lines' || r.fill?.type === 'maze') r.fill = { ...r.fill, plait: v as boolean };
+      tb.forEach(b => (b.plait = !!v && s.stroke.kind !== 'blocks'));
       break;
   }
 }
@@ -251,8 +253,7 @@ export function relevantTraits(c: Composition): Trait[] {
     if (k === 'reach') return t.terminal !== 'none';
     if (k === 'corner') return t.stroke !== 'blocks';
     // plaits need tall stems, and text in bands, lines or a maze
-    if (k === 'plait')
-      return (t.ascenders as number) >= 9 && ((t.borders as number) > 0 || t.fill === 'lines' || t.fill === 'maze');
+    if (k === 'plait') return (t.ascenders as number) >= 9 && (t.borders as number) > 0 && t.stroke !== 'blocks';
     return true;
   });
 }

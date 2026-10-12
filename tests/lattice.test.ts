@@ -145,3 +145,20 @@ describe('lattice in evolution', () => {
     expect(TRAIT_FEATURES.some(f => f.key === 'fill=lattice')).toBe(true);
   });
 });
+
+describe('full lattice straps (owner review)', () => {
+  const L = planLattice(TEXT, 2, square, DEFAULT_STYLE, kufi, 1)!,
+    items = latticeItems(L, square, DEFAULT_STYLE, kufi, 2, 0, 1);
+  it('pours at least one whole pass of the text and marks its start at the top right', () => {
+    const segs = kufi.segments(kufi.prepareLines([TEXT], DEFAULT_STYLE.letter)[0], 'words', 2).length;
+    expect(L.text.reduce((a, t) => a + t.groups.length, 0)).toBeGreaterThanOrEqual(segs);
+    const f = L.text[0].piece;
+    expect(f.dir).toBe('h');
+    expect(f.at).toBe(Math.min(...L.text.filter(t => t.piece.dir === 'h').map(t => t.piece.at)));
+    expect(items.filter(i => i.type === 'star')).toHaveLength(L.mark ? 1 : 0);
+  });
+  it('keeps letters to 68% of the strap width and ornaments the stretches without text', () => {
+    expect(L.prep.Hb * L.s).toBeLessThanOrEqual(0.68 * 2 * L.half + 1e-9);
+    expect(items.filter(i => i.type === 'diamond').length).toBeGreaterThanOrEqual(L.ornament.length);
+  });
+});
