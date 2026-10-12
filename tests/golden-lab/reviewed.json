@@ -1,5 +1,5 @@
 {
- "shape--fatimid-circle": 0.199,
+ "shape--fatimid-circle": 0.2,
  "shape--square-4": 0.206,
  "shape--hexagon": 0.148,
  "shape--octagon-curved": 0.154,
@@ -28,9 +28,9 @@
  "mono--block": 0.133,
  "mono--spiral": 0.141,
  "mono--tughra": 0.037,
- "mono--seal": 0.145,
- "mono--seal-joined-mirror": 0.069,
- "mono--seal-turn-curved": 0.164,
+ "mono--seal": 0.148,
+ "mono--seal-joined-mirror": 0.081,
+ "mono--seal-turn-curved": 0.12,
  "mono--block-basmala": 0.125,
  "mono--spiral-seal-core": 0.142,
  "mono--tughra-tall": 0.056
