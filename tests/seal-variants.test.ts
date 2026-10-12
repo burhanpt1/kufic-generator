@@ -55,7 +55,7 @@ describe('taller seal variants', () => {
     expect(letterShape(kufi, 'م', L, 0, 'iso', 0)).not.toBeNull();
   });
   it('are offered to the seal search identically by the kernel and the JS fallback', () => {
-    const p = { H: 7, sym: 'none' as const, box: 0.7, share: 2, tries: 1, seed: 4243 },
+    const p = { H: 7, sym: 'none' as const, box: 0.7, share: 2, tries: 1, seed: 4243, reshape: true },
       text = 'بسم الله الرحمن الرحيم';
     clearMonogramCache();
     const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
@@ -113,7 +113,7 @@ describe('solid-block penalty in the seal search', () => {
     )!;
   };
   it('agrees byte for byte between WebAssembly and JS', () => {
-    const p = { H: 7, sym: 'mirror' as const, tries: 2, blocks: 40 };
+    const p = { H: 7, sym: 'mirror' as const, tries: 2, blocks: 40, reshape: true };
     clearMonogramCache();
     const w = buildMonogram('seal', p, text, kufi, DEFAULT_STYLE.letter)!;
     unloadSealWasm();
@@ -126,12 +126,22 @@ describe('solid-block penalty in the seal search', () => {
   it('removes the collisions reshaping caused', () => {
     expect(blocksOf(best(7, true).grid)).toBeLessThan(blocksOf(best(7, true, 0).grid));
   });
-  it('makes reshaping pay: the best of six mirrored basmala seals score at least as high and share more', () => {
+  it('makes reshaping pay on the basmala: the best of six mirrored seals score at least as high and share more', () => {
     for (const H of [7, 9]) {
       const off = best(H, false),
         on = best(H, true);
       expect(on.metrics.total, `H${H} score`).toBeGreaterThanOrEqual(off.metrics.total);
       expect(on.stats!.shared!, `H${H} shared`).toBeGreaterThan(off.stats!.shared!);
     }
+  });
+});
+
+describe('reshaping default', () => {
+  it('is off: the seal search offers taller letters only when asked', () => {
+    clearMonogramCache();
+    const d = buildMonogram('seal', { H: 7, sym: 'none' }, 'يا علي مدد', kufi, DEFAULT_STYLE.letter)!;
+    clearMonogramCache();
+    const off = buildMonogram('seal', { H: 7, sym: 'none', reshape: false }, 'يا علي مدد', kufi, DEFAULT_STYLE.letter)!;
+    expect(Array.from(d.grid.data)).toEqual(Array.from(off.grid.data));
   });
 });
