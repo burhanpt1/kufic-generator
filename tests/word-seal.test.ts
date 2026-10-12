@@ -23,6 +23,17 @@ describe('word seals', () => {
     expect(m.stats?.readingOrder).toBe(true);
     expect(m.metrics.legibility).toBeGreaterThan(0.8);
   });
+  it.each(TEXTS)('come out square enough to take a frame: %s', text => {
+    for (const H of [7, 9]) {
+      clearMonogramCache();
+      const m = buildMonogram('seal', { H, tries: 2, frame: 'square' }, text, kufi, DEFAULT_STYLE.letter)!;
+      expect(m.metrics.squareness).toBeGreaterThan(0.75);
+      expect(m.grid.w).toBe(m.grid.h);
+      // the frame: the outer ring is all ink
+      for (let t = 0; t < m.grid.w; t++)
+        expect(m.grid.data[t] && m.grid.data[(m.grid.h - 1) * m.grid.w + t]).toBeTruthy();
+    }
+  });
   it('agree byte for byte between WebAssembly and JS', () => {
     const p = { H: 7, tries: 2, seed: 77 };
     clearMonogramCache();

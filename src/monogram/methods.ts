@@ -69,11 +69,15 @@ export interface MonoParams {
   words: boolean;
   /** Word seals: energy per unit of reading-order violation (next word not to the left on the line, nor below). */
   order: number;
+  /** Word seals: energy per cell of difference between width and height, so the seal comes out square enough to
+   *  take a frame (owner's review). 12 framed all 48 of eight texts × two heights × three seeds in one try, with
+   *  legibility and reading order as before; 8 still left some wide. Letter seals keep the kernel's 2.5. */
+  square: number;
 }
 export const MONO_DEFAULTS: MonoParams = {
   H: 9, stretch: 4, overlap: 2, nest: true, lines: 0, lineGap: 1, alternate: false, spiralRings: 3, corners: false, core: 'none',
   spineH: 15, flags: 1, loops: 1, loopW: 0.5, armLen: 10, arms: 1, stretchy: true, joins: false, sym: 'none', box: 0.7, share: 2,
-  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: false, blocks: 40, words: true, order: 24,
+  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: false, blocks: 40, words: true, order: 24, square: 12,
 }; // prettier-ignore
 
 export interface MonoStats {
@@ -254,7 +258,7 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
   });
   const res = runSeal({
     L: Lf, V: Vf, C: Cf, J: Jf, P: pos.flatMap(([x, y], i) => [x, y, vi[i]]), n, N, copies,
-    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000), orderMilli: p.words ? Math.round(p.order * 1000) : 0,
+    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000), orderMilli: p.words ? Math.round(p.order * 1000) : 0, squareMilli: p.words ? Math.round(p.square * 1000) : 2500,
   }); // prettier-ignore
   if (!res) return null;
   pos.forEach((q, i) => {
@@ -699,6 +703,8 @@ function build(
   if (!r) return null;
   if (p.dots && (method === 'seal' || method === 'pinwheel' || method === 'pinwheelIn')) r.grid = dotFill(r.grid);
   const metrics = monoMetrics(r.grid, r.stats),
-    grid = metrics.squareness > 0.8 && !r.curves ? frameIt(r.grid, p.frame) : r.grid;
+    // word seals search for squareness, so a near-square one (two long words) still takes the frame
+    square = method === 'seal' && p.words ? 0.75 : 0.8,
+    grid = metrics.squareness > square && !r.curves ? frameIt(r.grid, p.frame) : r.grid;
   return { grid, metrics, stats: r.stats, curves: r.curves };
 }
