@@ -168,6 +168,29 @@ export function strip(
       const ex = g.str.map(st => get('t' + si + ',' + gi + ',' + st.c));
       const gw = g.w + ex.reduce((p, q) => p + q, 0);
       x -= gw;
+      // marks (vowels, dots) above and below the baseline: each group keeps its shape and its place across the
+      // stretched glyph (owner's review: stretching split the dots of ي, or left them off its widened cup)
+      const markAt = (y: number, gx: number) => {
+          const v = g.data[y * g.w + gx];
+          return v === 2 || v === 3;
+        },
+        markShift = [0, 0];
+      if (gw > g.w)
+        for (const side of [0, 1]) {
+          let lo = Infinity,
+            hi = -Infinity;
+          for (let y = 0; y < Hb; y++)
+            if (y > base === !side)
+              for (let gx = 0; gx < g.w; gx++)
+                if (markAt(y, gx)) {
+                  lo = Math.min(lo, gx);
+                  hi = Math.max(hi, gx);
+                }
+          if (lo <= hi) {
+            const c = (lo + hi + 1) / 2;
+            markShift[side] = Math.round((c * gw) / g.w - c);
+          }
+        }
       for (let gx = 0; gx < g.w; gx++) {
         let sh = 0,
           rep = 1;
@@ -178,6 +201,13 @@ export function strip(
         for (let y = 0; y < Hb; y++) {
           const v = g.data[y * g.w + gx];
           if (!v) continue;
+          if (markAt(y, gx) && gw > g.w) {
+            const X = x + gx + markShift[y > base ? 0 : 1];
+            if (data[y * width + X] === 1) continue; // never over a letter
+            data[y * width + X] = v;
+            tag[y * width + X] = rt;
+            continue;
+          }
           for (let r = 0; r < rep; r++) {
             const v2 = v === 4 ? 1 : v;
             data[y * width + x + gx + sh + r] = v2;
