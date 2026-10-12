@@ -123,9 +123,10 @@ describe('as an option and a trait', () => {
     expect(ink(after)).not.toEqual(ink(before));
     expect(renderPlaced(after, { idPrefix: 'p' }).length).toBeGreaterThan(1000);
   });
-  it('is evolvable when stems are tall enough', () => {
+  it('is evolvable on curved or pen bands with tall stems only', () => {
     const c = structuredClone(preset('octagon-panel')),
       rng = new Rng(1);
+    c.style.stroke.kind = 'curved';
     c.style.letter.ascenders = 7;
     expect(relevantTraits(c)).not.toContain('plait');
     c.style.letter.ascenders = 11;
@@ -133,5 +134,17 @@ describe('as an option and a trait', () => {
     applyTrait(c, 'plait', true, rng);
     expect(traitsOf(c).plait).toBe(true);
     expect(c.root.child.borders.every(b => b.type !== 'textBorder' || b.plait)).toBe(true);
+    // block strokes: not offered, and switching to them takes the plaits off
+    applyTrait(c, 'stroke', 'blocks', rng);
+    expect(traitsOf(c).plait).toBe(false);
+    expect(relevantTraits(c)).not.toContain('plait');
+    applyTrait(c, 'plait', true, rng);
+    expect(traitsOf(c).plait).toBe(false);
+    // never on line fills or mazes
+    const m = structuredClone(preset('kufic-maze-tile'));
+    m.style.stroke.kind = 'pen';
+    m.style.letter.ascenders = 11;
+    applyTrait(m, 'plait', true, rng);
+    expect(m.root.child.fill).not.toHaveProperty('plait', true);
   });
 });
