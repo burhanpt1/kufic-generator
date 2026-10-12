@@ -107,7 +107,7 @@ export function letterShapes(
       d = diamondR(w);
     P3.H.forEach(([x0, x1, y]) => push(col, sectorOf(x0 + 0.5 - mw, x1 + 0.5 + mw, y + 0.5 - mw, y + 0.5 + mw)));
     P3.V.forEach(([x, y0, y1]) => push(col, sectorOf(x + 0.5 - mw, x + 0.5 + mw, y0 + 0.5 - mw, y1 + 0.5 + mw)));
-    P3.D.forEach(([x, y]) =>
+    P3.lone.forEach(([x, y]) =>
       push(
         col,
         pathFrom([['M', 0, -d], ['L', d, 0], ['L', 0, d], ['L', -d, 0], ['Z']], (u, v) =>
@@ -121,7 +121,7 @@ export function letterShapes(
     d = diamondR(w);
   P2.H.forEach(([x0, x1, y]) => vow.push(sectorOf(x0 + 0.5 - mw, x1 + 0.5 + mw, y + 0.5 - mw, y + 0.5 + mw)));
   P2.V.forEach(([x, y0, y1]) => vow.push(sectorOf(x + 0.5 - mw, x + 0.5 + mw, y0 + 0.5 - mw, y1 + 0.5 + mw)));
-  P2.D.forEach(([x, y]) =>
+  P2.lone.forEach(([x, y]) =>
     vow.push(
       pathFrom([['M', 0, -d], ['L', d, 0], ['L', 0, d], ['L', -d, 0], ['Z']], (u, v) =>
         mapPt(x + 0.5 + u, y + 0.5 + v),

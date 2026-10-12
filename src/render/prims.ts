@@ -3,7 +3,9 @@ import { f2 } from './svg';
 
 type Pt = [number, number];
 
-/** Cells -> horizontal runs [x0, x1, y], vertical runs [x, y0, y1], lone dots [x, y] and diagonal links. */
+/** Cells -> horizontal runs [x0, x1, y], vertical runs [x, y0, y1], lone dots [x, y] and diagonal links. `D` leaves
+ *  out cells a diagonal link already draws; `lone` keeps them, for marks, which draw no links (the three dots of ش
+ *  touch diagonally and were never drawn). */
 export function prims(pred: (x: number, y: number) => boolean | number, w: number, h: number) {
   const on = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && pred(x, y);
   const H: number[][] = [],
@@ -44,7 +46,7 @@ export function prims(pred: (x: number, y: number) => boolean | number, w: numbe
     linked.add(a + ',' + b);
     linked.add(c + ',' + d);
   });
-  return { H, V, D: D.filter(([x, y]) => !linked.has(x + ',' + y)), X };
+  return { H, V, D: D.filter(([x, y]) => !linked.has(x + ',' + y)), lone: D, X };
 }
 
 /** Stem-ending shape in local units: x across the stem (width w), y along it, 0 = cell centre. */
