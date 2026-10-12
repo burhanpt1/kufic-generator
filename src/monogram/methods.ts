@@ -59,7 +59,8 @@ export interface MonoParams {
   seed: number;
   /** Try this many seeds (alternating joins, like the lab's automatic centre monogram) and keep the best. */
   tries: number;
-  /** Seals: offer letters grown 3 rows taller by repeating a body row (lab port §6). */
+  /** Seals: offer letters grown 3 rows taller by repeating a body row (lab port §6). Off by default: across eight
+   *  texts at ascenders 7 and 9 it shared more cells but scored no better on average (lower at 9). */
   reshape: boolean;
   /** Seals: search energy per solid 2×2 block of ink (letters that collided); 0 = no penalty. */
   blocks: number;
@@ -67,7 +68,7 @@ export interface MonoParams {
 export const MONO_DEFAULTS: MonoParams = {
   H: 9, stretch: 4, overlap: 2, nest: true, lines: 0, lineGap: 1, alternate: false, spiralRings: 3, corners: false, core: 'none',
   spineH: 15, flags: 1, loops: 1, loopW: 0.5, armLen: 10, arms: 1, stretchy: true, joins: false, sym: 'none', box: 0.7, share: 2,
-  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: true, blocks: 40,
+  fourfold: false, dots: false, frame: 'none', seed: 4243, tries: 1, curved: false, reshape: false, blocks: 40,
 }; // prettier-ignore
 
 export interface MonoStats {
