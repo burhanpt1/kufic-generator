@@ -43,11 +43,9 @@ function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
 }
 
 /** Stems of a new line that stand right under a stem of the line above, a little apart, join it as one stem
- *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close; the alif
- *  of الا shares the right leg of the لا knot above it). */
+ *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close). */
 export const STEM_GAP = 3;
-/** Straight vertical cells the lower stem needs (the upper end may be a short leg: the alif of الا joins the لا
- *  knot above it, owner's review round 6). */
+/** Straight vertical cells each end needs to count as a stem (a lam-alif knot's short legs don't). */
 const STEM_RUN = 4;
 function shareStems(out: CellGrid, above: Uint8Array, H: number) {
   const W = out.w,
@@ -66,7 +64,7 @@ function shareStems(out: CellGrid, above: Uint8Array, H: number) {
       while (u >= 0 && !any(x, u) && !any(x - 1, u) && !any(x + 1, u) && t - 1 - u < STEM_GAP) u--;
       let q = 0;
       while (up(x, u - q)) q++;
-      if (u === t - 1 || q < 2 || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
+      if (u === t - 1 || q < STEM_RUN || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
       for (let y = u + 1; y < t; y++) out.data[y * W + x] = 1;
     }
 }
@@ -146,6 +144,84 @@ function splitEvenly(widths: (i: number, j: number) => number, n: number, L: num
   return starts;
 }
 
+/** Columns where a line has a full stem: letter ink straight from just under the ascender top down to the baseline
+ *  (alif, lam; not the legs of a lam-alif knot). */
+function tallCols(g: CellGrid, base: number, H: number): number[] {
+  const out: number[] = [];
+  if (base - H + 2 < 0) return out;
+  for (let x = 0; x < g.w; x++) {
+    let ok = true;
+    for (let y = base - H + 2; y <= base && ok; y++) if (g.data[y * g.w + x] !== 1) ok = false;
+    if (ok) out.push(x);
+  }
+  return out;
+}
+type LineGrid = { g: CellGrid; base: number };
+/** Word gaps a line laid out word by word may use beyond the natural one, and kashida per word. */
+const GAP_MORE = 2,
+  ALIGN = 4;
+/** Kashida a word may take for alignment: a quarter of its width, so it never pulls apart (رب in the Hamd). */
+const wordExtra = (w: number) => Math.ceil(w / 4);
+/** A line `W` wide built word by word, each word's kashida and each gap chosen so that as many of its stems as
+ *  possible stand right under stems of the line above (owner's review, seals round 7: the alifs of اله and الله in
+ *  the Shahada share one stem). Within that, kashida and gaps spread as evenly as they can. */
+function alignLine(
+  ws: string[],
+  W: number,
+  above: Set<number>,
+  word: (w: string, e: number) => LineGrid | null,
+  H: number,
+  wordGap: number,
+): { line: LineGrid; aligned: number; stretched: number } | null {
+  type Opt = { e: number; lg: LineGrid; tall: number[] };
+  const opts: Opt[][] = ws.map(w => {
+    const o: Opt[] = [];
+    const w0 = word(w, 0)?.g.w ?? 0;
+    for (let e = 0; e <= wordExtra(w0); e++) {
+      const lg = word(w, e);
+      if (lg && lg.g.w === (o[0]?.lg.g.w ?? lg.g.w - e) + e) o.push({ e, lg, tall: tallCols(lg.g, lg.base, H) });
+    }
+    return o;
+  });
+  if (opts.some(o => !o.length)) return null;
+  type St = { score: number; aligned: number; pick: { o: Opt; left: number }[] };
+  // states by the left edge of the last word placed, words placed from the right
+  let states = new Map<number, St>([[W, { score: 0, aligned: 0, pick: [] }]]);
+  ws.forEach((_, i) => {
+    const next = new Map<number, St>();
+    for (const [edge, st] of states)
+      for (let gp = i ? wordGap : 0; gp <= (i ? wordGap + GAP_MORE : 0); gp++)
+        for (const o of opts[i]) {
+          const left = edge - gp - o.lg.g.w;
+          if (left < 0) continue;
+          const hit = o.tall.filter(c => above.has(left + c)).length,
+            score = st.score + ALIGN * hit - (o.e * o.e) / opts[i][0].lg.g.w - 0.5 * (gp - (i ? wordGap : 0)) ** 2,
+            cur = next.get(left);
+          if (!cur || score > cur.score)
+            next.set(left, { score, aligned: st.aligned + hit, pick: [...st.pick, { o, left }] });
+        }
+    states = next;
+  });
+  const end = states.get(0);
+  if (!end) return null;
+  const up = Math.max(...end.pick.map(p => p.o.lg.base)),
+    down = Math.max(...end.pick.map(p => p.o.lg.g.h - 1 - p.o.lg.base)),
+    g = G(W, up + 1 + down);
+  for (const { o, left } of end.pick) {
+    const dy = up - o.lg.base;
+    for (let y = 0; y < o.lg.g.h; y++)
+      for (let x = 0; x < o.lg.g.w; x++) {
+        const v = o.lg.g.data[y * o.lg.g.w + x];
+        if (v) g.data[(y + dy) * W + left + x] = v;
+      }
+  }
+  return {
+    line: { g, base: up },
+    aligned: end.aligned,
+    stretched: end.pick.reduce((a, p) => a + p.o.e, 0),
+  };
+}
+
 /** The squarest block of justified lines for these words, at either ascender height. */
 export function wordBlock(
   script: ScriptEngine,
@@ -165,6 +241,7 @@ export function wordBlock(
         return cache.get(k)!;
       },
       text = (i: number, j: number) => words.slice(i, j).join(' '),
+      wordOf = (w: string, e: number) => lineGrid(w, e),
       widths = (i: number, j: number) => lineGrid(text(i, j), 0)?.g.w ?? Infinity;
     for (let L = 1; L <= Math.min(words.length, MAX_LINES); L++) {
       const starts = splitEvenly(widths, words.length, L);
@@ -189,6 +266,32 @@ export function wordBlock(
             for (let x = 0; x < g.g.w; x++) c.data[y * W + x + ox] = g.g.data[y * g.g.w + x];
           return { g: c, base: g.base };
         });
+        // lower lines: rebuilt word by word where that puts more of their stems under stems of the line above
+        for (let k = 1; k < grids.length; k++) {
+          const above = new Set(tallCols(grids[k - 1].g, grids[k - 1].base, H)),
+            have = tallCols(grids[k].g, grids[k].base, H).filter(c => above.has(c)).length,
+            [i, j] = spans[k],
+            a = alignLine(words.slice(i, j), W, above, wordOf, H, wordGap);
+          if (a && a.aligned > have) {
+            stretched += a.stretched - (W - nat[k]);
+            grids[k] = a.line;
+          }
+        }
+        // then upper lines over the line below, where the lower one had no slack to move (keeping what they share
+        // with the line above them)
+        for (let k = grids.length - 2; k >= 0; k--) {
+          const below = new Set(tallCols(grids[k + 1].g, grids[k + 1].base, H)),
+            prev = k ? new Set(tallCols(grids[k - 1].g, grids[k - 1].base, H)) : null,
+            mine = (lg: LineGrid) => tallCols(lg.g, lg.base, H),
+            have = mine(grids[k]).filter(c => below.has(c)).length,
+            kept = prev ? mine(grids[k]).filter(c => prev.has(c)).length : 0,
+            [i, j] = spans[k],
+            a = alignLine(words.slice(i, j), W, below, wordOf, H, wordGap);
+          if (a && a.aligned > have && (!prev || mine(a.line).filter(c => prev.has(c)).length >= kept)) {
+            stretched += a.stretched - (W - nat[k]);
+            grids[k] = a.line;
+          }
+        }
         const grid = stack(grids, W),
           sq = Math.abs(grid.w - grid.h) / Math.max(grid.w, grid.h),
           // square first; then little kashida, and the shorter ascenders when it's close
