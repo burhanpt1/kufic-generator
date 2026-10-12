@@ -42,6 +42,33 @@ function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
   return out;
 }
 
+/** Stems of a new line that stand right under a stem of the line above, a little apart, join it as one stem
+ *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close). */
+export const STEM_GAP = 3;
+/** Straight vertical cells each end needs to count as a stem (a lam-alif knot's short legs don't). */
+const STEM_RUN = 4;
+function shareStems(out: CellGrid, above: Uint8Array, H: number) {
+  const W = out.w,
+    up = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && above[y * W + x] === 1,
+    any = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && out.data[y * W + x] !== 0,
+    own = (x: number, y: number) => any(x, y) && !above[y * W + x] && out.data[y * W + x] === 1;
+  for (let x = 0; x < W; x++)
+    for (let t = 1; t < H - 2; t++) {
+      // the top of a thin vertical stem of the new line
+      if (any(x, t - 1) || any(x - 1, t) || any(x + 1, t)) continue;
+      let r = 0;
+      while (own(x, t + r)) r++;
+      if (r < STEM_RUN) continue;
+      // empty column above it, clear on both sides, up to the foot of a stem of the line above
+      let u = t - 1;
+      while (u >= 0 && !any(x, u) && !any(x - 1, u) && !any(x + 1, u) && t - 1 - u < STEM_GAP) u--;
+      let q = 0;
+      while (up(x, u - q)) q++;
+      if (u === t - 1 || q < STEM_RUN || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
+      for (let y = u + 1; y < t; y++) out.data[y * W + x] = 1;
+    }
+}
+
 /** Stack line grids (all `W` wide), each as high as clearance allows under the ones above. */
 function stack(lines: { g: CellGrid; base: number }[], W: number): CellGrid {
   const total = lines.reduce((a, l) => a + l.g.h + MARK_CLEAR + 1, 0);
@@ -76,12 +103,14 @@ function stack(lines: { g: CellGrid; base: number }[], W: number): CellGrid {
     // a line never rises to the baseline of the one above (it would read before it)
     while (oy - 1 + gb > base + 1 && fits(oy - 1)) oy--;
     base = oy + gb;
+    const above = Uint8Array.from(out.data);
     for (let y = 0; y < g.h; y++)
       for (let x = 0; x < g.w; x++) {
         const v = g.data[y * g.w + x],
           Y = y + oy;
         if (v && Y >= 0 && Y < total) out.data[Y * W + x] = v;
       }
+    if (bottom) shareStems(out, above, total);
     for (let y = total - 1; y >= 0; y--)
       if (out.data.subarray(y * W, y * W + W).some(v => v)) {
         bottom = y + 1;
