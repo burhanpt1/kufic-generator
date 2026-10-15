@@ -14,8 +14,27 @@ export interface Palette {
   paper: string;
   mark: string;
 }
+/** Thuluth's pen (ignored by Kufi): a calibrated preset, optionally adjusted. Kufi's letter, stroke and terminals
+ *  groups do not apply to thuluth, except letter.marks ('all' shows the vowels). */
+export interface ThuluthPen {
+  /** line: a written line; band: an inscription band; tile: glazed tile (2.5:1 contrast); roundel: painted jali (6:1). */
+  preset: 'line' | 'band' | 'tile' | 'roundel';
+  /** Nib width (pen units) and angle (degrees). */
+  nib?: number;
+  angle?: number;
+  /** Size of the letter bodies against the stems. */
+  body?: number;
+  /** Thinnest stroke, as a share of the nib. */
+  floor?: number;
+  /** Baseline between two joined loop letters (body units). */
+  loopGap?: number;
+  heh?: 'round' | 'almond' | 'eye';
+}
+export type ScriptId = 'kufi' | 'thuluth';
 export interface Style {
-  script: 'kufi';
+  script: ScriptId;
+  /** Thuluth only. */
+  pen?: ThuluthPen;
   letter: LetterStyle;
   stroke: {
     kind: 'blocks' | 'curved' | 'pen';
@@ -195,8 +214,19 @@ const abjadOpts = z.object({
   taMarbuta: z.union([z.literal(5), z.literal(400)]),
   system: z.enum(['mashriqi', 'maghribi']),
 });
+const pen = z.object({
+  preset: z.enum(['line', 'band', 'tile', 'roundel']),
+  nib: z.number().min(0.3).max(4).optional(),
+  angle: z.number().min(0).max(90).optional(),
+  body: z.number().min(0.8).max(2).optional(),
+  floor: z.number().min(0).max(0.8).optional(),
+  loopGap: z.number().min(0).max(4).optional(),
+  heh: z.enum(['round', 'almond', 'eye']).optional(),
+});
+const script = z.enum(['kufi', 'thuluth']);
 export const StyleSchema = z.object({
-  script: z.literal('kufi'),
+  script,
+  pen: pen.optional(),
   letter,
   stroke,
   terminals,
@@ -206,7 +236,8 @@ export const StyleSchema = z.object({
 });
 const StyleOverrideSchema = z
   .object({
-    script: z.literal('kufi'),
+    script,
+    pen: pen.partial(),
     letter: letter.partial(),
     stroke: stroke.partial(),
     terminals: terminals.partial(),

@@ -12,12 +12,13 @@ import { numberSVG } from '../ornament/numerals';
 import { picPath } from '../ornament/patterns/pic';
 import { tiles } from '../ornament/patterns/tilings';
 import { starSVG, vineDefs } from '../ornament/stars';
-import type { CellStrip } from '../script/types';
+import type { CellStrip, VectorStrip } from '../script/types';
+import { parsePolys } from '../script/vector';
 import { gridSource, letterShapes } from './letters';
 import { NIB, nibSweep, simplify } from './strokes';
 import type { Source } from './letters';
 import type { RenderOptions, Shapes } from './svg';
-import { U, acc, diamond, f2, groupsOut, merge, mix, wrap } from './svg';
+import { U, acc, diamond, f2, groupsOut, keyColour, merge, mix, wrap } from './svg';
 
 export interface RenderPlacedOptions {
   /** Prefix for every id in the SVG; default derived from the seed. */
@@ -133,14 +134,39 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
   // letters: one Shapes per style so colours group, drawn at the end of the letters layer
   const strips = placed.items.filter(it => it.type === 'strip') as Extract<PlacedItem, { type: 'strip' }>[];
   const maxRing = Math.max(1, ...placed.items.map(it => ('ring' in it ? it.ring : 0)));
-  const maxTag = Math.max(1, ...strips.map(st => (st.strip.kind === 'cells' ? Math.max(0, ...st.strip.tag) : 1)));
+  const maxTag = Math.max(
+    1,
+    ...strips.map(st =>
+      st.strip.kind === 'cells' ? Math.max(0, ...st.strip.tag) : Math.max(1, ...st.strip.paths.map(p => p.tag)),
+    ),
+  );
   const shapes = new Map<number, Shapes>();
   const shapesFor = (i: number) => {
     if (!shapes.has(i)) shapes.set(i, { ink: new Map(), vow: [] });
     return shapes.get(i)!;
   };
 
+  // a vector strip (a pen-stroke script): its polygons, every point through the placement, so they bend with arcs
+  const vectorSVG = (it: Extract<PlacedItem, { type: 'strip' }>, st: VectorStrip) => {
+    const o = ropt(it.style),
+      cell = placeMap(it.place),
+      maxKey = o.colourMode === 'ring' ? maxRing : o.colourMode === 'repeat' ? maxTag : 1,
+      sh: Shapes = { ink: new Map(), vow: [] };
+    for (const p of st.paths) {
+      const d = parsePolys(p.d)
+        .map(q => 'M' + q.map(([x, y]) => P(cell(x, y)).map(f2).join(' ')).join('L') + 'Z')
+        .join('');
+      if (p.role === 'vowel') sh.vow.push(`<path d="${d}"/>`);
+      else {
+        const c = keyColour(o, o.colourMode === 'ring' ? it.ring : p.tag, maxKey);
+        if (!sh.ink.has(c)) sh.ink.set(c, []);
+        sh.ink.get(c)!.push(`<path d="${d}"/>`);
+      }
+    }
+    merge(shapesFor(it.style), sh);
+  };
   const stripSVG = (it: Extract<PlacedItem, { type: 'strip' }>) => {
+    if (it.strip.kind === 'vector') return vectorSVG(it, it.strip);
     const st = it.strip as CellStrip,
       o = ropt(it.style),
       cell = placeMap(it.place);

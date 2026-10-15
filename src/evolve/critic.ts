@@ -1,6 +1,7 @@
 // The critic (COMPOSITION_ENGINE.md §7): each part of a composition contributes metrics in [0, 1] through a
 // registry; the overall score is their taste-weighted mean (taste.ts). Ported from the lab's analyseStrip/metrics
 // and monoMetrics.
+import { rasterCells } from '../script/vector';
 import type { Placed, PlacedItem } from '../compose/placed';
 import type { CellStrip } from '../script/types';
 import { emptySpace } from './space';
@@ -51,10 +52,7 @@ export function analyseStrip(st: CellStrip, wrap: boolean) {
 
 const borderStrips = (p: Placed) => {
   const rings = p.meta.borders.reduce((a, b) => a + b.rings.length, 0);
-  return p.items.filter(
-    (i): i is Extract<PlacedItem, { type: 'strip' }> =>
-      i.type === 'strip' && i.ring <= rings && i.strip.kind === 'cells',
-  );
+  return p.items.filter((i): i is Extract<PlacedItem, { type: 'strip' }> => i.type === 'strip' && i.ring <= rings);
 };
 
 const CRITICS = new Map<string, Critic>();
@@ -65,7 +63,9 @@ export const registerCritic = (name: string, c: Critic) => CRITICS.set(name, c);
 registerCritic('borders', p => {
   const strips = borderStrips(p);
   if (!strips.length) return none;
-  const parts = strips.map(s => analyseStrip(s.strip as CellStrip, s.place.type === 'arc'));
+  const parts = strips.map(s =>
+    analyseStrip(s.strip.kind === 'cells' ? s.strip : rasterCells(s.strip), s.place.type === 'arc'),
+  );
   const Hb = Math.max(...strips.map(s => s.strip.Hb));
   const cvs = parts.map(x => x.cv).filter((v): v is number => v != null),
     dens = parts.map(x => x.density);

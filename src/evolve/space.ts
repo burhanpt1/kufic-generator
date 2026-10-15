@@ -2,6 +2,7 @@
 // Workers can't decode SVG images, so the placed composition is rasterised directly at 160×160: letters, lines and
 // ornaments as ink, patterned and vine areas as texture. Flat areas (paper, tints, plain bands) stay blank whatever
 // their colour, as on the rendered image; unlike the lab, solid ink (a dense seal's blocks) counts as filled.
+import { rasterCells } from '../script/vector';
 import type { Area, Placed } from '../compose/placed';
 import { placeMap } from '../compose/textBorder';
 import type { Pt } from '../geometry/types';
@@ -66,8 +67,7 @@ export function rasterise(placed: Placed): Uint8Array {
         if (it.kind === 'vine') texture(it.area);
         break;
       case 'strip': {
-        if (it.strip.kind !== 'cells') break;
-        const st = it.strip,
+        const st = it.strip.kind === 'cells' ? it.strip : rasterCells(it.strip),
           cell = placeMap(it.place),
           r = Math.max(0.5, (it.place.s * k) / 2);
         for (let y = 0; y < st.Hb; y++)

@@ -8,6 +8,7 @@ import type { LetterStyle, Prepared, ScriptEngine, Segment, Segments, VectorStri
 import type { Built, Thuluth } from './engine';
 import { DEFAULT_THULUTH, thuluth } from './engine';
 import { lineMarks } from './marks';
+import { outline } from './outline';
 import type { WordMark } from './shape';
 import { FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
 import type { Family, Poly, ThuluthStyle } from './types';
@@ -111,6 +112,16 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       built.set(k, b);
     }
     return b;
+  };
+  // a piece's ink as outlines (the union of its quads), computed once per built piece
+  const outlines = new WeakMap<Built, Poly[]>();
+  const inkOutline = (b: Built) => {
+    let o = outlines.get(b);
+    if (!o) {
+      o = outline([...b.strokes.flatMap(s => th.strokePolys(s)), ...b.dots.flatMap(([x, y]) => th.dotPolysAt(x, y))]);
+      outlines.set(b, o);
+    }
+    return o;
   };
   const inkOf = (b: Built) => polysBox([...b.strokes.flatMap(s => th.strokePolys(s)), ...b.dots.flatMap(([x, y]) => th.dotPolysAt(x, y))]); // prettier-ignore
 
@@ -219,7 +230,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       pieces.forEach((p, i) => {
         const dx = x - p.box.x1,
           tag = (p.s.rep ?? 0) + 1;
-        paths.push({ d: pathOf([...p.b.strokes.flatMap(s => th.strokePolys(s)), ...p.b.dots.flatMap(([a, b]) => th.dotPolysAt(a, b))], dx), role: 'letter', tag }); // prettier-ignore
+        paths.push({ d: pathOf(inkOutline(p.b), dx), role: 'letter', tag });
         lines.push({ d: lineOf(p.b.strokes, dx), role: 'letter' });
         // dots as a short stroke across the nib, the way the pen writes them
         const da = ((th.style.ang + 90) * Math.PI) / 180,

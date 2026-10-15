@@ -1,5 +1,6 @@
 // Fabrication output (COMPOSITION_ENGINE.md §9 Phase 6.8): single-line plotter paths, laser/CNC layers, and a relief
 // depth map. Everything is derived from a Placed composition, so it matches what the renderer draws.
+import { parseLines } from '../script/vector';
 import type { Area, Placed } from '../compose/placed';
 import { placeMap } from '../compose/textBorder';
 import { offsetPolyline } from '../geometry/offset';
@@ -109,7 +110,17 @@ export function centrelines(placed: Placed, o: CentrelineOptions = {}): Polyline
   };
   out.push({ pts: placed.meta.outline.map(P), closed: true, kind: 'outline' });
   for (const it of placed.items) {
-    if (it.type === 'strip' && it.strip.kind === 'cells') {
+    if (it.type === 'strip' && it.strip.kind === 'vector') {
+      // a pen-stroke script: the pen's own centrelines
+      const cell = placeMap(it.place);
+      for (const l of it.strip.lines ?? [])
+        for (const q of parseLines(l.d))
+          out.push({
+            pts: q.map(([x, y]) => P(cell(x, y))),
+            closed: false,
+            kind: l.role === 'letter' ? 'letter' : 'mark',
+          });
+    } else if (it.type === 'strip' && it.strip.kind === 'cells') {
       const st = it.strip,
         cell = placeMap(it.place);
       letters(
