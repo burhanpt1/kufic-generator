@@ -45,6 +45,8 @@ export interface ThuluthStyle {
   heh: 'round' | 'almond' | 'eye';
   /** Slant of leaning stems: a factor, or left (−0.06), right (0.14), none. */
   slant: number | 'left' | 'right' | 'none';
+  /** The lab's letters exactly, without the later legibility fixes (fixes.ts), to compare with the lab. */
+  labLetters?: boolean;
   /** Great roundel gestures (lab useGreat): the Husayn bowl as final nun or a returning ya, the long-headed hah. */
   great?: { nun?: boolean; hah?: boolean; ya?: boolean; yaWide?: number; yaDeep?: number };
 }
