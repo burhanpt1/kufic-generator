@@ -299,8 +299,11 @@ export function wordBlock(
         const used: number[] = [];
         const grids = spans.map(([i, j], k) => {
           // a short line stretches by at most half its width and is centred, so a lone short word doesn't pull
-          // apart across the block (يا over لطيف, رب over زدني)
-          const extra = Math.min(W - nat[k], Math.max(3, Math.ceil(nat[k] / 2))),
+          // apart across the block (يا over لطيف, رب over زدني); a lone word over a line of several barely stretches at
+          // all, since kashidas inside it read as gaps (نور over على نور)
+          const lone = j - i === 1 && spans.some(([a, b]) => b - a > 1),
+            cap = lone ? Math.max(1, Math.floor(nat[k] / 6)) : Math.max(3, Math.ceil(nat[k] / 2)),
+            extra = Math.min(W - nat[k], cap),
             g = (extra && lineGrid(text(i, j), extra)) || lineGrid(text(i, j), 0)!;
           used[k] = g.g.w - nat[k];
           if (g.g.w === W) return g;

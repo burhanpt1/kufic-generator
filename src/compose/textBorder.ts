@@ -55,6 +55,8 @@ export interface RingFit {
   score: number;
   /** Band depth in cells. */
   room: number;
+  /** Mean share of each run left to stretching. */
+  slack: number;
 }
 
 export interface FitOptions {
@@ -64,8 +66,10 @@ export interface FitOptions {
   fixed?: number;
   once: boolean;
   wordGap: number;
-  /** Largest scale at which the band's inner edge still exists. */
+  /** Largest scale the band may grow to when its text is too short for it (see MAX_SLACK). */
   sMax: number;
+  /** Largest scale of the normal search (the band's inner edge still exists); sMax when absent. */
+  sHi?: number;
   /** Band depth in cells (letters plus headroom); the letters' height by default. */
   room?: number;
 }
@@ -77,6 +81,10 @@ const MAX_SKIP = 0.35;
 const TINY_RUN = 0.08;
 /** Score cost per unit of skipped length share. */
 const SKIP_COST = 1.5;
+/** A run holding less than this many of the shortest segment may be left blank instead of taking a lone word. */
+const ORPHAN_RUN = 2.5;
+/** Score cost per run holding a single segment. */
+const ORPHAN_COST = 0.04;
 
 /** The runs (in reading order) that take text at these capacities, and the skipped share of the ring's length; null
  *  when too much would be skipped. All runs take text whenever every one can hold a segment. */
@@ -97,15 +105,20 @@ function usableRuns(bg: BandGeom, c: number[], minSeg: number): { ord: number[];
   return use.length && skipped <= MAX_SKIP * total ? { ord: use, skip: skipped / total } : null;
 }
 
+/** Slack (share of the band left to stretching) above which a fit reads as gappy: words pulled apart by long
+ *  kashidas. A master fills a band before stretching it, so past this the search tries more repeats, larger letters
+ *  and, last, breaking words at non-joining letters. */
+export const MAX_SLACK = 0.12;
+
 /** Best (scale, repeats) for one ring. */
 export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, o: FitOptions): RingFit | null {
-  let best: RingFit | null = null;
   const room = o.room ?? prepared.Hb;
-  const hi = Math.min(o.sMax, Math.min(1.15, o.sTarget * 1.3)),
+  const hi = Math.min(o.sHi ?? o.sMax, Math.min(1.15, o.sTarget * 1.3)),
     lo = Math.max(0.36, o.sTarget * 0.7);
   if (!o.fixed && hi < lo) return null; // the band can't be drawn at an acceptable size here
-  const scales = o.fixed ? [o.fixed] : Array.from({ length: 29 }, (_, i) => hi - (i * (hi - lo)) / 28);
-  for (const mode of ['words', 'breaks'] as const) {
+  const range = (a: number, b: number) => Array.from({ length: 29 }, (_, i) => a - (i * (a - b)) / 28);
+  const search = (scales: number[], mode: 'words' | 'breaks', scaleCost: boolean): RingFit | null => {
+    let best: RingFit | null = null;
     const segs0 = script.segments(prepared, mode, o.wordGap) as Segs;
     if (!segs0.length) return null;
     const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length,
@@ -113,32 +126,56 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
     for (const s of scales) {
       const c = capacities(bg, prepared.Hb, s, room);
       if (!c) continue;
-      const use = usableRuns(bg, c, minSeg);
-      if (!use) continue;
-      const G = c.length,
-        cOrd = use.ord.map(g => c[(G - g) % G]),
-        sum = cOrd.reduce((a, b) => a + b, 0);
-      const rep0 = Math.max(1, Math.ceil(cOrd.length / segs0.length)),
-        repMax = o.once ? rep0 : 14;
-      if (o.once && rep0 > 1) continue;
-      for (let rep = rep0; rep <= repMax; rep++) {
-        if (rep * one - o.wordGap > sum + 1) break;
-        const p = partition(repeat(segs0, rep), cOrd);
-        if (!p) continue;
-        const score =
-          p.score +
-          (o.fixed ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget) +
-          (mode === 'breaks' ? 0.15 : 0) +
-          SKIP_COST * use.skip;
-        if (!best || score < best.score) {
-          // groups in reading order for every run; skipped runs get none
-          const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
-          use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
-          best = { s, rep, groups, caps: c, mode, score, room };
+      // runs that would hold only a lone word may also stay blank, as a master leaves a finial or a neck plain
+      const uses = [usableRuns(bg, c, minSeg), usableRuns(bg, c, minSeg * ORPHAN_RUN)].filter(
+        (u, i, a): u is NonNullable<typeof u> => !!u && (i === 0 || u.ord.length !== a[0]?.ord.length),
+      );
+      for (const use of uses) {
+        const G = c.length,
+          cOrd = use.ord.map(g => c[(G - g) % G]),
+          sum = cOrd.reduce((a, b) => a + b, 0);
+        const rep0 = Math.max(1, Math.ceil(cOrd.length / segs0.length)),
+          // enough repeats to fill the band, however short the text is against it
+          repMax = o.once ? rep0 : Math.max(14, Math.ceil((sum + o.wordGap) / one) + 1);
+        if (o.once && rep0 > 1) continue;
+        for (let rep = rep0; rep <= repMax; rep++) {
+          if (rep * one - o.wordGap > sum + 1) break;
+          const p = partition(repeat(segs0, rep), cOrd);
+          if (!p) continue;
+          const orphans = cOrd.length > 1 ? p.groups.filter(g => g.length === 1).length : 0,
+            score =
+              p.score +
+              (o.fixed || !scaleCost ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget) +
+              (mode === 'breaks' ? 0.15 : 0) +
+              SKIP_COST * use.skip +
+              ORPHAN_COST * orphans;
+          if (!best || score < best.score) {
+            // groups in reading order for every run; skipped runs get none
+            const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
+            use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
+            best = { s, rep, groups, caps: c, mode, score, room, slack: p.score };
+          }
         }
       }
     }
-    if (best) break; // whole words worked
+    return best;
+  };
+  // a fit found by growing or breaking replaces the first only when it clearly closes the gaps
+  const better = (a: RingFit | null, b: RingFit | null) => (!a ? b : !b ? a : b.slack < a.slack - 0.05 ? b : a);
+  const scales = o.fixed ? [o.fixed] : range(hi, lo);
+  let best = search(scales, 'words', true);
+  // still gappy: larger letters, up to what the band's geometry allows
+  // a repeated text fills by repeating; only a text written once grows its letters to fill
+  const grow = o.once && !o.fixed && o.sMax > hi * 1.02;
+  if ((!best || best.slack > MAX_SLACK) && grow)
+    best = better(best, search(range(Math.min(o.sMax, o.sTarget * 3), hi), 'words', false));
+  // then words broken at non-joining letters
+  if (!best || best.slack > MAX_SLACK) {
+    let br = search(scales, 'breaks', true);
+    if ((!br || br.slack > MAX_SLACK) && grow)
+      br = better(br, search(range(Math.min(o.sMax, o.sTarget * 3), hi), 'breaks', false));
+    // breaking words only pays when it closes the gaps clearly
+    best = better(best, br);
   }
   return best;
 }

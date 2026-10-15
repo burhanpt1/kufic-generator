@@ -119,6 +119,13 @@ function maxScale(shape: ShapeGeometry, size: number, inset: number, Hb: number,
   return s >= hi ? hi : s >= 0.2 ? s : 0;
 }
 
+/** Share of the outline's area a growing band must leave inside it. */
+const GROW_KEEP = 0.6;
+function growScale(shape: ShapeGeometry, size: number, inset: number, Hb: number, hi: number): number {
+  const s = (shape.depthFor(GROW_KEEP) * size - inset) / Hb;
+  return Math.max(0, Math.min(hi, s));
+}
+
 export interface RegionResult {
   size: number;
   outer: Pt[];
@@ -162,7 +169,8 @@ export function resolveRegion(node: RegionNode, parentStyle: Style, ctx: Ctx, fi
     const fill = ctx.fill as Placed['meta']['fill'];
     const fillOk =
       !node.fill ||
-      node.fill.type === 'region' ||
+      // a nested region that found no room at all is a failed fill too
+      (node.fill.type === 'region' && fill?.ok !== false) ||
       (fill && fill.ok && (fill.scale == null || fill.scale >= MIN_FILL_RATIO * (res?.lastScale ?? 1)));
     if ((ctx.warnings.length === snap.warnings && fillOk) || i === steps.length - 1) break;
     ctx.items.length = snap.items;
@@ -221,7 +229,10 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         sepW = sep.kind !== 'none' && sep.width > 0 ? sep.width * sT : 0,
         margin = SEP_MARGIN * sHi,
         dBand = inset + sepW + 2 * margin,
-        sMax = maxScale(shape, size, dBand, room, sHi);
+        sMax = maxScale(shape, size, dBand, room, sHi),
+        // a band too short for its text may grow its letters instead of stretching them, but must leave at least
+        // GROW_KEEP of the outline's area inside it
+        sGrow = typeof b.scale === 'number' ? sMax : Math.max(sMax, growScale(shape, size, dBand, room, sT * 3));
       const bg = sMax > 0 ? bandGeom(shape, size, dBand) : null;
       const fit = bg
         ? fitRing(bg, ctx.script, p, {
@@ -229,7 +240,8 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
             fixed: typeof b.scale === 'number' ? b.scale : undefined,
             once: slot.repeat === 'once',
             wordGap: slot.wordGap,
-            sMax,
+            sMax: sGrow,
+            sHi: sMax,
             room,
           })
         : null;
