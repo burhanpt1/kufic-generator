@@ -1,7 +1,7 @@
 // Placed: the resolved composition, renderer-agnostic and serialisable (COMPOSITION_ENGINE.md §3.3). Coordinates are
 // in cells, centred on the region's outline; canvas.origin is where that centre sits on the canvas.
 import type { Pt } from '../geometry/types';
-import type { PatternSpec, SeparatorKind, Style } from '../model/schema';
+import type { PatternSpec, RoundelColours, SeparatorKind, Style } from '../model/schema';
 import type { CellStrip, Strip } from '../script/types';
 
 /** Where a strip goes: strip (x, y) in cells -> canvas. y runs from the band's outer edge inward. */
@@ -56,7 +56,31 @@ export type PlacedItem =
   /** A region's outline and the space left inside its borders (not drawn; for clipping and layering effects). */
   | { type: 'outline'; style: number; outer: Pt[]; inner: Pt[] | null }
   /** Edges of interlaced ribbons: open polylines (broken where a ribbon passes under another). */
-  | { type: 'ribbon'; style: number; paths: Pt[][]; width: number; pen?: boolean };
+  | { type: 'ribbon'; style: number; paths: Pt[][]; width: number; pen?: boolean }
+  /** A thuluth roundel: its drawing scaled by s (canvas cells per unit) about centre, framed by a gilded rim. */
+  | ({
+      type: 'roundel';
+      style: number;
+      centre: Pt;
+      s: number;
+      framed: boolean;
+      colours: Required<RoundelColours>;
+    } & RoundelDrawing);
+
+/** A roundel's drawing in its own units (pen units, y down, centred on the oval), ready to scale onto the canvas. */
+export interface RoundelDrawing {
+  oval: number;
+  /** Field radius (vertical) and rim width. */
+  Rf: number;
+  rim: number;
+  /** Ink as path data: the untinted letters and marks, then each tint. */
+  ink: string;
+  tints: { colour: string; d: string }[];
+  counters: string;
+  /** Marks placed / missing, and ornaments, for the meta. */
+  marks: number;
+  missing: number;
+}
 
 /** Draw order, back to front. */
 export const LAYER_ORDER = ['ground', 'pattern', 'spandrels', 'letters', 'separators', 'features'] as const;
@@ -68,7 +92,11 @@ export const layerOf = (it: PlacedItem): Layer =>
       ? 'pattern'
       : it.type === 'spandrels'
         ? 'spandrels'
-        : it.type === 'strip' || it.type === 'grid' || it.type === 'abjad' || it.type === 'rule'
+        : it.type === 'strip' ||
+            it.type === 'grid' ||
+            it.type === 'abjad' ||
+            it.type === 'rule' ||
+            it.type === 'roundel'
           ? 'letters'
           : it.type === 'separator' || it.type === 'ribbon'
             ? 'separators'

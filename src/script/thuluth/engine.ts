@@ -36,6 +36,8 @@ export interface PlacedLetter {
   /** Letter index in its word, and the word's index. */
   li: number;
   wi: number;
+  /** Scale of the group this letter belongs to (roundels shrink a conjunction, say). */
+  sc?: number;
 }
 export type Placed =
   | PlacedLetter
@@ -75,9 +77,11 @@ export interface LineOptions {
   allah?: boolean;
   noAuto?: boolean;
 }
+/** A dot: position, then (in compositions) its scale, the nib's rotation and a tint. */
+export type Dot = [x: number, y: number, sc?: number, rot?: number, tint?: string];
 export interface Built {
   strokes: Stroke[];
-  dots: [number, number][];
+  dots: Dot[];
   placed: Placed[];
   dotGroups: DotGroup[];
 }
@@ -206,7 +210,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       ang = st.ang,
       placed = setLine(text, o),
       strokes: Stroke[] = [],
-      dots: [number, number][] = [];
+      dots: Dot[] = [];
     type Raw = { ang: number; pts: [number, number, number, number?][] };
     const raws: Raw[] = [];
     let open: Raw | null = null;
@@ -337,11 +341,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     dotPolys(x, y, st.nib * scale, st.ang, st.floor, rot);
 
   /** The lab's specimen renderer: strokes and dots on paper, with padding (drawSVG). */
-  function drawSVG(
-    strokes: Stroke[],
-    dots: [number, number][],
-    o: { U?: number; ink?: string; paper?: string; pad?: number } = {},
-  ) {
+  function drawSVG(strokes: Stroke[], dots: Dot[], o: { U?: number; ink?: string; paper?: string; pad?: number } = {}) {
     const U = o.U ?? 14,
       ink = o.ink ?? '#1b1b1b',
       paper = o.paper ?? '#f4efe3',

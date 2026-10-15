@@ -116,6 +116,14 @@ export function rasterise(placed: Placed): Uint8Array {
         );
         break;
       }
+      case 'roundel': {
+        // a filled field with letters all over it: no empty space inside its rim
+        const R = it.Rf + (it.framed ? it.rim : 0),
+          a = (R + (it.Rf + it.rim) * (it.oval - 1)) * it.s,
+          b = R * it.s;
+        texture([Array.from({ length: 48 }, (_, i) => [it.centre[0] + a * Math.cos((i * Math.PI) / 24), it.centre[1] + b * Math.sin((i * Math.PI) / 24)] as Pt)]); // prettier-ignore
+        break;
+      }
       case 'abjad': {
         const [cx, cy] = it.centre,
           hw = it.maxW / 2,
