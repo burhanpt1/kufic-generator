@@ -44,11 +44,16 @@ export interface Sheet {
 export interface SheetOptions {
   /** The core of the star: the square Kufic spiral, or a rosette of نور على نور on eight spokes reading outward. */
   core?: 'spiral' | 'rosette';
-  /** The light from the glass: plain wedges, or rays written in gold: نور, or the Light Verse word by word. */
+  /** The light from the glass: plain wedges, or rays written in gold: نور, or the Light Verse word by word
+   *  (the default). */
   rays?: 'wedges' | 'nur' | 'verse';
 }
 
-export function nurSheet(o: SheetOptions = {}): Sheet {
+/** The chosen design: the square Kufic spiral at the core, light written in the Light Verse. */
+export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse' };
+
+export function nurSheet(opts: SheetOptions = {}): Sheet {
+  const o = { ...NUR_DEFAULTS, ...opts };
   const fr = resolve(frame(NAMES_99.join(' '))),
     W = fr.canvas.w * U,
     H = fr.canvas.h * U;
