@@ -1,6 +1,5 @@
 // The script engine interface (COMPOSITION_ENGINE.md §4): everything letter-specific sits behind it, so a cursive
 // engine can later replace Kufi for borders and line fills.
-import type { Shaped } from '../types';
 
 export interface LetterStyle {
   ascenders: number;
@@ -74,8 +73,9 @@ export interface LayoutOptions {
 
 export interface ScriptEngine {
   id: string;
-  shape(text: string, style: LetterStyle): Shaped;
-  prepare(shaped: Shaped, style: LetterStyle): Prepared;
+  /** Shaped text, opaque outside the engine (each script shapes in its own way). */
+  shape(text: string, style: LetterStyle): unknown;
+  prepare(shaped: unknown, style: LetterStyle): Prepared;
   /** Prepare several lines together so they share one band height (one ring per line). */
   prepareLines(lines: string[], style: LetterStyle): Prepared[];
   /** 'words' keeps words whole; 'breaks' also allows breaks inside words (after non-joining letters). */

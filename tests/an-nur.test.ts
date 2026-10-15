@@ -1,5 +1,6 @@
 // Surat al-Nur as text (src/showpiece/an-nur.ts) and as the star field of Light upon light (field: 'surah'): the
 // text must be whole, in order, and drawable; nothing may be dropped or repeated.
+import type { Shaped } from '../src/types';
 import { describe, expect, it } from 'vitest';
 import { loadSealWasm } from '../src/kernels/seal';
 import { DEFAULT_STYLE } from '../src/model/style';
@@ -19,7 +20,7 @@ describe('Surat al-Nur', () => {
     expect(words).toHaveLength(1316);
   });
   it('reduces to letters the engine draws, keeping hamza on its seat', () => {
-    expect(kufi.shape(words.join(' '), DEFAULT_STYLE.letter).unsupported).toEqual([]);
+    expect((kufi.shape(words.join(' '), DEFAULT_STYLE.letter) as Shaped).unsupported).toEqual([]);
     expect([...new Set(words.join(''))].every(c => /[ء-يٱ]/.test(c))).toBe(true);
     for (const w of ['شيئا', 'يستئذن', 'ٱمرئ']) expect(words.join(' ')).toContain(w);
   });
