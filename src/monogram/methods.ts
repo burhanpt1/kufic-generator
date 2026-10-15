@@ -187,7 +187,8 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
         .normalize('NFC')
         .split(/\s+/)
         .filter(w => /[ء-يٱ-ۓ]/.test(w)),
-      b = wordBlock(script, words, letter, Hs);
+      // one word is a single line: taller ascenders are the only way to bring it nearer square
+      b = wordBlock(script, words, letter, words.length === 1 ? [...new Set([...Hs, Math.min(15, p.H + 6)])] : Hs);
     if (!b) return null;
     return {
       grid: b.grid,
@@ -685,8 +686,9 @@ function build(
   if (p.dots && ((method === 'seal' && !p.words) || method === 'pinwheel' || method === 'pinwheelIn'))
     r.grid = dotFill(r.grid);
   const metrics = monoMetrics(r.grid, r.stats),
-    // word seals are laid out square; a near-square one (two long words) still takes the frame
-    square = method === 'seal' && p.words ? 0.75 : 0.8,
+    // word seals always take the frame, which squares them: one word can't be stacked square, so it sits centred
+    // in it (owner's review of the held-out seals)
+    square = method === 'seal' && p.words ? -1 : 0.8,
     grid = metrics.squareness > square && !r.curves ? frameIt(r.grid, p.frame) : r.grid;
   return { grid, metrics, stats: r.stats, curves: r.curves };
 }

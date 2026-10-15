@@ -242,6 +242,31 @@ function alignLine(
   };
 }
 
+/** A line narrower than the block may sit anywhere in its margin: the shift that puts most of its alifs under (or
+ *  over) alifs of the neighbouring line, the smallest such shift from where it is. */
+function slide(lg: LineGrid, target: Set<number>, H: number): { line: LineGrid; hits: number } {
+  const g = lg.g,
+    cols = alifCols(g, lg.base, H);
+  let x0 = g.w,
+    x1 = -1;
+  for (let y = 0; y < g.h; y++)
+    for (let x = 0; x < g.w; x++)
+      if (g.data[y * g.w + x]) {
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+      }
+  let best = { d: 0, hits: cols.filter(c => target.has(c)).length };
+  for (let d = -x0; d <= g.w - 1 - x1; d++) {
+    const hits = cols.filter(c => target.has(c + d)).length;
+    if (hits > best.hits || (hits === best.hits && hits > 0 && Math.abs(d) < Math.abs(best.d))) best = { d, hits };
+  }
+  if (!best.d) return { line: lg, hits: best.hits };
+  const out = G(g.w, g.h);
+  for (let y = 0; y < g.h; y++)
+    for (let x = 0; x < g.w; x++) if (g.data[y * g.w + x]) out.data[y * g.w + x + best.d] = g.data[y * g.w + x];
+  return { line: { g: out, base: lg.base }, hits: best.hits };
+}
+
 /** The squarest block of justified lines for these words, at either ascender height. */
 export function wordBlock(
   script: ScriptEngine,
@@ -271,21 +296,31 @@ export function wordBlock(
         W0 = Math.max(...nat);
       // justify to the widest line, or wider while the block is taller than it is wide
       for (let W = W0; W <= W0 + Math.ceil(W0 / 2); W += 2) {
-        let stretched = 0;
+        const used: number[] = [];
         const grids = spans.map(([i, j], k) => {
-          const extra = W - nat[k],
+          // a short line stretches by at most half its width and is centred, so a lone short word doesn't pull
+          // apart across the block (يا over لطيف, رب over زدني)
+          const extra = Math.min(W - nat[k], Math.max(3, Math.ceil(nat[k] / 2))),
             g = (extra && lineGrid(text(i, j), extra)) || lineGrid(text(i, j), 0)!;
-          if (g.g.w === W) {
-            stretched += extra;
-            return g;
-          }
-          // couldn't stretch to width: centre it
+          used[k] = g.g.w - nat[k];
+          if (g.g.w === W) return g;
+          // short of the width: centre it
           const c = G(W, g.g.h),
             ox = Math.floor((W - g.g.w) / 2);
           for (let y = 0; y < g.g.h; y++)
             for (let x = 0; x < g.g.w; x++) c.data[y * W + x + ox] = g.g.data[y * g.g.w + x];
           return { g: c, base: g.base };
         });
+        // lines narrower than the block slide within their margin to stand alifs under alifs, top down
+        for (let k = 1; k < grids.length; k++)
+          if (used[k] + nat[k] < W)
+            grids[k] = slide(grids[k], new Set(alifCols(grids[k - 1].g, grids[k - 1].base, H)), H).line;
+        for (let k = grids.length - 2; k >= 0; k--)
+          if (used[k] + nat[k] < W) {
+            const below = new Set(alifCols(grids[k + 1].g, grids[k + 1].base, H)),
+              s = slide(grids[k], below, H);
+            if (s.hits) grids[k] = s.line;
+          }
         // lower lines: rebuilt word by word where that puts more of their stems under stems of the line above
         for (let k = 1; k < grids.length; k++) {
           const above = new Set(alifCols(grids[k - 1].g, grids[k - 1].base, H)),
@@ -293,7 +328,7 @@ export function wordBlock(
             [i, j] = spans[k],
             a = alignLine(words.slice(i, j), W, above, wordOf, H, wordGap);
           if (a && a.aligned > have) {
-            stretched += a.stretched - (W - nat[k]);
+            used[k] = a.stretched;
             grids[k] = a.line;
           }
         }
@@ -308,13 +343,14 @@ export function wordBlock(
             [i, j] = spans[k],
             a = alignLine(words.slice(i, j), W, below, wordOf, H, wordGap);
           if (a && a.aligned > have && (!prev || mine(a.line).filter(c => prev.has(c)).length >= kept)) {
-            stretched += a.stretched - (W - nat[k]);
+            used[k] = a.stretched;
             grids[k] = a.line;
           }
         }
         const grid = stack(grids, W, H),
           sq = Math.abs(grid.w - grid.h) / Math.max(grid.w, grid.h),
           // square first; then little kashida, and the shorter ascenders when it's close
+          stretched = used.reduce((a, b) => a + b, 0),
           score = sq + (0.25 * stretched) / (W * L) + (H > Hs[0] ? 0.03 : 0);
         if (!best || score < best.score - 1e-9)
           best = { b: { grid, lines: spans.map(([i, j]) => words.slice(i, j)), H, stretched }, score };

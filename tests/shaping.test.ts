@@ -27,8 +27,9 @@ describe('shape(): joining forms', () => {
       ['MEEM.ini', 'DAL.fin', 'DAL.iso'],
     ]);
   });
-  it('maps Persian and Urdu letters to their nearest group', () => {
-    expect(forms('پگ')).toEqual([['BEH.ini', 'KAF.fin']]);
+  it('maps Persian and Urdu letters to their nearest group (گ has its own, kaf with a second arm)', () => {
+    expect(forms('پگ')).toEqual([['BEH.ini', 'GAF.fin']]);
+    expect(forms('پک')).toEqual([['BEH.ini', 'KAF.fin']]);
   });
 });
 
