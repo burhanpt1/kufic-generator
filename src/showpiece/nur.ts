@@ -60,7 +60,6 @@ export function niche(): Composition {
       {
         type: 'textBorder',
         text: 'lamp',
-        scale: 1.4,
         separator: { kind: 'chevron', width: 3 },
         ground: { kind: 'pattern', pattern: { tiling: '488', angle: 67, scale: 4 } },
       },
@@ -91,7 +90,6 @@ export function niche(): Composition {
           {
             type: 'textBorder',
             text: 'verse',
-            scale: 2.4,
             separator: { kind: 'braid', width: 4 },
             ground: { kind: 'vine' },
           },
