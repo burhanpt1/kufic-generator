@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth legibility</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Thuluth legibility</h1>
+<p>Rules the engine now keeps, each a mistake caught by eye in the lab (tests/thuluth-legibility.test.ts): every letter has its dots; vowels stay off the letters and none are dropped; confusable letters stay apart; loop letters keep their counters; no small loop where a bowl leaves a letter.</p>
+<h2>Final and isolated kaf, rebuilt</h2>
+<p>The lab's final kaf was a leaning shaft over a short foot, so بارك read as بارد or بارل. It now has an upright under a shoulder stroke, a long base that lifts at its end, and the small kaf sign inside.</p>
+<div class="row" id="kaf"></div>
+<h2>Vowels under deep tails</h2>
+<p>A kasra under a final mim or nun used to be dropped when the tail filled the band below. It now sits under the letter's body beside the tail, and a crowded dagger alif searches further before giving up (never further than its own letter).</p>
+<div class="row" id="marks"></div>
+<h2>Confusable pairs</h2>
+<div class="row" id="pairs"></div>
+<script type="module">
+import { ROUNDEL_PEN, TILE_PEN, thuluth, parseVowels, lineMarks } from '../src/script/thuluth/index.ts';
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+const fig = (el, svg, cap) => { const f = document.createElement('figure'); f.innerHTML = `<img alt="" src="${url(svg)}"><figcaption>${cap}</figcaption>`; document.getElementById(el).append(f); };
+const text = 'بارك بارد ملك كتب';
+fig('kaf', thuluth({ ...ROUNDEL_PEN, labLetters: true }).renderLine(text, { U: 10 }), 'The lab: <bdi>بارك</bdi> reads as <bdi>بارل</bdi>');
+fig('kaf', thuluth(ROUNDEL_PEN).renderLine(text, { U: 10 }), 'Now');
+fig('kaf', thuluth(TILE_PEN).renderLine('بارك الله لك', { U: 10 }), 'Now, at the tile pen: <bdi>بارك الله لك</bdi>');
+function vocal(th, t) { const pv = parseVowels(t), b = th.buildStrokes(pv.bare), m = lineMarks(th, b, pv.marks, 16, -6); return [th.drawSVG([...b.strokes, ...m.strokes], b.dots, { U: 10 }), m.missing]; }
+for (const t of ['بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 'وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُمْ']) {
+  const [svg, missing] = vocal(thuluth(ROUNDEL_PEN), t);
+  fig('marks', svg, `All marks placed (${missing} missing)`);
+}
+for (const [a, b] of [['الحمد', 'العمد'], ['قلب', 'غلب'], ['فصل', 'خصل'], ['محمد', 'محمر'], ['بارك', 'بارد'], ['ملك', 'ملل']])
+  fig('pairs', thuluth(ROUNDEL_PEN).renderLine(`${a}   ${b}`, { U: 10, wordGap: 5 }), `Right: <bdi>${a}</bdi> · left: <bdi>${b}</bdi>`);
+</script>
+</body>
+</html>

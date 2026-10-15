@@ -83,13 +83,24 @@ export function lineMarks(
       const [w0, h0] = MARK_SIZE[m] || [1.4, 1.2],
         w = w0 * markScale,
         h = h0 * markScale;
+      const ink = p.g.s.flatMap(st => sampleStroke(st.pts.map(q => [q[0] + p.ox, q[1] + (p.oy || 0), 1, q[3]] as SkelPt), th.style.tension, 6)); // prettier-ignore
+      const span = (Math.max(...pts.map(q => q[0])) - Math.min(...pts.map(q => q[0]))) / 2;
+      const botNear = (mx: number, mw: number) => {
+        let b = Infinity;
+        for (const q of ink) if (Math.abs(q.x - mx) < mw / 2 + 0.6) b = Math.min(b, q.y);
+        return b === Infinity ? 0 : b;
+      };
       let spot: [number, number] | null = null;
-      for (let rad = 0; rad <= 6 && !spot; rad += 0.3)
+      for (let rad = 0; rad <= 10 && !spot; rad += 0.3)
         for (let a = 0; a < 20; a++) {
           const mx = lx + Math.cos((a / 20) * 6.283) * rad,
             my = (below ? bot - h / 2 - 0.4 : top + h / 2 + 0.4) + Math.sin((a / 20) * 6.283) * rad * 0.6;
-          if (below ? my + h / 2 > bot - 0.2 : my - h / 2 < Math.min(top, 3.0) + 0.2) continue;
+          // a mark below clears the part of its letter right above it (beside a deep tail, under the body), and a
+          // mark above clears the whole letter
+          if (below ? my + h / 2 > Math.min(botNear(mx, w), 0) - 0.2 : my - h / 2 < Math.min(top, 3.0) + 0.2) continue;
           if (my + h / 2 > yTop || my - h / 2 < yBot) continue;
+          // never so far aside that the mark reads as another letter's
+          if (Math.abs(mx - lx) > span + 2.5) continue;
           const ax = Math.floor(X(mx - w / 2)),
             bx = Math.ceil(X(mx + w / 2)),
             ay = Math.floor(Y(my + h / 2)),

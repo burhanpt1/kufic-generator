@@ -1,6 +1,7 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
+import { LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleStroke } from './pen';
 import { DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
@@ -106,6 +107,9 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
   /** The letter table with this style's choices: the heh design and the great roundel gestures. */
   const table = (() => {
     const t = { ...LETTERS } as Record<Family, Partial<Record<Form, GlyphDef>>>;
+    if (!st.labLetters)
+      for (const [fam, fs] of Object.entries(LETTER_FIXES) as [Family, Partial<Record<Form, GlyphDef>>][])
+        t[fam] = { ...t[fam], ...fs };
     t.ha = { ...t.ha, fin: HEH_FIN[st.heh] || HEH_FIN.round };
     const gr = st.great;
     if (gr?.nun) t.nun = { ...t.nun, fin: clone(GREAT.nunFin) };
