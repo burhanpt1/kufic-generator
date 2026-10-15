@@ -7,11 +7,11 @@ export interface LetterStyle {
   ra: 'desc' | 'short' | 'hook';
   ayn: 'open' | 'cup';
   lamAlif: 'plain' | 'knot';
-  /** Final م with its tail on the line ('flat') or dropped below it (absent = 'flat'). */
+  /** Final م with its tail on the line ('flat') or dropped below it (absent = 'drop'). */
   meem?: 'flat' | 'drop';
-  /** Initial and medial ص ض with a tall or a short tooth after the loop (absent = 'tall'). */
+  /** Initial and medial ص ض with a tall or a short tooth after the loop (absent = 'short'). */
   sad?: 'tall' | 'short';
-  /** Justification may widen the small loops of م و ف ق ه ('stretch') or not ('rigid'); absent = 'stretch'. */
+  /** Justification may widen the small loops of م و ف ق ه ('stretch') or not ('rigid'); absent = 'rigid'. */
   loops?: 'stretch' | 'rigid';
   marks: 'off' | 'dots' | 'all';
   vowels: 'modern' | 'early';

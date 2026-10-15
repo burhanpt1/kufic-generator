@@ -10,12 +10,12 @@ export interface LetterVariants {
   ra: 'desc' | 'short' | 'hook';
   ayn: 'open' | 'cup';
   la: 'plain' | 'knot';
-  /** Final م: 'flat' on the line (the prototype's), 'drop' with its tail below it. */
+  /** Final م: 'drop' with its tail below the line (default), or 'flat' on it (the prototype's). */
   meem?: 'flat' | 'drop';
-  /** Initial and medial ص ض: 'tall' tooth after the loop (the prototype's) or a 'short' one. */
+  /** Initial and medial ص ض: a 'short' tooth after the loop (default) or a 'tall' one (the prototype's). */
   sad?: 'tall' | 'short';
-  /** Whether justification may widen the small closed loops of م و ف ق ه ('stretch', the prototype's) or not
-   *  ('rigid': a widened م read as ص). */
+  /** Whether justification may widen the small closed loops of م و ف ق ه: 'rigid' (default; a widened م read as
+   *  ص) or 'stretch' (the prototype's). */
   loops?: 'stretch' | 'rigid';
 }
 export type LetterOptions = Partial<LetterVariants>;

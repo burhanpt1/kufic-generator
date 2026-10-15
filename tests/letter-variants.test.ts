@@ -1,6 +1,6 @@
 // Letter changes from the held-out seal review: final م drops its tail below the line (it read as ص in سلام), and
 // the tooth after the loop of initial and medial ص ض is short (in ضياء it read as a missing letter). Both are the
-// default style; the engine's fallback keeps the prototype's shapes, which the golden snapshots pin.
+// default style and the engine's fallback; the prototype's shapes stay available as variants.
 import { describe, expect, it } from 'vitest';
 import { baseDef, setVariants } from '../src/glyphs/overrides';
 import { DEFAULT_STYLE } from '../src/model/style';
@@ -12,10 +12,14 @@ describe('letter variants', () => {
     expect(DEFAULT_STYLE.letter.meem).toBe('drop');
     expect(DEFAULT_STYLE.letter.sad).toBe('short');
   });
-  it('fall back to the prototype’s shapes', () => {
+  it('are the engine’s fallback too, with the prototype’s shapes still available', () => {
     setVariants({});
+    expect(baseDef('MEEM', 'fin')).toEqual({ rows: ['..###', '..#.#', '#####', '#....', '#....'], base: 2 });
+    expect(baseDef('SAD', 'ini')).toEqual(['..#####', '#.#...#', '#######']);
+    setVariants({ meem: 'flat', sad: 'tall' });
     expect(baseDef('MEEM', 'fin')).toEqual(['..###', '#.#.#', '#####']);
     expect(baseDef('SAD', 'ini')).toEqual(['#.#####', '#.#...#', '#######']);
+    setVariants({});
   });
   it('drop final م below the line, without the post that made it read as ص', () => {
     const { g, base } = wordGrid(kufi, 'سلام', { ...DEFAULT_STYLE.letter, ascenders: 7 }, 0)!,
