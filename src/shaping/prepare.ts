@@ -2,6 +2,8 @@ import type { BandGlyph, MarksMode, Seg, Unit, VowelStyle, Word } from '../types
 import { altDef } from '../glyphs/overrides';
 import { buildGlyph } from './buildGlyph';
 
+/** Letters whose initial and medial forms are a bare tooth. */
+const TEETH = new Set(['BEH', 'NOON', 'YEH']);
 const TAILS = new Set(['BEH', 'NOON', 'YEH', 'HAH', 'SEEN', 'SAD', 'AIN', 'FEH', 'QAF', 'KAF', 'MEEM']);
 
 export interface Prepared {
@@ -14,23 +16,30 @@ export interface Prepared {
 // Stretchable columns: a word-final tail (baseline only) or a letter body (every stroke in the column is horizontal).
 export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: VowelStyle, alts = false): Prepared {
   const built = shaped.map(units => units.map(u => buildGlyph(u, H, mode, style)));
-  // ي joined to a tall letter (يا, يل): one more cell of join, so the cup between its tooth and the stem is wide
-  // enough for its two dots to sit centred in it (owner's review, seals round 6; strip() centres them)
+  // a tooth letter (ب ت ث ن ي …) joined to a tall letter: its dots sit in the hollow between its tooth and that
+  // letter's stem (owner's review: dots go in the hollow the letter makes). One more cell of join toward the stem
+  // makes the hollow wide enough for a spaced pair to sit centred; a column that only held a dot goes, so the word
+  // keeps its width. The following letter's stem counts first, then the preceding one's. strip() centres the dots.
+  const tall = (g: (typeof built)[number][number] | undefined) => !!g?.cells.some(([, y, v]) => v === 1 && y >= H - 1);
   built.forEach((gs, wi) =>
     gs.forEach((g, gi) => {
-      const u = shaped[wi][gi],
-        nx = gs[gi + 1];
-      if (u.key !== 'YEH' || (u.form !== 'ini' && u.form !== 'med') || !u.jn || !nx || nx.top < H - 1) return;
-      // one more cell of join on the left; the dots stay put (so they move toward the cup), and a right column
-      // that only held a dot goes
+      const u = shaped[wi][gi];
+      if (!TEETH.has(u.key) || (u.form !== 'ini' && u.form !== 'med') || !g.cells.some(([, , v]) => v !== 1)) return;
+      const next = u.jn && tall(gs[gi + 1]),
+        prev = !next && u.jp && tall(gs[gi - 1]);
+      if (!next && !prev) return;
       let w = g.w + 1,
-        cells: [number, number, number][] = [
-          [0, 0, 1],
-          ...g.cells.map(([x, y, v]) => [v === 1 ? x + 1 : x, y, v] as [number, number, number]),
-        ];
-      if (!cells.some(([x, , v]) => x === w - 1 && v === 1)) {
+        cells: [number, number, number][] = next
+          ? // join on the left; the dots stay put, so they move toward the stem
+            [[0, 0, 1], ...g.cells.map(([x, y, v]) => [v === 1 ? x + 1 : x, y, v] as [number, number, number])]
+          : // join on the right; the dots move one cell right, toward the stem
+            [[g.w, 0, 1], ...g.cells.map(([x, y, v]) => [v === 1 ? x : x + 1, y, v] as [number, number, number])];
+      const edge = next ? w - 1 : 0;
+      if (!cells.some(([x, , v]) => x === edge && v === 1)) {
         w--;
-        cells = cells.filter(([x]) => x < w);
+        cells = next
+          ? cells.filter(([x]) => x < w)
+          : cells.filter(([x]) => x > 0).map(([x, y, v]) => [x - 1, y, v] as [number, number, number]);
       }
       gs[gi] = { ...g, w, cells };
     }),
@@ -87,7 +96,7 @@ export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: Vow
     const tr = down + H - 1;
     if (tr < Hb) for (let x = 0; x < g.w; x++) if (data[tr * g.w + x] === 1) tall.push(x);
     const b: BandGlyph = { w: g.w, data, form: g.form, str, tall };
-    if (g.key === 'YEH' && (g.form === 'ini' || g.form === 'med')) b.cup = true;
+    if (TEETH.has(g.key) && (g.form === 'ini' || g.form === 'med')) b.cup = true;
     return b;
   };
   const words = built.map((gs, wi) => ({
