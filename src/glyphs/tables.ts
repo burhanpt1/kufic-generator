@@ -44,7 +44,12 @@ export const D: Record<string, Record<Form, Rows>> = (() => {
 })();
 
 // Letter style variants. A def is rows (top -> bottom) or { rows, base } where base = rows below the baseline.
-export const VARIANTS: { ra: Record<string, FormTable>; ayn: Record<string, FormTable> } = {
+export const VARIANTS: {
+  ra: Record<string, FormTable>;
+  ayn: Record<string, FormTable>;
+  meem: Record<'flat' | 'drop', GlyphDef>;
+  sad: Record<'tall' | 'short', GlyphDef>;
+} = {
   ra: {
     desc: { iso: { rows: ['..#', '..#', '..#', '###'], base: 2 } },
     short: { iso: ['..#', '..#', '###'] },
@@ -61,6 +66,16 @@ export const VARIANTS: { ra: Record<string, FormTable>; ayn: Record<string, Form
       med: ['#.#', '###', '.#.', '.#.', '###'],
       fin: ['..#.#', '..###', '#..#.', '#..#.', '#####'],
     },
+  },
+  // final م: with a post on its left it read as ص (owner's review: سلام); 'drop' runs its tail below the line
+  meem: {
+    flat: ['..###', '#.#.#', '#####'],
+    drop: { rows: ['..###', '..#.#', '#####', '#....', '#....'], base: 2 },
+  },
+  // initial and medial ص ض: a 'short' tooth after the loop doesn't read as a letter of its own (owner's review: ضياء)
+  sad: {
+    tall: ['#.#####', '#.#...#', '#######'],
+    short: ['..#####', '#.#...#', '#######'],
   },
 };
 /** Long alternates of final letters, chosen by the justifier when a line has room (letter.alternates). Original

@@ -566,7 +566,7 @@ function spiralCompose(p: MonoParams, text: string, script: ScriptEngine, letter
   for (let rings = p.spiralRings; rings >= 1; rings--) {
     const res = classicCompose({
       text, layout: 'rings', H: p.H, wordGap: 2, rings, rotation: 0, center: 'none', marks: 'dots', vowels: 'modern', repeat: true,
-      ra: letter.ra, ayn: letter.ayn, la: letter.lamAlif, terminals: 'none', gap: 1, cornerBlocks: p.corners, taper: 0, centre: 0, rhythm: true,
+      ra: letter.ra, ayn: letter.ayn, la: letter.lamAlif, meem: letter.meem, sad: letter.sad, loops: letter.loops, terminals: 'none', gap: 1, cornerBlocks: p.corners, taper: 0, centre: 0, rhythm: true,
     }); // prettier-ignore
     if (res.kind !== 'square') continue;
     const out = G(res.size, res.size);
