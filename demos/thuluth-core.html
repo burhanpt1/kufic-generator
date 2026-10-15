@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth core</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6;--hand:#8a6d3b;--learned:#2a7f62;--master:#1f3f8f}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
+.letters{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure svg{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}input{font:inherit;padding:4px 8px;flex:1 1 14em;min-width:0;direction:rtl}select{font:inherit}
+.ok{color:#2a7f62;font-weight:600}.no{color:#b3362c;font-weight:600}
+.key span{display:inline-block;padding:1px 8px;border-radius:9px;color:#fff;font-size:12px;margin-right:4px}
+</style>
+</head>
+<body>
+<h1>Thuluth core (TypeScript port)</h1>
+<p>src/script/thuluth: the lab's pen, letter set, shaping, joining and kashida, with the lab's globals as one explicit style and no DOM. Its line output is identical to the lab's, byte for byte, for every reference. A small pure rasteriser replaces the browser canvas the lab used to measure ink.</p>
+<h2>Lab and port, side by side</h2>
+<div class="bar"><input id="t" value="بسم الله الرحمن الرحيم" aria-label="Text"><select id="pen" aria-label="Pen"><option value="roundel">Roundel pen</option><option value="tile">Tile pen</option></select><label><input type="range" id="k" min="0" max="8" step="0.5" value="0" style="width:8em;flex:none"> kashida</label></div>
+<div class="g" style="margin-top:8px"><figure><div id="lab"></div><figcaption>Lab</figcaption></figure><figure><div id="port"></div><figcaption id="same"></figcaption></figure></div>
+<h2>The letter set</h2>
+<p class="key"><span style="background:var(--master)">master fit</span><span style="background:var(--learned)">learned (Calliar)</span><span style="background:var(--hand)">hand-drawn</span></p>
+<div class="letters" id="letters"></div>
+<script type="module">
+import labSrc from '../prototypes/thuluth-lab/thuluth-lab.bundle.js?raw';
+import { thuluth, ROUNDEL_PEN, TILE_PEN, LETTERS, polyPath, nibPolys, sampleStroke } from '../src/script/thuluth/index.ts';
+const s = document.createElement('script');
+s.textContent = labSrc + ';window.__lab={renderLine,useLearned,set:o=>{BODY=o.body;NIB_FLOOR=o.floor;LOOP_GAP=o.loopGap;}};';
+document.head.append(s);
+const lab = window.__lab, PENS = { roundel: ROUNDEL_PEN, tile: TILE_PEN };
+function draw() {
+  const st = PENS[document.getElementById('pen').value], t = document.getElementById('t').value || ' ', k = +document.getElementById('k').value;
+  lab.set(st); lab.useLearned(true, 1 / 1.25 * 1.12);
+  const a = lab.renderLine(t, { U: 10, nib: st.nib, ang: st.ang, pad: 2, kashida: k }), b = thuluth(st).renderLine(t, { U: 10, pad: 2, kashida: k });
+  document.getElementById('lab').innerHTML = a; document.getElementById('port').innerHTML = b;
+  document.getElementById('same').innerHTML = a === b ? 'Port: <span class="ok">identical to the lab</span>' : 'Port: <span class="no">differs from the lab</span>';
+}
+['t', 'pen', 'k'].forEach(id => (document.getElementById(id).oninput = draw));
+draw();
+// every form, drawn with the roundel pen, coloured by where it came from
+const th = thuluth(ROUNDEL_PEN), col = { hand: 'var(--hand)', learned: 'var(--learned)', master: 'var(--master)' };
+for (const [fam, forms] of Object.entries(LETTERS)) for (const [form, g] of Object.entries(forms)) {
+  const k = ['alif', 'lam', 'lamalif'].includes(fam) ? 1 : ROUNDEL_PEN.body, polys = g.s.flatMap(sd => nibPolys(sampleStroke(sd.pts.map(([x, y, w, c]) => [x * k, y * k, w, c])), ROUNDEL_PEN.nib, sd.ang ?? ROUNDEL_PEN.ang, ROUNDEL_PEN.floor));
+  const xs = polys.flat().map(p => p[0]), ys = polys.flat().map(p => p[1]), x0 = Math.min(...xs) - 1, x1 = Math.max(...xs) + 1, y0 = Math.min(-5, Math.min(...ys)) - 1, y1 = Math.max(11, Math.max(...ys)) + 1, U = 6;
+  const f = document.createElement('figure');
+  f.innerHTML = `<svg viewBox="0 0 ${((x1 - x0) * U).toFixed(0)} ${((y1 - y0) * U).toFixed(0)}"><line x1="0" x2="${((x1 - x0) * U).toFixed(0)}" y1="${(y1 * U).toFixed(1)}" y2="${(y1 * U).toFixed(1)}" stroke="#c9bfa8" stroke-dasharray="3 3"/><path fill="${col[g.src]}" d="${polyPath(polys, x => (x - x0) * U, y => (y1 - y) * U)}"/></svg><figcaption>${fam} ${form}</figcaption>`;
+  document.getElementById('letters').append(f);
+}
+</script>
+</body>
+</html>
