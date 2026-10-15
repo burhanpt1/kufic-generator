@@ -98,6 +98,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
   const colours: Required<RoundelColours> = {
     field: f.colours?.field ?? style.palette.paper,
     letters: f.colours?.letters ?? style.palette.ink,
+    sheen: f.colours?.sheen ?? '#f0d07a',
     rim: f.colours?.rim ?? style.palette.ink,
     line: f.colours?.line ?? style.palette.ink2,
     counters: f.colours?.counters ?? '',
@@ -119,6 +120,8 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     return;
   }
   const s = fit.s * 0.97;
+  if (f.ground)
+    ctx.items.push({ type: 'tilework', style: sid, area: [inner.pts], centre: fit.c, radius: Math.max(...inner.pts.map(q => Math.hypot(q[0] - fit.c[0], q[1] - fit.c[1]))), iznik: f.ground }); // prettier-ignore
   ctx.items.push({ type: 'roundel', style: sid, centre: fit.c, s, framed, colours, ...art });
   ctx.fill = {
     type: 'roundel',

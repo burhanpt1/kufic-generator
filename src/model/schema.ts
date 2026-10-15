@@ -106,6 +106,9 @@ export interface TextBorder {
   /** Inner rings smaller: target scale = (ring size / outer size)^taper. */
   taper?: number;
   separator?: Separator;
+  /** A gap in cells where a closed ring's text starts and ends, for a text read once (a verse) rather than a band
+   *  that repeats; centred where the ring starts. Default: none (the text closes up on itself). */
+  seam?: number;
   ground?: Ground;
   /** Plaited tall stems (needs ascenders of 9 or more). */
   plait?: boolean;
@@ -156,7 +159,15 @@ export type FillerNode =
   | { type: 'solid' }
   | { type: 'region'; node: RegionNode }
   /** A thuluth roundel or cartouche: the text arranged to fill an oval, its marks solved, on a gilded field. */
-  | { type: 'roundel'; text: string; recipe?: RoundelRecipe; frame?: boolean; colours?: RoundelColours };
+  | {
+      type: 'roundel';
+      text: string;
+      recipe?: RoundelRecipe;
+      frame?: boolean;
+      colours?: RoundelColours;
+      /** Iznik tiles over the space round the cartouche (it sits on them, as on a tile panel). */
+      ground?: IznikSpec;
+    };
 
 /** How a roundel is made (the thuluth lab's layout recipes): composer options, a pinned layout, hand adjustments. */
 export interface RoundelRecipe {
@@ -197,6 +208,8 @@ export interface RoundelRecipe {
 export interface RoundelColours {
   field?: string;
   letters?: string;
+  /** The gilding's highlight across letters and rim (#f0d07a, gold); the letter colour itself for flat white. */
+  sheen?: string;
   rim?: string;
   line?: string;
   counters?: string;
@@ -380,6 +393,7 @@ const border = z.discriminatedUnion('type', [
     scale: z.union([z.literal('auto'), z.number().min(0.2).max(3)]).optional(),
     taper: z.number().min(0).max(2).optional(),
     separator: separator.optional(),
+    seam: z.number().min(0).max(60).optional(),
     ground: ground.optional(),
     plait: z.boolean().optional(),
   }),
@@ -463,8 +477,9 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       text: slotName,
       recipe: roundelRecipe.optional(),
       frame: z.boolean().optional(),
+      ground: iznik.optional(),
       colours: z
-        .object({ field: colour, letters: colour, rim: colour, line: colour, counters: colour })
+        .object({ field: colour, letters: colour, sheen: colour, rim: colour, line: colour, counters: colour })
         .partial()
         .optional(),
     }),

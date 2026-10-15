@@ -18,7 +18,8 @@
     "compare:lab": "node scripts/compare-lab.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "mosque": "MOSQUE=1 vitest run tests/mosque.test.ts",
-    "showpiece": "SHOWPIECE=1 vitest run tests/showpiece.test.ts"
+    "showpiece": "SHOWPIECE=1 vitest run tests/showpiece.test.ts",
+    "wedding": "WEDDING=1 vitest run tests/wedding.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
