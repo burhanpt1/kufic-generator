@@ -16,6 +16,8 @@ export interface BandGeom {
   /** Circle: outer radius in cells. */
   R: number;
   runs: Run[];
+  /** A closed ring's gap, in cells, where its text starts and ends (TextBorder.seam). */
+  seam?: number;
 }
 
 export function bandGeom(shape: ShapeGeometry, size: number, inset: number): BandGeom | null {
@@ -38,11 +40,11 @@ export function capacities(bg: BandGeom, Hb: number, s: number, room = Hb): numb
   if (bg.kind === 'circle') {
     const r = bg.R / s;
     if (r - room < Math.max(3, room * 0.9)) return null;
-    return [Math.round(2 * Math.PI * (r - Hb / 2)) - 1];
+    return [Math.round(2 * Math.PI * (r - Hb / 2)) - 1 - (bg.seam ?? 0)];
   }
   // letters fan out on a curve tighter than the band is tall: no ring there at this size
   if (bg.runs.some(rn => runMinRadius(rn) < Hb * s * MIN_CURVE)) return null;
-  if (bg.kind === 'closed') return [Math.floor(bg.runs[0].len / s) - 1];
+  if (bg.kind === 'closed') return [Math.floor(bg.runs[0].len / s) - 1 - (bg.seam ?? 0)];
   return bg.runs.map(rn => Math.floor((rn.len - room * s * (rn.start!.clearance + rn.end!.clearance) - s) / s));
 }
 
@@ -217,13 +219,21 @@ export function layRing(
     const gg = (G - gi) % G,
       W = fit.caps[gi];
     if (!fit.groups[gg]?.length) continue; // a run too short for text stays empty
-    const strip = script.layout(fit.groups[gg] as Segments, prepared, W, { ...opts, wrap: bg.kind !== 'runs' });
+    const strip = script.layout(fit.groups[gg] as Segments, prepared, W, {
+      ...opts,
+      wrap: bg.kind !== 'runs' && !bg.seam,
+    });
     if (!strip) continue;
     let place: StripPlace;
-    if (bg.kind === 'circle') place = { type: 'arc', C: [0, 0], R: bg.R / s, N: W + 1, s, rot: 0 };
+    // a seam leaves its gap centred where the ring starts (the bottom of a circle, the outline's first point)
+    const seam = bg.seam ?? 0,
+      N = W + 1 + seam;
+    if (bg.kind === 'circle')
+      place = { type: 'arc', C: [0, 0], R: bg.R / s, N, s, rot: seam ? (-Math.PI * (seam + 1)) / N : 0 }; // prettier-ignore
     else if (bg.kind === 'closed') {
-      const rn = bg.runs[0];
-      place = { type: 'run', pts: rn.pts, cum: rn.cum, off: 0, sx: rn.len / (W + 1), s };
+      const rn = bg.runs[0],
+        sx = rn.len / N;
+      place = { type: 'run', pts: rn.pts, cum: rn.cum, off: seam ? ((seam + 1) / 2) * sx : 0, sx, s };
     } else {
       const rn = bg.runs[gi],
         cA = rn.start!.clearance,

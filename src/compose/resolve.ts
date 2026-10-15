@@ -24,7 +24,7 @@ import { scriptFor } from '../script/registry';
 import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
-import { bandGeom, fitRing, fitsAtFullSize, layRing } from './textBorder';
+import { bandGeom, fitRing, fitsAtFullSize, layRing, placeMap } from './textBorder';
 
 export interface ResolveOptions {
   /** One engine for every region, whatever their styles ask for (tests, tools). */
@@ -89,7 +89,8 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
   const prepared = ctx.script.prepareLines(lines, style.letter)[0],
     sep = (border.separator ?? DEFAULT_SEPARATOR).width;
   const fits = (L: number) => {
-    const bg = bandGeom(shape, L, sep);
+    const bg0 = bandGeom(shape, L, sep),
+      bg = bg0 && border.seam ? { ...bg0, seam: border.seam } : bg0;
     return (
       !!bg &&
       fitsAtFullSize(bg, ctx.script, prepared, slot.wordGap, bandRoom(prepared, style)) &&
@@ -257,7 +258,8 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         // a band too short for its text may grow its letters instead of stretching them, but must leave at least
         // GROW_KEEP of the outline's area inside it
         sGrow = typeof b.scale === 'number' ? sMax : Math.max(sMax, growScale(shape, size, dBand, room, sT * 3));
-      const bg = sMax > 0 ? bandGeom(shape, size, dBand) : null;
+      const bg0 = sMax > 0 ? bandGeom(shape, size, dBand) : null,
+        bg = bg0 && b.seam ? { ...bg0, seam: b.seam } : bg0;
       const fit = bg
         ? fitRing(bg, ctx.script, p, {
             sTarget: sT,
@@ -324,6 +326,12 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         plait: !!b.plait && ctx.script.capabilities.plait !== false,
       });
       for (const l of laid) ctx.items.push({ type: 'strip', style: sid, strip: l.strip, place: l.place, ring: ringNo });
+      // a star closes the seam, between the end of the text and its start
+      if (bg.seam && bg.seam >= 2 && laid.length === 1 && bg.kind !== 'runs') {
+        const W = laid[0].strip.W,
+          at = placeMap(laid[0].place)(W + (bg.seam + 1) / 2, fit.room / 2);
+        ctx.items.push({ type: 'star', style: sid, centre: at, r: (Math.min(bg.seam, fit.room) * fit.s) / 2.4 });
+      }
       const natural = fit.groups.reduce((a, g) => a + g.reduce((x, sg) => x + sg.minW, 0), 0);
       meta.rings.push({
         scale: fit.s,

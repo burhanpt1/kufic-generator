@@ -215,9 +215,12 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
         // the tiling is symmetric about the item's centre; the field is clipped to the area
         const cid = id('t'),
           [cx, cy] = P(it.centre),
-          edge = it.iznik.scale * U;
+          edge = it.iznik.scale * U,
+          box = it.area.flat().map(P),
+          [x0, x1] = [Math.min(...box.map(q => q[0])) - edge * 2, Math.max(...box.map(q => q[0])) + edge * 2],
+          [y0, y1] = [Math.min(...box.map(q => q[1])) - edge * 2, Math.max(...box.map(q => q[1])) + edge * 2];
         defs += `<clipPath id="${cid}"><path clip-rule="evenodd" d="${dArea(it.area)}"/></clipPath>`;
-        out = `<g clip-path="url(#${cid})">${iznikField(Math.max(W, H), { fold: it.iznik.fold, edge, cx, cy, reach: it.radius * U + edge * 2, seams: !!it.iznik.seams, tile: edge * 3, ground: o.paper, cobalt: o.ink, turq: o.ink2, red: o.mark })}</g>`; // prettier-ignore
+        out = `<g clip-path="url(#${cid})">${iznikField(Math.max(W, H), { fold: it.iznik.fold, edge, cx, cy, keep: (x, y) => x > x0 && x < x1 && y > y0 && y < y1, reach: it.radius * U + edge * 2, seams: !!it.iznik.seams, tile: edge * 3, ground: o.paper, cobalt: o.ink, turq: o.ink2, red: o.mark })}</g>`; // prettier-ignore
         break;
       }
       case 'fill':
@@ -283,14 +286,14 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
           e = (rx: number, ry: number, fill: string, w: number) =>
             `<ellipse cx="0" cy="0" rx="${f2(rx)}" ry="${f2(ry)}" fill="${fill}" stroke="${c.line}" stroke-width="${w}"/>`;
         defs +=
-          `<linearGradient id="${gd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.letters}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${c.letters}"/></linearGradient>` +
+          `<linearGradient id="${gd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.letters}"/><stop offset="0.5" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.letters}"/></linearGradient>` +
           `<radialGradient id="${fd}" cx="0.5" cy="0.45" r="0.6"><stop offset="0" stop-color="${c.field}" stop-opacity="0.85"/><stop offset="1" stop-color="${c.field}"/></radialGradient>`;
         const rim =
           c.rim === c.letters
             ? `url(#${gd})`
             : (() => {
                 const rd = id('rr');
-                defs += `<linearGradient id="${rd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.rim}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${c.rim}"/></linearGradient>`;
+                defs += `<linearGradient id="${rd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.rim}"/><stop offset="0.5" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.rim}"/></linearGradient>`;
                 return `url(#${rd})`;
               })();
         out =

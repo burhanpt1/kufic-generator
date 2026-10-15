@@ -55,6 +55,8 @@ export interface IznikOptions {
   /** Square ceramic joints over the top, and their spacing (default S / 6). */
   seams?: boolean;
   tile?: number;
+  /** Only the rhombs whose centre (in field coordinates) passes: the rest would be clipped or covered anyway. */
+  keep?: (x: number, y: number) => boolean;
   /** Rhomb edge (default S / (density · 6.5)). */
   edge?: number;
   /** Centre of symmetry and how far the tiling reaches (default the middle, 0.75 S). */
@@ -80,7 +82,10 @@ export function iznikField(S: number, o: IznikOptions = {}): string {
     cy = o.cy ?? S / 2,
     reach = o.reach || S * 0.75,
     L = o.edge ?? S / (density * 6.5);
-  const tiles = multigrid(N, reach, L),
+  const keep = o.keep,
+    tiles = multigrid(N, reach, L).filter(
+      t => !keep || keep(cx + (t.q[0][0] + t.q[2][0]) / 2, cy + (t.q[0][1] + t.q[2][1]) / 2),
+    ),
     f = (n: number) => n.toFixed(1),
     P = (p: [number, number]): [number, number] => [cx + p[0], cy + p[1]];
   const key = (p: [number, number]) => Math.round(p[0] * 20) + ',' + Math.round(p[1] * 20),
