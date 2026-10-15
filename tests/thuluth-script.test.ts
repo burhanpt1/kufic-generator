@@ -130,7 +130,14 @@ describe('thuluth ScriptEngine', () => {
         return JSON.stringify(e.layout(e.segments(p, 'words', 2), p, 50, opts));
       };
     expect(run(a)).toBe(run(b));
-    expect(a.capabilities).toEqual({ grid: false, seals: false, mazes: false });
+    expect(a.capabilities).toEqual({
+      grid: false,
+      seals: false,
+      mazes: false,
+      plait: false,
+      terminals: false,
+      strokes: false,
+    });
     expect(a.abjad('بسم الله الرحمن الرحيم')).toBe(786);
     expect(a.id).toBe('thuluth');
   });

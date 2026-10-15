@@ -62,6 +62,9 @@ export const TRAITS = {
   stemTaper: { values: [0, 0.5, 0.8], ordinal: true, label: 'Tapered stem ends' },
   sprouts: { values: [false, true], label: 'Leaves on stems', prior: { true: 0.5 } },
   letterSet: { values: ['square', 'fatimid'], label: 'Letter set' },
+  // thuluth is new: never picked at random until taste or a lock asks for it (new features are off by default)
+  script: { values: ['kufi', 'thuluth'], label: 'Script', prior: { thuluth: 0 } },
+  pen: { values: ['line', 'band', 'tile', 'roundel'], label: 'Pen' },
 } as const satisfies Record<string, TraitSpec>;
 export type Trait = keyof typeof TRAITS;
 export type Traits = { [K in Trait]?: string | number | boolean };
@@ -133,6 +136,8 @@ export function traitsOf(c: Composition): Traits {
   t.stemTaper = c.style.stroke.taper ?? 0;
   t.sprouts = c.style.terminals.flourish === 'sprouts';
   t.letterSet = c.style.letter.set ?? 'square';
+  t.script = c.style.script;
+  if (c.style.script === 'thuluth') t.pen = c.style.pen?.preset ?? 'band';
   return t;
 }
 

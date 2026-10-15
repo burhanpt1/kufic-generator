@@ -87,6 +87,15 @@ export interface ScriptEngine {
   layout(segments: Segments, prepared: Prepared, width: number | null, opts: LayoutOptions): Strip | null;
   /** Abjad value of the text. */
   abjad(text: string, opts?: { taMarbuta?: 5 | 400; system?: 'mashriqi' | 'maghribi' }): number;
-  /** Grid-based extras; a cursive engine may not support these, and fillers must check. */
-  capabilities: { grid: boolean; seals: boolean; mazes: boolean };
+  /** What the script can do beyond setting lines; fillers, features and evolution check these. grid: letters as
+   *  cell grids (monograms, Kufi letter variants); plait: plaited tall stems; terminals: floriated stem endings;
+   *  strokes: the cell stroke renderers (blocks, curved, pen). Absent means yes. */
+  capabilities: {
+    grid: boolean;
+    seals: boolean;
+    mazes: boolean;
+    plait?: boolean;
+    terminals?: boolean;
+    strokes?: boolean;
+  };
 }

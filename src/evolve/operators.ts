@@ -11,6 +11,7 @@ import type {
   TextBorder,
 } from '../model/schema';
 import { isValidComposition } from '../model/schema';
+import { scriptFor } from '../script/registry';
 import { DEFAULT_STYLE } from '../model/style';
 import { PALETTE_LIST, TRAITS, traitsOf } from './genes';
 import type { Trait, TraitSpec, Traits } from './genes';
@@ -31,14 +32,39 @@ const textBorders = (c: Composition) => c.root.child.borders.filter((b): b is Te
 const mainSlot = (c: Composition) => textBorders(c)[0]?.text ?? Object.keys(c.texts)[0];
 
 /** Taste-biased choice among a trait's values (lab pickPref). */
-export function pickValue(trait: Trait, rng: Rng, taste?: Taste): V {
+export function pickValue(trait: Trait, rng: Rng, taste?: Taste, c?: Composition): V {
   const spec: TraitSpec = TRAITS[trait],
     vals = spec.values as readonly V[],
-    p = taste?.pref[trait] ?? {};
-  return rng.weighted(
-    vals,
-    vals.map(v => (spec.prior?.[String(v)] ?? 1) * (1 + 0.7 * (p[String(v)] ?? 0))),
-  );
+    p = taste?.pref[trait] ?? {},
+    w = vals.map(v =>
+      c && !allowed(c, trait, v) ? 0 : (spec.prior?.[String(v)] ?? 1) * (1 + 0.7 * (p[String(v)] ?? 0)),
+    );
+  // one possible value (a choice the script or the priors rule out): no draw, so other choices keep their sequence
+  const live = w.filter(x => x > 0).length;
+  if (live <= 1)
+    return vals[
+      Math.max(
+        0,
+        w.findIndex(x => x > 0),
+      )
+    ];
+  return rng.weighted(vals, w);
+}
+
+/** Centre fills a script can't build (monograms and mazes need letters as cell grids). */
+function allowed(c: Composition, trait: Trait, v: V): boolean {
+  if (trait === 'pen') return c.style.script === 'thuluth';
+  if (trait !== 'fill') return true;
+  const caps = scriptFor(c.style).capabilities;
+  if (v === 'monogram') return caps.grid && caps.seals;
+  if (v === 'maze') return caps.mazes;
+  return true;
+}
+/** Keep a composition buildable after its script changed: a fill the script can't build becomes line text. */
+function fitScript(c: Composition, rng: Rng) {
+  const f = c.root.child.fill;
+  if (f && (f.type === 'monogram' || f.type === 'maze') && !allowed(c, 'fill', f.type))
+    applyTrait(c, 'fill', 'lines', rng);
 }
 
 const patternOf = (t: Traits): PatternSpec => ({
@@ -246,13 +272,30 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'letterSet':
       s.letter.set = v as 'fatimid';
       break;
+    case 'script':
+      s.script = v as 'kufi';
+      if (v === 'thuluth') s.pen = s.pen ?? { preset: 'band' };
+      break;
+    case 'pen':
+      if (s.script === 'thuluth') s.pen = { ...(s.pen ?? {}), preset: v as 'band' };
+      break;
   }
 }
 
 /** Traits whose value matters for this composition (e.g. star points only on a star). */
+const KUFI_LETTERS: Trait[] = ['ascenders', 'ra', 'lamAlif', 'marks', 'alternates', 'letterSet'];
+const STROKES: Trait[] = ['stroke', 'corner', 'banded', 'weight', 'softness', 'contrast', 'stemTaper'];
+const TERMINALS: Trait[] = ['terminal', 'reach', 'sprouts'];
 export function relevantTraits(c: Composition): Trait[] {
-  const t = traitsOf(c);
+  const t = traitsOf(c),
+    caps = scriptFor(c.style).capabilities;
   return (Object.keys(TRAITS) as Trait[]).filter(k => {
+    // what the script can't do: thuluth has its own letters, pen and stroke, no plaits or floriated endings
+    if (k === 'pen') return t.script === 'thuluth';
+    if (!caps.grid && KUFI_LETTERS.includes(k)) return false;
+    if (caps.strokes === false && STROKES.includes(k)) return false;
+    if (caps.terminals === false && TERMINALS.includes(k)) return false;
+    if (caps.plait === false && k === 'plait') return false;
     if (k === 'sides') return t.outline === 'polygon';
     if (k === 'points' || k === 'depth') return t.outline === 'star';
     if (k === 'taper') return (t.borders as number) > 1;
@@ -314,8 +357,12 @@ export function randomComposition(texts: Composition['texts'], o: OperatorOption
     'scale',
   ];
   for (const k of [...order, ...(Object.keys(TRAITS) as Trait[]).filter(k => !order.includes(k))])
-    applyTrait(c, k, pickValue(k, rng, taste), rng);
+    applyTrait(c, k, pickValue(k, rng, taste, c), rng);
   applyLocks(c, locks, rng);
+  // a script set by a lock chooses its pen afterwards (the pen was no choice while the script was Kufi)
+  if (c.style.script === 'thuluth' && locks?.pen === undefined)
+    applyTrait(c, 'pen', pickValue('pen', rng, taste, c), rng);
+  fitScript(c, rng);
   return valid(c, {
     ...c,
     root: {
@@ -340,9 +387,10 @@ export function mutate(parent: Composition, rate: number, o: OperatorOptions): C
         i = vals.indexOf(cur as V),
         j = i < 0 ? 0 : Math.max(0, Math.min(vals.length - 1, i + (rng.next() < 0.5 ? -1 : 1)));
       v = vals[j];
-    } else v = pickValue(k, rng, taste);
+    } else v = pickValue(k, rng, taste, c);
     applyTrait(c, k, v, rng);
   }
+  fitScript(c, rng);
   // re-seed a maze or seal
   const f = c.root.child.fill;
   if (f && rng.next() < rate) {
@@ -368,6 +416,12 @@ export function crossover(a: Composition, b: Composition, o: OperatorOptions): C
   if (rng.next() < 0.5) c.root.child.spread = B.root.child.spread;
   for (const g of ['letter', 'stroke', 'terminals', 'palette', 'colouring'] as const)
     if (rng.next() < 0.5) (c.style as unknown as Record<string, unknown>)[g] = B.style[g];
+  // the script and its pen go together
+  if (B.style.script !== c.style.script && rng.next() < 0.5) {
+    c.style.script = B.style.script;
+    c.style.pen = B.style.pen;
+  }
   applyLocks(c, locks, rng);
+  fitScript(c, rng);
   return valid(c, a);
 }

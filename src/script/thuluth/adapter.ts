@@ -254,7 +254,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       return { kind: 'vector', W, Hb: P.Hb, base: P.base, paths, lines };
     },
     abjad: abjadValue,
-    capabilities: { grid: false, seals: false, mazes: false },
+    capabilities: { grid: false, seals: false, mazes: false, plait: false, terminals: false, strokes: false },
   };
 }
 
