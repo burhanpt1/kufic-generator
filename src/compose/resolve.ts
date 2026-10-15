@@ -340,6 +340,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
     inset += w + 2 * m;
   } else if (lastSep) inset += lastSep.sep.width * lastSep.s + SEP_MARGIN * lastSep.s;
   const inner = shape.ring(size, inset);
+  ctx.items.push({ type: 'outline', style: sid, outer, inner: inner?.pts ?? null });
   const res: RegionResult = {
     size,
     outer,

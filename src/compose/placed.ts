@@ -53,6 +53,8 @@ export type PlacedItem =
   | { type: 'pattern'; style: number; area: Area; pattern: PatternSpec; centre: Pt; radius: number; strength: number }
   | { type: 'fill'; style: number; kind: 'solid' | 'vine'; area: Area }
   | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' }
+  /** A region's outline and the space left inside its borders (not drawn; for clipping and layering effects). */
+  | { type: 'outline'; style: number; outer: Pt[]; inner: Pt[] | null }
   /** Edges of interlaced ribbons: open polylines (broken where a ribbon passes under another). */
   | { type: 'ribbon'; style: number; paths: Pt[][]; width: number; pen?: boolean };
 
