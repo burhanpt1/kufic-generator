@@ -7,6 +7,7 @@ tests/golden/manifest.json
 CLAUDE.md
 prototypes/
 tests/golden-lab/*.svg
+tests/golden-thuluth-lab/*.svg
 demos/golden-lab.html
 COMPOSITION_ENGINE.md
 demos/*.html

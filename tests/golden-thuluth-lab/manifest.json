@@ -1,0 +1,90 @@
+[
+  {
+    "id": "line-00-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-01-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-02-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-03-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-04-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-05-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-06-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-07-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-08-roundel",
+    "width": 960
+  },
+  {
+    "id": "line-00-tile",
+    "width": 960
+  },
+  {
+    "id": "line-01-tile",
+    "width": 960
+  },
+  {
+    "id": "line-02-tile",
+    "width": 960
+  },
+  {
+    "id": "line-03-tile",
+    "width": 960
+  },
+  {
+    "id": "line-04-tile",
+    "width": 960
+  },
+  {
+    "id": "line-05-tile",
+    "width": 960
+  },
+  {
+    "id": "line-06-tile",
+    "width": 960
+  },
+  {
+    "id": "line-07-tile",
+    "width": 960
+  },
+  {
+    "id": "line-08-tile",
+    "width": 960
+  },
+  {
+    "id": "cartouche-zainab-qusay",
+    "width": 800
+  },
+  {
+    "id": "tiling-8fold",
+    "width": 600
+  },
+  {
+    "id": "tiling-10fold",
+    "width": 600
+  },
+  {
+    "id": "tiling-12fold",
+    "width": 600
+  }
+]
