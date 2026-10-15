@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breeding in thuluth</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,160px),1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:11px;color:var(--muted);margin-top:4px}
+button{font:inherit;padding:4px 12px}
+</style>
+</head>
+<body>
+<h1>Breeding in thuluth</h1>
+<p>Script and pen are now traits. Thuluth is never picked at random (it is new, so it stays off until you lock it or your ratings favour it); locked, the breeder offers only what the script can build: no seals or mazes (they need letters as cells), no Kufi letter, stroke or ending traits, and the pen instead. Kufi breeding draws exactly as before.</p>
+<p><button id="again">New generation</button></p>
+<div class="g" id="g"></div>
+<script type="module">
+import { freshGeneration } from '../src/evolve/breed.ts';
+import { Rng } from '../src/evolve/rng.ts';
+import { traitsOf } from '../src/evolve/genes.ts';
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { DEFAULT_STYLE, PALETTES } from '../src/model/style.ts';
+const texts = { main: { text: 'محمد علي فاطمة الحسن الحسين', repeat: 'fill', wordGap: 2 } };
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+let seed = 21;
+const card = (c, i, cap) => { const f = document.createElement('figure'); f.innerHTML = `<img alt="" src="${url(renderPlaced(resolve(c), { idPrefix: 'b' + i }))}"><figcaption>${cap}</figcaption>`; return f; };
+function gen() {
+  const g = document.getElementById('g');
+  g.innerHTML = '';
+  const kids = freshGeneration(8, texts, { rng: new Rng(seed++), locks: { script: 'thuluth' } });
+  kids.forEach((c, i) => { const t = traitsOf(c); g.append(card(c, i, `${t.outline} · ${t.fill ?? 'no centre'} · ${t.pen} pen`)); });
+}
+document.getElementById('again').onclick = gen;
+gen();
+</script>
+</body>
+</html>

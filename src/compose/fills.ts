@@ -233,7 +233,7 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     return;
   }
   const ring = ++ctx.ring,
-    o = { ...layoutOpts(style, wg), plait: !!f.plait };
+    o = { ...layoutOpts(style, wg), plait: !!f.plait && script.capabilities.plait !== false };
   best.ivs.forEach((v, i) => {
     const st = script.layout(best!.groups[i], prep, v.W, { ...o, wrap: false });
     if (!st) return;

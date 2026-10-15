@@ -7,7 +7,8 @@ import { picLines } from '../ornament/patterns/pic';
 import { tiles } from '../ornament/patterns/tilings';
 import type { Tiling } from '../ornament/patterns/tilings';
 import { repeat } from '../script/kufi';
-import type { CellStrip, ScriptEngine, Segments } from '../script/types';
+import type { ScriptEngine, Segments, Strip } from '../script/types';
+import { parsePolys } from '../script/vector';
 import type { PlacedItem } from './placed';
 import { layoutOpts } from './resolve';
 
@@ -15,8 +16,15 @@ const TILING: Record<PatternSpec['tiling'], Tiling> = { square: 'sq', '488': '48
 /** Height of the letters' ink as a share of the tile edge (a plain pattern line is 0.16 of it). */
 export const WORD_LINE = 0.09;
 
-/** Rows of ink (lowest, highest) in a strip. */
-function inkRows(st: CellStrip): [number, number] {
+/** Rows of ink (lowest, highest) in a strip; for a vector strip, the rows its outlines reach into. */
+function inkRows(st: Strip): [number, number] {
+  if (st.kind === 'vector') {
+    const ys = st.paths
+      .flatMap(p => parsePolys(p.d))
+      .flat()
+      .map(q => q[1]);
+    return ys.length ? [Math.floor(Math.min(...ys)), Math.ceil(Math.max(...ys)) - 1] : [st.Hb, -1];
+  }
   let lo = st.Hb,
     hi = -1;
   for (let y = 0; y < st.Hb; y++)
@@ -63,7 +71,7 @@ export function patternTextItems(
   const lt = { ...style.letter, ascenders: 7 as const },
     prep = script.prepareLines([text], lt)[0],
     segs = script.segments(prep, 'words', 2),
-    one = script.layout(segs, prep, null, { ...layoutOpts(style, 2), wrap: false }) as CellStrip | null;
+    one = script.layout(segs, prep, null, { ...layoutOpts(style, 2), wrap: false }) as Strip | null;
   if (!one) return [];
   const [lo, hi] = inkRows(one),
     a = pattern.scale,
@@ -71,7 +79,7 @@ export function patternTextItems(
     gap = 0.35 * WORD_LINE * a,
     unitW = one.W + 2,
     mid = (lo + hi + 1) / 2,
-    cache = new Map<number, CellStrip | null>(),
+    cache = new Map<number, Strip | null>(),
     stripOf = (k: number) => {
       if (!cache.has(k))
         cache.set(
@@ -79,7 +87,7 @@ export function patternTextItems(
           script.layout(repeat(segs as Segments, k), prep, null, {
             ...layoutOpts(style, 2),
             wrap: false,
-          }) as CellStrip | null,
+          }) as Strip | null,
         );
       return cache.get(k)!;
     };
@@ -210,7 +218,7 @@ export function cutCrossings(segs: [Pt, Pt][], gap: number): [Pt, Pt][] {
 export function stripOnSegment(
   P0: Pt,
   Q0: Pt,
-  st: CellStrip,
+  st: Strip,
   s: number,
   mid: number,
   sid: number,

@@ -297,7 +297,10 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
           });
         }
       }
-      const laid = layRing(bg, fit, ctx.script, p, { ...layoutOpts(style, slot.wordGap), plait: !!b.plait });
+      const laid = layRing(bg, fit, ctx.script, p, {
+        ...layoutOpts(style, slot.wordGap),
+        plait: !!b.plait && ctx.script.capabilities.plait !== false,
+      });
       for (const l of laid) ctx.items.push({ type: 'strip', style: sid, strip: l.strip, place: l.place, ring: ringNo });
       const natural = fit.groups.reduce((a, g) => a + g.reduce((x, sg) => x + sg.minW, 0), 0);
       meta.rings.push({
