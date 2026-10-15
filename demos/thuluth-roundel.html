@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth roundels</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Thuluth roundels</h1>
+<p>The lab's roundel composer, ported: the groups of a phrase arranged to fill an oval, a great final bowl redrawn along the frame, the frame fitted to everything drawn, dots and vowels solved as one even spread with small ornaments in the gaps, and turquoise in the counters. Left: the lab's own rendering of the wedding cartouche. Right: rebuilt here from the same recipe. Below: the same cartouche as a composition fill inside a Kufic ring, and a free arrangement (no pinned layout).</p>
+<div class="row" id="ref"></div>
+<h2>As a composition fill</h2>
+<div class="row" id="comp"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { DEFAULT_STYLE, PALETTES } from '../src/model/style.ts';
+import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth/index.ts';
+import { buildRoundel, renderRoundel } from '../src/script/thuluth/roundel/index.ts';
+import labSVG from '../tests/golden-thuluth-lab/cartouche-zainab-qusay.svg?raw';
+import rc from '../prototypes/thuluth-lab/layouts/zainab-qusay.json';
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+const fig = (el, svg, cap) => { const f = document.createElement('figure'); f.innerHTML = `<img alt="${cap}" src="${url(svg)}"><figcaption>${cap}</figcaption>`; el.append(f); };
+const fixed = structuredClone(rc.layout); fixed.wp[0].y += 1.4;
+const great = { ya: true, yaWide: 2.6, yaDeep: 1.3 };
+const compose = { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, emph: 'ب', kern: true, tries: 1, fixed };
+const tweaks = [{ at: 'و', scale: 0.62, tint: '#2aa6a0', under: { group: 1, gap: 0.7 } }];
+const ref = document.getElementById('ref'), comp = document.getElementById('comp');
+fig(ref, labSVG, 'The lab (reference)');
+const th = thuluth({ ...ROUNDEL_PEN, great });
+let t0 = performance.now();
+const b = buildRoundel(th, { text: rc.text, compose, tweaks, bowl: { oval: 1.45, clear: 5.6, autoOval: true }, frame: { markReach: 2.2, ornaments: true, density: 0.6 } });
+fig(ref, renderRoundel(th, b.r, b.f, { U: 12, field: '#1f3f8f', gold: '#f4f6f7', goldDark: '#16306e', outline: '#16306e', bg: '#f4f6f7', discScale: 1, noOutline: true, counters: '#2aa6a0' }), `Rebuilt · ${(performance.now() - t0).toFixed(0)} ms`);
+const slot = (text, repeat = 'fill') => ({ text, repeat, wordGap: 2 });
+const cases = [
+  ['Inside a Kufic ring', { ...compose, fixed, great, tweaks, bowl: { clear: 5.6, autoOval: true }, markReach: 2.2, ornaments: true, density: 0.6 }, rc.text],
+  ['Free arrangement: <bdi>مودة ورحمة</bdi>', { cross: true, elongate: true, oval: 1.3, fillTarget: 0.45, tries: 4, ornaments: true, density: 0.4 }, 'مودة ورحمة'],
+];
+for (const [name, recipe, text] of cases) {
+  const c = { version: 1, seed: 3, canvas: { shape: 'square', margin: 3 }, style: { ...structuredClone(DEFAULT_STYLE), palette: { ...PALETTES.cobalt } },
+    texts: { ring: slot('محمد علي فاطمة الحسن الحسين'), names: slot(text, 'once') },
+    root: { type: 'frame', child: { type: 'region', outline: { kind: 'circle' }, borders: [{ type: 'textBorder', text: 'ring', separator: { kind: 'braid', width: 2 } }],
+      fill: { type: 'roundel', text: 'names', recipe, colours: { field: '#1f3f8f', letters: '#f4f6f7', line: '#16306e', counters: '#2aa6a0' } } } } };
+  t0 = performance.now();
+  fig(comp, renderPlaced(resolve(c), { idPrefix: name.length.toString(36) }), `${name} · ${(performance.now() - t0).toFixed(0)} ms`);
+}
+</script>
+</body>
+</html>

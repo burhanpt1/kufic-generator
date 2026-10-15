@@ -160,6 +160,7 @@ export function defaultFill(type: FillerNode['type'], c: Composition): FillerNod
     case 'monogram':
       return { type, text: slot, method: 'seal', params: {} };
     case 'abjad':
+    case 'roundel':
       return { type, text: slot };
     case 'strapwork':
       return { type, text: slot, tiling: '488' };

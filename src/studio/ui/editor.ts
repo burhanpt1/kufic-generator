@@ -32,6 +32,7 @@ const GROUPS: [string, Trait[]][] = [
 const FILL_TYPES: FillerNode['type'][] = [
   'monogram',
   'abjad',
+  'roundel',
   'lines',
   'flow',
   'maze',

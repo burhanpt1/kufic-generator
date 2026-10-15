@@ -35,6 +35,8 @@ export function translateItem(it: PlacedItem, d: Pt): PlacedItem {
     case 'finial':
     case 'diamond':
       return { ...it, p: mv(it.p, d) };
+    case 'roundel':
+      return { ...it, centre: mv(it.centre, d) };
     case 'abjad':
       return { ...it, centre: mv(it.centre, d), frame: it.frame && mvs(it.frame, d) };
     case 'rule':

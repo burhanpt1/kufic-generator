@@ -3,6 +3,7 @@ import './fills';
 import './flow';
 import './strapwork';
 import './lattice';
+import './roundel';
 export { resolve } from './resolve';
 export type { ResolveOptions } from './resolve';
 export * from './placed';

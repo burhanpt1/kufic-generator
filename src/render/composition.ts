@@ -254,6 +254,40 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
       case 'diamond':
         out = diamond(...P(it.p), it.r * U).replace('<path ', `<path fill="${accent}" `);
         break;
+      case 'roundel': {
+        const c = it.colours,
+          [px, py] = P(it.centre),
+          gd = id('rg'),
+          fd = id('rf'),
+          OV = it.oval,
+          Rout = it.Rf + it.rim,
+          wide = Rout * OV - Rout,
+          e = (rx: number, ry: number, fill: string, w: number) =>
+            `<ellipse cx="0" cy="0" rx="${f2(rx)}" ry="${f2(ry)}" fill="${fill}" stroke="${c.line}" stroke-width="${w}"/>`;
+        defs +=
+          `<linearGradient id="${gd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.letters}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${c.letters}"/></linearGradient>` +
+          `<radialGradient id="${fd}" cx="0.5" cy="0.45" r="0.6"><stop offset="0" stop-color="${c.field}" stop-opacity="0.85"/><stop offset="1" stop-color="${c.field}"/></radialGradient>`;
+        const rim =
+          c.rim === c.letters
+            ? `url(#${gd})`
+            : (() => {
+                const rd = id('rr');
+                defs += `<linearGradient id="${rd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.rim}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${c.rim}"/></linearGradient>`;
+                return `url(#${rd})`;
+              })();
+        out =
+          `<g transform="translate(${f2(px)} ${f2(py)}) scale(${f2(it.s * U)})">` +
+          (it.framed
+            ? e(Rout + it.rim * (OV - 1) + wide, Rout, rim, 0.12) +
+              e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08)
+            : '') +
+          e(it.Rf + wide, it.Rf, `url(#${fd})`, it.framed ? 0.1 : 0) +
+          (c.counters && it.counters ? `<path fill="${c.counters}" d="${it.counters}"/>` : '') +
+          `<path fill="url(#${gd})" d="${it.ink}"/>` +
+          it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('') +
+          '</g>';
+        break;
+      }
       case 'abjad':
         out =
           (it.frame

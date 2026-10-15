@@ -142,7 +142,53 @@ export type FillerNode =
   | { type: 'rings' }
   | { type: 'vine' }
   | { type: 'solid' }
-  | { type: 'region'; node: RegionNode };
+  | { type: 'region'; node: RegionNode }
+  /** A thuluth roundel or cartouche: the text arranged to fill an oval, its marks solved, on a gilded field. */
+  | { type: 'roundel'; text: string; recipe?: RoundelRecipe; frame?: boolean; colours?: RoundelColours };
+
+/** How a roundel is made (the thuluth lab's layout recipes): composer options, a pinned layout, hand adjustments. */
+export interface RoundelRecipe {
+  /** Composer: stems may cross horizontals; words lift onto shelves and into great bowls; kerning; the field's
+   *  proportion and fill; an emphasised letter; the reading-order rules. */
+  elongate?: boolean;
+  cross?: boolean;
+  merge?: boolean;
+  cradle?: boolean;
+  kern?: boolean;
+  noRise?: boolean;
+  ceiling?: boolean;
+  topFirst?: boolean;
+  fillTarget?: number;
+  oval?: number;
+  emph?: string;
+  tries?: number;
+  iters?: number;
+  seed?: number;
+  /** A recorded arrangement: each group's variant and each word's place. */
+  fixed?: { lv: number[]; wp: { x: number; y: number }[] };
+  /** Great gestures: the returning ya (width, depth), the Husayn nun, the long-headed hah. */
+  great?: { ya?: boolean; yaWide?: number; yaDeep?: number; nun?: boolean; hah?: boolean };
+  tweaks?: {
+    at: string;
+    scale?: number;
+    tint?: string;
+    under?: { group: number; gap?: number; dx?: number };
+  }[];
+  /** Redraw a great final bowl along the frame. */
+  bowl?: { clear?: number; side?: number; tailUp?: number; lead?: number; autoOval?: boolean };
+  /** Marks: how far a vowel may sit from its letter; ornaments in the gaps and their density. */
+  markReach?: number;
+  ornaments?: boolean;
+  density?: number;
+  ornStyle?: 'plume' | 'trefoil';
+}
+export interface RoundelColours {
+  field?: string;
+  letters?: string;
+  rim?: string;
+  line?: string;
+  counters?: string;
+}
 
 export interface FeatureSet {
   tips?: 'finial' | 'diamond' | 'none';
@@ -210,6 +256,45 @@ const terminals = z.object({
   flourish: z.enum(['none', 'sprouts']).optional(),
 });
 const palette = z.object({ ink: colour, ink2: colour, paper: colour, mark: colour });
+const num = z.number().finite();
+const roundelRecipe = z
+  .object({
+    elongate: z.boolean(),
+    cross: z.boolean(),
+    merge: z.boolean(),
+    cradle: z.boolean(),
+    kern: z.boolean(),
+    noRise: z.boolean(),
+    ceiling: z.boolean(),
+    topFirst: z.boolean(),
+    fillTarget: z.number().min(0.1).max(0.9),
+    oval: z.number().min(1).max(3),
+    emph: z.string().max(4),
+    tries: z.number().int().min(1).max(40),
+    iters: z.number().int().min(0).max(20000),
+    seed: z.number().int(),
+    fixed: z.object({
+      lv: z.array(z.number().int().min(0)).max(200),
+      wp: z.array(z.object({ x: num, y: num })).max(100),
+    }),
+    great: z.object({ ya: z.boolean(), yaWide: num, yaDeep: num, nun: z.boolean(), hah: z.boolean() }).partial(),
+    tweaks: z
+      .array(
+        z.object({
+          at: z.string().min(1).max(40),
+          scale: z.number().min(0.2).max(2).optional(),
+          tint: colour.optional(),
+          under: z.object({ group: z.number().int().min(0), gap: num.optional(), dx: num.optional() }).optional(),
+        }),
+      )
+      .max(20),
+    bowl: z.object({ clear: num, side: num, tailUp: num, lead: num, autoOval: z.boolean() }).partial(),
+    markReach: z.number().min(0.5).max(6),
+    ornaments: z.boolean(),
+    density: z.number().min(0).max(1),
+    ornStyle: z.enum(['plume', 'trefoil']),
+  })
+  .partial();
 const abjadOpts = z.object({
   taMarbuta: z.union([z.literal(5), z.literal(400)]),
   system: z.enum(['mashriqi', 'maghribi']),
@@ -351,6 +436,16 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
     z.object({ type: z.literal('vine') }),
     z.object({ type: z.literal('solid') }),
     z.object({ type: z.literal('region'), node: RegionSchema }),
+    z.object({
+      type: z.literal('roundel'),
+      text: slotName,
+      recipe: roundelRecipe.optional(),
+      frame: z.boolean().optional(),
+      colours: z
+        .object({ field: colour, letters: colour, rim: colour, line: colour, counters: colour })
+        .partial()
+        .optional(),
+    }),
   ]),
 ) as z.ZodType<FillerNode>;
 const spandrels = z.union([FillerSchema, z.object({ type: z.literal('stars') })]);
