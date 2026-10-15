@@ -19,6 +19,7 @@ npm run lint         # ESLint
 npm run format       # Prettier
 npm run typecheck    # tsc
 npm run golden       # rewrite tests/golden/ from the current engine (only for intentional output changes)
+npm run mosque       # render the mosque programme (src/mosque) and its qibla wall to docs/mosque/
 ```
 
 The original single-file prototype, and the rebuilt prototype UI that replaced it, are in git history; the golden

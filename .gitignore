@@ -2,3 +2,4 @@ node_modules/
 dist/
 coverage/
 tests/golden-lab/compare/
+docs/mosque/
