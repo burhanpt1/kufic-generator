@@ -1,11 +1,6 @@
 [
  {
   "id": "square--bv--default",
-  "ui": {
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -27,17 +22,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bp--default",
-  "ui": {
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -59,17 +47,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--default",
-  "ui": {
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -91,17 +72,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--la--default",
-  "ui": {
-   "layout": "rings",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -123,17 +97,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "49 × 49 cells, 2 rings, text repeated 7×. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "square--ali--default",
-  "ui": {
-   "layout": "rings",
-   "text": "يا علي مدد"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -155,17 +122,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 × 58 cells, 2 rings, text repeated 9×. Abjad value 169",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--default",
-  "ui": {
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -187,17 +147,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bp--default",
-  "ui": {
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -219,17 +172,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "64 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--default",
-  "ui": {
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -251,17 +197,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--la--default",
-  "ui": {
-   "layout": "circle",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -283,17 +222,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "50 cells across, 2 rings, text repeated 6×. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "circle--ali--default",
-  "ui": {
-   "layout": "circle",
-   "text": "يا علي مدد"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -315,17 +247,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "66 cells across, 2 rings, text repeated 9×. Abjad value 169",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--default",
-  "ui": {
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -348,17 +273,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "77 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--bp--default",
-  "ui": {
-   "layout": "line",
-   "text": "بسم الله الرحمن الرحيم"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -381,17 +299,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "68 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--names--default",
-  "ui": {
-   "layout": "line",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -414,17 +325,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "161 × 11 cells. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--default",
-  "ui": {
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -447,17 +351,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "line--ali--default",
-  "ui": {
-   "layout": "line",
-   "text": "يا علي مدد"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -480,17 +377,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "31 × 11 cells. Abjad value 169",
-  "warn": ""
+  }
  },
  {
   "id": "letters--bv--default",
-  "ui": {
-   "layout": "letters",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -513,17 +403,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--bp--default",
-  "ui": {
-   "layout": "letters",
-   "text": "بسم الله الرحمن الرحيم"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -546,17 +429,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--names--default",
-  "ui": {
-   "layout": "letters",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -579,17 +455,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--la--default",
-  "ui": {
-   "layout": "letters",
-   "text": "لا اله الا الله"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -612,17 +481,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--ali--default",
-  "ui": {
-   "layout": "letters",
-   "text": "يا علي مدد"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -645,18 +507,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--fatimid",
-  "ui": {
-   "preset": "fatimid",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -678,18 +532,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "107 × 107 cells, 3 rings, text repeated 9×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -711,18 +557,10 @@
     "geoScale": 5,
     "letterStyle": "banded"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--colour-ring",
-  "ui": {
-   "colourMode": "ring",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -744,18 +582,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--colour-repeat",
-  "ui": {
-   "colourMode": "repeat",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -777,18 +607,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--colour-radial",
-  "ui": {
-   "colourMode": "radial",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -810,19 +632,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-abjad",
-  "ui": {
-   "center": "abjad",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -844,19 +657,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-letters",
-  "ui": {
-   "center": "letters",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -878,19 +682,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-geo",
-  "ui": {
-   "center": "geo",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -912,19 +707,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-squares",
-  "ui": {
-   "center": "squares",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -946,19 +732,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-solid",
-  "ui": {
-   "center": "solid",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -980,19 +757,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--centre-none",
-  "ui": {
-   "center": "none",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1014,18 +782,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--corners-stars",
-  "ui": {
-   "corners": "stars",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1047,18 +807,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "91 × 91 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--corners-geo",
-  "ui": {
-   "corners": "geo",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1080,18 +832,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "91 × 91 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--corners-vine",
-  "ui": {
-   "corners": "vine",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1113,18 +857,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "91 × 91 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--band-none",
-  "ui": {
-   "bandStyle": "none",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1146,18 +882,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "78 × 78 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--band-pearls",
-  "ui": {
-   "bandStyle": "pearls",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1179,18 +907,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "89 × 89 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--band-chevron",
-  "ui": {
-   "bandStyle": "chevron",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1212,18 +932,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "89 × 89 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--band-braid",
-  "ui": {
-   "bandStyle": "braid",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1245,19 +957,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "89 × 89 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--tiling-sq",
-  "ui": {
-   "ground": "geo",
-   "tiling": "sq",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1279,19 +982,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--tiling-488",
-  "ui": {
-   "ground": "geo",
-   "tiling": "488",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1313,19 +1007,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--tiling-hex",
-  "ui": {
-   "ground": "geo",
-   "tiling": "hex",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1347,19 +1032,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--tiling-31212",
-  "ui": {
-   "ground": "geo",
-   "tiling": "31212",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1381,18 +1057,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--ground-tint",
-  "ui": {
-   "ground": "tint",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1414,18 +1082,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--ground-vine",
-  "ui": {
-   "ground": "vine",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1447,18 +1107,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--terminal-notch",
-  "ui": {
-   "terminal": "notch",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1480,18 +1132,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--terminal-bevel",
-  "ui": {
-   "terminal": "bevel",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1513,18 +1157,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--terminal-leaf",
-  "ui": {
-   "terminal": "leaf",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1546,18 +1182,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1579,19 +1207,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--reach-asc",
-  "ui": {
-   "terminal": "leaf",
-   "reach": "asc",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1613,19 +1232,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--reach-all",
-  "ui": {
-   "terminal": "notch",
-   "reach": "all",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1647,18 +1257,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--marks-off",
-  "ui": {
-   "marks": "off",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1680,18 +1282,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "78 × 78 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1713,20 +1307,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "84 × 84 cells, 2 rings, text repeated 5×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "contrast": false,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1748,20 +1332,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "93 × 93 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--letters-alt",
-  "ui": {
-   "ra": "hook",
-   "ayn": "cup",
-   "la": "plain",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1783,18 +1357,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--ra-short",
-  "ui": {
-   "ra": "short",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1816,20 +1382,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--rings-4-taper",
-  "ui": {
-   "rings": 4,
-   "taper": 0.8,
-   "centreSize": 0.1,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1851,19 +1407,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "77 × 77 cells, 4 rings, text repeated 10×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--rings-1",
-  "ui": {
-   "rings": 1,
-   "centreSize": 0,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1885,19 +1432,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "31 × 31 cells, 1 ring. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--no-repeat-no-rhythm",
-  "ui": {
-   "repeat": false,
-   "rhythm": false,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1919,19 +1457,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "57 × 57 cells, 2 rings. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--gap-4-asc-13",
-  "ui": {
-   "gap": 4,
-   "asc": 13,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1953,19 +1482,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "101 × 101 cells, 2 rings, text repeated 7×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--rot-90",
-  "ui": {
-   "rot": 90,
-   "center": "letters",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -1987,21 +1507,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--grid-soft",
-  "ui": {
-   "grid": true,
-   "soft": 0.8,
-   "weight": 0.5,
-   "palette": 4,
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2023,21 +1532,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "79 × 79 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--bv--geo-angle",
-  "ui": {
-   "corners": "geo",
-   "geoAngle": 40,
-   "geoScale": 9,
-   "tiling": "hex",
-   "layout": "rings",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2059,18 +1557,10 @@
     "geoScale": 9,
     "letterStyle": "solid"
    }
-  },
-  "meta": "91 × 91 cells, 2 rings, text repeated 6×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--fatimid",
-  "ui": {
-   "preset": "fatimid",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2092,18 +1582,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "102 × 102 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2125,18 +1607,10 @@
     "geoScale": 5,
     "letterStyle": "banded"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--colour-ring",
-  "ui": {
-   "colourMode": "ring",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2158,18 +1632,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--colour-repeat",
-  "ui": {
-   "colourMode": "repeat",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2191,18 +1657,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--colour-radial",
-  "ui": {
-   "colourMode": "radial",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2224,19 +1682,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-abjad",
-  "ui": {
-   "center": "abjad",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2258,19 +1707,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-letters",
-  "ui": {
-   "center": "letters",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2292,19 +1732,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-geo",
-  "ui": {
-   "center": "geo",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2326,19 +1757,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-squares",
-  "ui": {
-   "center": "squares",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2360,19 +1782,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-solid",
-  "ui": {
-   "center": "solid",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2394,19 +1807,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--centre-none",
-  "ui": {
-   "center": "none",
-   "centreSize": 0.3,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2428,18 +1832,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "95 × 95 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--corners-stars",
-  "ui": {
-   "corners": "stars",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2461,18 +1857,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--corners-geo",
-  "ui": {
-   "corners": "geo",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2494,18 +1882,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--corners-vine",
-  "ui": {
-   "corners": "vine",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2527,18 +1907,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--band-none",
-  "ui": {
-   "bandStyle": "none",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2560,18 +1932,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "74 × 74 cells, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--band-pearls",
-  "ui": {
-   "bandStyle": "pearls",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2593,18 +1957,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "86 × 86 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--band-chevron",
-  "ui": {
-   "bandStyle": "chevron",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2626,18 +1982,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "86 × 86 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--band-braid",
-  "ui": {
-   "bandStyle": "braid",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2659,19 +2007,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "86 × 86 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--tiling-sq",
-  "ui": {
-   "ground": "geo",
-   "tiling": "sq",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2693,19 +2032,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--tiling-488",
-  "ui": {
-   "ground": "geo",
-   "tiling": "488",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2727,19 +2057,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--tiling-hex",
-  "ui": {
-   "ground": "geo",
-   "tiling": "hex",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2761,19 +2082,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--tiling-31212",
-  "ui": {
-   "ground": "geo",
-   "tiling": "31212",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2795,18 +2107,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--ground-tint",
-  "ui": {
-   "ground": "tint",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2828,18 +2132,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--ground-vine",
-  "ui": {
-   "ground": "vine",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2861,18 +2157,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--terminal-notch",
-  "ui": {
-   "terminal": "notch",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2894,18 +2182,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--terminal-bevel",
-  "ui": {
-   "terminal": "bevel",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2927,18 +2207,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--terminal-leaf",
-  "ui": {
-   "terminal": "leaf",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2960,18 +2232,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -2993,19 +2257,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--reach-asc",
-  "ui": {
-   "terminal": "leaf",
-   "reach": "asc",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3027,19 +2282,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--reach-all",
-  "ui": {
-   "terminal": "notch",
-   "reach": "all",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3061,18 +2307,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--marks-off",
-  "ui": {
-   "marks": "off",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3094,18 +2332,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3127,20 +2357,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "contrast": false,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3162,20 +2382,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--letters-alt",
-  "ui": {
-   "ra": "hook",
-   "ayn": "cup",
-   "la": "plain",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3197,18 +2407,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--ra-short",
-  "ui": {
-   "ra": "short",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3230,20 +2432,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--rings-4-taper",
-  "ui": {
-   "rings": 4,
-   "taper": 0.8,
-   "centreSize": 0.1,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3265,19 +2457,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "59 × 59 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--rings-1",
-  "ui": {
-   "rings": 1,
-   "centreSize": 0,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3299,19 +2482,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "63 × 63 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--no-repeat-no-rhythm",
-  "ui": {
-   "repeat": false,
-   "rhythm": false,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3333,19 +2507,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--gap-4-asc-13",
-  "ui": {
-   "gap": 4,
-   "asc": 13,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3367,19 +2532,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "105 × 105 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--rot-90",
-  "ui": {
-   "rot": 90,
-   "center": "letters",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3401,21 +2557,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--grid-soft",
-  "ui": {
-   "grid": true,
-   "soft": 0.8,
-   "weight": 0.5,
-   "palette": 4,
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3437,21 +2582,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "square--names--geo-angle",
-  "ui": {
-   "corners": "geo",
-   "geoAngle": 40,
-   "geoScale": 9,
-   "tiling": "hex",
-   "layout": "rings",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -3473,18 +2607,10 @@
     "geoScale": 9,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 × 80 cells, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--fatimid",
-  "ui": {
-   "preset": "fatimid",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3506,18 +2632,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "108 cells across, 3 rings, text repeated 9×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3539,18 +2657,10 @@
     "geoScale": 5,
     "letterStyle": "banded"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--colour-ring",
-  "ui": {
-   "colourMode": "ring",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3572,18 +2682,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--colour-repeat",
-  "ui": {
-   "colourMode": "repeat",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3605,18 +2707,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--colour-radial",
-  "ui": {
-   "colourMode": "radial",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3638,19 +2732,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-abjad",
-  "ui": {
-   "center": "abjad",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3672,19 +2757,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-letters",
-  "ui": {
-   "center": "letters",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3706,19 +2782,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-geo",
-  "ui": {
-   "center": "geo",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3740,19 +2807,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-squares",
-  "ui": {
-   "center": "squares",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3774,19 +2832,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-solid",
-  "ui": {
-   "center": "solid",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3808,19 +2857,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--centre-none",
-  "ui": {
-   "center": "none",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3842,18 +2882,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "70 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--corners-stars",
-  "ui": {
-   "corners": "stars",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3875,18 +2907,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--corners-geo",
-  "ui": {
-   "corners": "geo",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3908,18 +2932,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--corners-vine",
-  "ui": {
-   "corners": "vine",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3941,18 +2957,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--band-none",
-  "ui": {
-   "bandStyle": "none",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -3974,18 +2982,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "68 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--band-pearls",
-  "ui": {
-   "bandStyle": "pearls",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4007,18 +3007,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "82 cells across, 2 rings, text repeated 5×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--band-chevron",
-  "ui": {
-   "bandStyle": "chevron",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4040,18 +3032,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "82 cells across, 2 rings, text repeated 5×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--band-braid",
-  "ui": {
-   "bandStyle": "braid",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4073,19 +3057,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "82 cells across, 2 rings, text repeated 5×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--tiling-sq",
-  "ui": {
-   "ground": "geo",
-   "tiling": "sq",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4107,19 +3082,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--tiling-488",
-  "ui": {
-   "ground": "geo",
-   "tiling": "488",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4141,19 +3107,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--tiling-hex",
-  "ui": {
-   "ground": "geo",
-   "tiling": "hex",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4175,19 +3132,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--tiling-31212",
-  "ui": {
-   "ground": "geo",
-   "tiling": "31212",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4209,18 +3157,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--ground-tint",
-  "ui": {
-   "ground": "tint",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4242,18 +3182,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--ground-vine",
-  "ui": {
-   "ground": "vine",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4275,18 +3207,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--terminal-notch",
-  "ui": {
-   "terminal": "notch",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4308,18 +3232,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--terminal-bevel",
-  "ui": {
-   "terminal": "bevel",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4341,18 +3257,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--terminal-leaf",
-  "ui": {
-   "terminal": "leaf",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4374,18 +3282,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4407,19 +3307,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--reach-asc",
-  "ui": {
-   "terminal": "leaf",
-   "reach": "asc",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4441,19 +3332,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--reach-all",
-  "ui": {
-   "terminal": "notch",
-   "reach": "all",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4475,18 +3357,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--marks-off",
-  "ui": {
-   "marks": "off",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4508,18 +3382,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "74 cells across, 2 rings, text repeated 5×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4541,20 +3407,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "66 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "contrast": false,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4576,20 +3432,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "64 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--letters-alt",
-  "ui": {
-   "ra": "hook",
-   "ayn": "cup",
-   "la": "plain",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4611,18 +3457,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--ra-short",
-  "ui": {
-   "ra": "short",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4644,20 +3482,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--rings-4-taper",
-  "ui": {
-   "rings": 4,
-   "taper": 0.8,
-   "centreSize": 0.1,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4679,19 +3507,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 4 rings, text repeated 9×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--rings-1",
-  "ui": {
-   "rings": 1,
-   "centreSize": 0,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4713,19 +3532,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "62 cells across, 1 ring, text repeated 2×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--no-repeat-no-rhythm",
-  "ui": {
-   "repeat": false,
-   "rhythm": false,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4747,19 +3557,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--gap-4-asc-13",
-  "ui": {
-   "gap": 4,
-   "asc": 13,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4781,19 +3582,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 2 rings, text repeated 4×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--rot-90",
-  "ui": {
-   "rot": 90,
-   "center": "letters",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4815,21 +3607,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--grid-soft",
-  "ui": {
-   "grid": true,
-   "soft": 0.8,
-   "weight": 0.5,
-   "palette": 4,
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4851,21 +3632,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--bv--geo-angle",
-  "ui": {
-   "corners": "geo",
-   "geoAngle": 40,
-   "geoScale": 9,
-   "tiling": "hex",
-   "layout": "circle",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4887,18 +3657,10 @@
     "geoScale": 9,
     "letterStyle": "solid"
    }
-  },
-  "meta": "58 cells across, 2 rings, text repeated 3×. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--fatimid",
-  "ui": {
-   "preset": "fatimid",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4920,18 +3682,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "102 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4953,18 +3707,10 @@
     "geoScale": 5,
     "letterStyle": "banded"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--colour-ring",
-  "ui": {
-   "colourMode": "ring",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -4986,18 +3732,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--colour-repeat",
-  "ui": {
-   "colourMode": "repeat",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5019,18 +3757,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--colour-radial",
-  "ui": {
-   "colourMode": "radial",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5052,19 +3782,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-abjad",
-  "ui": {
-   "center": "abjad",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5086,19 +3807,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-letters",
-  "ui": {
-   "center": "letters",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5120,19 +3832,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-geo",
-  "ui": {
-   "center": "geo",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5154,19 +3857,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-squares",
-  "ui": {
-   "center": "squares",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5188,19 +3882,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-solid",
-  "ui": {
-   "center": "solid",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5222,19 +3907,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--centre-none",
-  "ui": {
-   "center": "none",
-   "centreSize": 0.3,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5256,18 +3932,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "96 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--corners-stars",
-  "ui": {
-   "corners": "stars",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5289,18 +3957,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--corners-geo",
-  "ui": {
-   "corners": "geo",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5322,18 +3982,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--corners-vine",
-  "ui": {
-   "corners": "vine",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5355,18 +4007,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--band-none",
-  "ui": {
-   "bandStyle": "none",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5388,18 +4032,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "74 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--band-pearls",
-  "ui": {
-   "bandStyle": "pearls",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5421,18 +4057,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "88 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--band-chevron",
-  "ui": {
-   "bandStyle": "chevron",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5454,18 +4082,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "88 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--band-braid",
-  "ui": {
-   "bandStyle": "braid",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5487,19 +4107,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "88 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--tiling-sq",
-  "ui": {
-   "ground": "geo",
-   "tiling": "sq",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5521,19 +4132,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--tiling-488",
-  "ui": {
-   "ground": "geo",
-   "tiling": "488",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5555,19 +4157,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--tiling-hex",
-  "ui": {
-   "ground": "geo",
-   "tiling": "hex",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5589,19 +4182,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--tiling-31212",
-  "ui": {
-   "ground": "geo",
-   "tiling": "31212",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5623,18 +4207,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--ground-tint",
-  "ui": {
-   "ground": "tint",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5656,18 +4232,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--ground-vine",
-  "ui": {
-   "ground": "vine",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5689,18 +4257,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--terminal-notch",
-  "ui": {
-   "terminal": "notch",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5722,18 +4282,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--terminal-bevel",
-  "ui": {
-   "terminal": "bevel",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5755,18 +4307,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--terminal-leaf",
-  "ui": {
-   "terminal": "leaf",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5788,18 +4332,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5821,19 +4357,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--reach-asc",
-  "ui": {
-   "terminal": "leaf",
-   "reach": "asc",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5855,19 +4382,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--reach-all",
-  "ui": {
-   "terminal": "notch",
-   "reach": "all",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5889,18 +4407,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--marks-off",
-  "ui": {
-   "marks": "off",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5922,18 +4432,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5955,20 +4457,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "contrast": false,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -5990,20 +4482,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--letters-alt",
-  "ui": {
-   "ra": "hook",
-   "ayn": "cup",
-   "la": "plain",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6025,18 +4507,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--ra-short",
-  "ui": {
-   "ra": "short",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6058,20 +4532,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--rings-4-taper",
-  "ui": {
-   "rings": 4,
-   "taper": 0.8,
-   "centreSize": 0.1,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6093,19 +4557,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "60 cells across, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--rings-1",
-  "ui": {
-   "rings": 1,
-   "centreSize": 0,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6127,19 +4582,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "72 cells across, 3 rings, text repeated 2×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--no-repeat-no-rhythm",
-  "ui": {
-   "repeat": false,
-   "rhythm": false,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6161,19 +4607,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--gap-4-asc-13",
-  "ui": {
-   "gap": 4,
-   "asc": 13,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6195,19 +4632,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "106 cells across, 3 rings, text repeated 4×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--rot-90",
-  "ui": {
-   "rot": 90,
-   "center": "letters",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6229,21 +4657,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--grid-soft",
-  "ui": {
-   "grid": true,
-   "soft": 0.8,
-   "weight": 0.5,
-   "palette": 4,
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6265,21 +4682,10 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "circle--names--geo-angle",
-  "ui": {
-   "corners": "geo",
-   "geoAngle": 40,
-   "geoScale": 9,
-   "tiling": "hex",
-   "layout": "circle",
-   "text": "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderCircle",
    "opt": {
@@ -6301,18 +4707,10 @@
     "geoScale": 9,
     "letterStyle": "solid"
    }
-  },
-  "meta": "80 cells across, 3 rings, text repeated 3×. Abjad value 1431",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6335,18 +4733,10 @@
     "letterStyle": "banded"
    },
    "margin": 2
-  },
-  "meta": "77 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6369,19 +4759,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "97 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6404,19 +4785,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "93 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "reach": "all",
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6439,19 +4811,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "77 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--bv--grid-tint",
-  "ui": {
-   "grid": true,
-   "ground": "tint",
-   "layout": "line",
-   "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6474,18 +4837,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "77 × 11 cells. Abjad value 786",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--banded",
-  "ui": {
-   "letterStyle": "banded",
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6508,18 +4863,10 @@
     "letterStyle": "banded"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--marks-all",
-  "ui": {
-   "marks": "all",
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6542,19 +4889,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--marks-early",
-  "ui": {
-   "marks": "all",
-   "vowels": "early",
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6577,19 +4915,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--terminal-palmette",
-  "ui": {
-   "terminal": "palmette",
-   "reach": "all",
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6612,19 +4941,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "line--la--grid-tint",
-  "ui": {
-   "grid": true,
-   "ground": "tint",
-   "layout": "line",
-   "text": "لا اله الا الله"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6647,19 +4967,10 @@
     "letterStyle": "solid"
    },
    "margin": 2
-  },
-  "meta": "34 × 9 cells. Abjad value 165",
-  "warn": ""
+  }
  },
  {
   "id": "letters--alt",
-  "ui": {
-   "ra": "hook",
-   "ayn": "cup",
-   "la": "plain",
-   "layout": "letters"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6682,18 +4993,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--asc-15",
-  "ui": {
-   "asc": 15,
-   "ra": "short",
-   "layout": "letters"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6716,18 +5019,10 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 15-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "letters--grid",
-  "ui": {
-   "grid": true,
-   "palette": 2,
-   "layout": "letters"
-  },
-  "engine": "alphabet",
   "render": {
    "fn": "renderGrid",
    "opt": {
@@ -6750,36 +5045,18 @@
     "letterStyle": "solid"
    },
    "margin": 1
-  },
-  "meta": "Letter forms, 9-cell band",
-  "warn": ""
+  }
  },
  {
   "id": "empty--blank",
-  "ui": {
-   "text": ""
-  },
-  "engine": "compose",
-  "render": null,
-  "meta": "",
-  "warn": "Type some Arabic text to begin."
+  "render": null
  },
  {
   "id": "empty--latin",
-  "ui": {
-   "text": "hello"
-  },
-  "engine": "compose",
-  "render": null,
-  "meta": "",
-  "warn": "Type some Arabic text to begin. Skipped: h e l o"
+  "render": null
  },
  {
   "id": "square--mixed-unsupported",
-  "ui": {
-   "text": "بسم الله 123 abc"
-  },
-  "engine": "compose",
   "render": {
    "fn": "renderSquare",
    "opt": {
@@ -6801,8 +5078,6 @@
     "geoScale": 5,
     "letterStyle": "solid"
    }
-  },
-  "meta": "66 × 66 cells, 2 rings, text repeated 14×. Abjad value 168",
-  "warn": " Skipped: 1 2 3 a b c"
+  }
  }
 ]

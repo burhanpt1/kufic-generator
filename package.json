@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "golden": "UPDATE_GOLDEN=1 vitest run tests/ui.test.ts",
+    "golden": "UPDATE_GOLDEN=1 vitest run tests/golden-update.test.ts",
     "golden:lab": "node scripts/golden-lab.mjs",
     "compare:lab": "node scripts/compare-lab.mjs",
     "build:wasm": "node scripts/build-wasm.mjs"

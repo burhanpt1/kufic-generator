@@ -4,7 +4,7 @@
 
 A generative art tool that lays out Arabic text as square / Fatimid-style Kufic calligraphy on a cell grid, winds it into square or circular rings, and decorates it (floriated stems, geometric star patterns, braided bands, abjad numerals). Everything runs client-side and outputs SVG.
 
-The original prototype was one self-contained `index.html` (~1,360 lines) built iteratively in a claude.ai chat. It has been migrated to `src/` (migration steps 1–7 are done) and retired; it is in git history as `legacy/index.html`. Its output is frozen in `tests/golden/`, and the code must keep reproducing it exactly unless a change is intentional (then run `npm run golden` and review the diff).
+The original prototype was one self-contained `index.html` (~1,360 lines) built iteratively in a claude.ai chat. It has been migrated to `src/` (migration steps 1–7 are done) and retired; it is in git history as `legacy/index.html`, and so is the rebuilt prototype UI (`src/ui`), retired in favour of Kufic Studio (`index.html`, `src/studio`). `tests/golden/` holds the engine and renderer's reference output, first captured from the prototype and now on the current letter set; the code must keep reproducing it exactly unless a change is intentional (then run `npm run golden` and review the diff).
 
 ## How the prototype was organised (line numbers approximate; the same names exist in `src/`)
 

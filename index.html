@@ -1,153 +1,259 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Square Kufic generator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
-</head>
-<body>
-<div class="wrap">
-<header>
-  <h1>Square Kufic</h1>
-  <p>Type Arabic text. It's shaped into square Kufic letterforms on a grid and wound into a square.</p>
-  <p><a href="./studio.html">Open Kufic Studio</a>: compositions in any shape, breeding, chronograms.</p>
-</header>
-<div class="app">
-  <section class="stage" aria-label="Composition">
-    <div class="art" id="art"></div>
-    <div class="status"><span id="meta"></span><span id="warn" class="warn"></span></div>
-  </section>
-  <section class="panel" aria-label="Controls">
-    <div class="field">
-      <label for="text">Text <button id="fatimid" class="preset" type="button">Fatimid preset</button></label>
-      <textarea id="text" dir="rtl" lang="ar" spellcheck="false" rows="3">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</textarea>
-      <p class="note" style="margin-top:6px">One line flows through every ring. Several lines give one ring each, outside to inside.</p>
-      <div class="chips" id="chips"></div>
-    </div>
-    <div class="field">
-      <div class="lab">Layout</div>
-      <div class="seg" id="layout" role="group" aria-label="Layout">
-        <button data-v="rings" aria-pressed="true">Square</button><button data-v="circle" aria-pressed="false">Circle</button><button data-v="line" aria-pressed="false">Line</button><button data-v="letters" aria-pressed="false">Letters</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kufic Studio</title>
+    <meta
+      name="description"
+      content="Compose square Kufic calligraphy: breed compositions, edit their borders and fills, write chronograms, and export SVG or PNG."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 2h12v12H2zM5 5v6h6V5z%22 fill=%22%2317807e%22 fill-rule=%22evenodd%22/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./src/studio/ui/studio.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>Kufic Studio</h1>
+        <p>Breed compositions until one is right, then refine it: shape, borders, fill, style, letters.</p>
       </div>
-      <p class="note" id="layoutNote"></p>
-    </div>
-    <div id="compOpts">
-      <div class="field">
-        <div class="row2">
-          <div><label for="rings" class="lab">Rings <output id="ringsOut"></output></label><input type="range" id="rings" min="1" max="8" step="1" value="2"></div>
-          <div><label for="centreSize" class="lab">Centre <output id="centreOut"></output></label><input type="range" id="centreSize" min="0" max="0.5" step="0.02" value="0.2"></div>
-        </div>
-        <div class="row2" style="margin-top:12px">
-          <div><label for="taper" class="lab">Inner rings smaller <output id="taperOut"></output></label><input type="range" id="taper" min="0" max="1" step="0.05" value="0.5"></div>
-          <div><label for="gap" class="lab">Word gap <output id="gapOut"></output></label><input type="range" id="gap" min="1" max="5" step="1" value="2"></div>
-        </div>
-        <label class="check" style="margin-top:12px"><input type="checkbox" id="repeat" checked> Repeat text to fill the rings</label>
-        <label class="check" style="margin-top:8px"><input type="checkbox" id="rhythm" checked> Space tall stems evenly</label>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" data-tab="gallery" aria-selected="true">Gallery</button>
+        <button role="tab" data-tab="trainer" aria-selected="false">Trainer</button>
+        <button role="tab" data-tab="editor" aria-selected="false">Editor</button>
+        <button role="tab" data-tab="chrono" aria-selected="false">Chronogram</button>
+        <button role="tab" data-tab="letters" aria-selected="false">Letters</button>
+      </nav>
+      <div class="actions">
+        <button id="undo" title="Undo (Ctrl+Z)">Undo</button><button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+        <button id="share">Copy link</button><button id="saveSvg">SVG</button><button id="savePng">PNG</button>
+        <select id="fab" aria-label="Fabrication export">
+          <option value="">Make…</option>
+          <option value="plot">Plotter SVG (single line)</option>
+          <option value="laser">Laser / CNC SVG (layers)</option>
+          <option value="relief">Relief depth map (PNG)</option>
+        </select>
+        <a href="./index.html" class="quiet">Classic tool</a>
       </div>
-      <div class="field">
-        <div class="lab">Centre</div>
-        <div class="seg grid3" id="center" role="group" aria-label="Centre">
-          <button data-v="abjad" aria-pressed="true">Abjad number</button><button data-v="letters" aria-pressed="false">Letters</button><button data-v="geo" aria-pressed="false">Pattern</button><button data-v="squares" aria-pressed="false">Rings</button><button data-v="solid" aria-pressed="false">Solid</button><button data-v="none" aria-pressed="false">Empty</button>
+    </header>
+
+    <main>
+      <!-- Gallery: presets, breeding, favourites -->
+      <section class="panel" id="gallery" role="tabpanel">
+        <h2>Presets</h2>
+        <div class="cards small" id="presets"></div>
+        <h2>Breed</h2>
+        <div class="bar">
+          <input type="text" id="breedText" class="ar" dir="rtl" aria-label="Text to breed with" />
+          <button id="fresh" class="primary">New generation</button>
+          <button id="breed">Breed from picks</button>
+          <button id="vary">Vary current</button>
+          <span id="breedStatus" class="note"></span>
         </div>
-        <div class="sub">Corners</div>
-        <div class="seg" id="corners" role="group" aria-label="Corners">
-          <button data-v="none" aria-pressed="true">Empty</button><button data-v="stars" aria-pressed="false">Stars</button><button data-v="geo" aria-pressed="false">Pattern</button><button data-v="vine" aria-pressed="false">Vine</button>
+        <p class="note">
+          Click a candidate to pick it (one or two), then Breed. Open one in the editor with its ✎ button. Locked traits
+          stay fixed in every child; lock them from a picked candidate.
+        </p>
+        <div class="locks" id="locks"></div>
+        <div class="cards" id="cands"></div>
+        <h2>Favourites</h2>
+        <div class="bar">
+          <button id="favAdd">Save current to favourites</button
+          ><button id="tasteReset" class="quiet">Forget learned taste</button><span id="tasteNote" class="note"></span>
         </div>
-        <div class="sub">Between rings</div>
-        <div class="seg grid3" id="bandStyle" role="group" aria-label="Between rings">
-          <button data-v="none" aria-pressed="false">Nothing</button><button data-v="lines" aria-pressed="true">Lines</button><button data-v="pearls" aria-pressed="false">Pearls</button><button data-v="chevron" aria-pressed="false">Chevron</button><button data-v="braid" aria-pressed="false">Braid</button><button data-v="none" aria-hidden="true" tabindex="-1" style="visibility:hidden"></button>
-        </div>
-        <div class="sub">Ground</div>
-        <div class="seg" id="ground" role="group" aria-label="Ground">
-          <button data-v="plain" aria-pressed="true">Plain</button><button data-v="tint" aria-pressed="false">Tinted</button><button data-v="vine" aria-pressed="false">Vine</button><button data-v="geo" aria-pressed="false">Pattern</button>
-        </div>
-      </div>
-      <details class="field compact">
-        <summary>Geometric pattern</summary>
-        <div class="inner">
-          <div class="seg" id="tiling" role="group" aria-label="Tiling">
-            <button data-v="sq" aria-pressed="false">Square</button><button data-v="488" aria-pressed="true">8-fold</button><button data-v="hex" aria-pressed="false">6-fold</button><button data-v="31212" aria-pressed="false">12-fold</button>
+        <div class="cards small" id="favs"></div>
+      </section>
+
+      <!-- Taste trainer: rate one composition at a time -->
+      <section class="panel hidden" id="trainer" role="tabpanel">
+        <div class="split">
+          <div class="side">
+            <div class="lab">Rate what you see</div>
+            <input type="text" id="trText" class="ar" dir="rtl" aria-label="Text to train with" />
+            <div class="rate" role="group" aria-label="Rating">
+              <button id="trVeto" title="Veto (3 or ←)">Veto <kbd>3</kbd></button
+              ><button id="trMeh" title="Meh (2 or ↓)">Meh <kbd>2</kbd></button
+              ><button id="trLike" class="primary" title="Like (1 or →)">Like <kbd>1</kbd></button
+              ><button id="trSkip" class="quiet" title="Skip (space)">Skip <kbd>␣</kbd></button>
+            </div>
+            <p id="trStatus" class="note" aria-live="polite"></p>
+            <p class="note">
+              Veto what should never come up again; Like what you would keep. After six ratings the trainer shows what
+              it is least sure about, and breeding in the gallery screens out likely vetoes and ranks by what you like.
+            </p>
+            <h3>What it has learned</h3>
+            <div id="trLearned" class="learned"></div>
+            <div class="bar">
+              <button id="trCopy">Copy ratings</button><button id="trForget" class="quiet">Forget ratings</button>
+            </div>
+            <details class="group">
+              <summary>Paste lab ratings</summary>
+              <textarea
+                id="trLab"
+                rows="5"
+                spellcheck="false"
+                placeholder="Paste the Kufic Lab's exported ratings (a JSON array of { g, text, r, m })."
+              ></textarea>
+              <div class="bar"><button id="trImport">Import</button></div>
+              <p id="trImportNote" class="note"></p>
+            </details>
           </div>
-          <div class="row2" style="margin-top:12px">
-            <div><label for="geoAngle" class="lab">Star angle <output id="geoAngleOut"></output></label><input type="range" id="geoAngle" min="20" max="80" step="1" value="67"></div>
-            <div><label for="geoScale" class="lab">Scale <output id="geoScaleOut"></output></label><input type="range" id="geoScale" min="2" max="14" step="0.5" value="5"></div>
+          <div class="stage"><div id="trPic" class="preview" aria-live="polite"></div></div>
+        </div>
+      </section>
+
+      <!-- Editor: guided controls, layers, preview -->
+      <section class="panel hidden" id="editor" role="tabpanel">
+        <div class="split">
+          <div class="side">
+            <h2>Texts</h2>
+            <div id="texts"></div>
+            <h2>Guided</h2>
+            <div id="guided"></div>
+            <h2>Layers</h2>
+            <div id="layers" class="layers"></div>
+            <div id="nodeEdit" class="nodeedit"></div>
+          </div>
+          <div class="stage">
+            <div id="preview" class="preview" aria-live="polite"></div>
+            <p id="info" class="note"></p>
+            <details class="group critic" id="critic">
+              <summary>Ask a critic (optional, uses your Claude API key)</summary>
+              <p class="note">
+                Sends a picture of this composition to the Claude API for a calligraphy teacher's critique, with
+                suggested changes you can apply. Nothing is sent until you press Ask. Your key stays in this browser.
+              </p>
+              <div class="bar">
+                <input
+                  type="password"
+                  id="criticKey"
+                  placeholder="API key (sk-ant-…)"
+                  autocomplete="off"
+                  aria-label="Claude API key"
+                />
+                <select id="criticModel" aria-label="Model"></select>
+              </div>
+              <div class="bar">
+                <label><input type="checkbox" id="criticRemember" /> Remember the key in this browser</label>
+                <button id="criticAsk" class="primary">Ask</button>
+                <span id="criticStatus" class="note"></span>
+              </div>
+              <div id="criticOut"></div>
+            </details>
           </div>
         </div>
-      </details>
-    </div>
-    <div class="field">
-      <div class="lab">Ornament</div>
-      <div class="sub" style="margin-top:0">Stem endings</div>
-      <div class="seg grid3" id="terminal" role="group" aria-label="Stem endings">
-        <button data-v="none" aria-pressed="true">Plain</button><button data-v="notch" aria-pressed="false">Notched</button><button data-v="bevel" aria-pressed="false">Bevelled</button><button data-v="leaf" aria-pressed="false">Leaf</button><button data-v="palmette" aria-pressed="false">Palmette</button><button data-v="none" aria-hidden="true" tabindex="-1" style="visibility:hidden"></button>
-      </div>
-      <div class="seg" id="reach" role="group" aria-label="Which stems" style="margin-top:8px">
-        <button data-v="asc" aria-pressed="false">Tall stems</button><button data-v="tails" aria-pressed="true">+ tails</button><button data-v="all" aria-pressed="false">Every stem</button>
-      </div>
-      <div class="sub">Letter style</div>
-      <div class="seg" id="letterStyle" role="group" aria-label="Letter style">
-        <button data-v="solid" aria-pressed="true">Solid</button><button data-v="banded" aria-pressed="false">Banded</button>
-      </div>
-      <div class="sub">Letter colour</div>
-      <div class="seg" id="colourMode" role="group" aria-label="Letter colour">
-        <button data-v="solid" aria-pressed="true">Solid</button><button data-v="ring" aria-pressed="false">By ring</button><button data-v="repeat" aria-pressed="false">By repeat</button><button data-v="radial" aria-pressed="false">Radial</button>
-      </div>
-    </div>
-    <details class="field compact">
-      <summary>Letterforms</summary>
-      <div class="inner">
-        <div class="row2">
-          <div><label for="asc" class="lab">Ascenders <output id="ascOut"></output></label><input type="range" id="asc" min="7" max="15" step="2" value="9"></div>
-          <div></div>
+      </section>
+
+      <!-- Chronogram -->
+      <section class="panel hidden" id="chrono" role="tabpanel">
+        <div class="seg" id="chMode" role="group" aria-label="Chronogram mode">
+          <button data-m="complete" aria-pressed="true">Complete my phrase</button
+          ><button data-m="read" aria-pressed="false">Read a phrase</button
+          ><button data-m="find" aria-pressed="false">Find from scratch</button>
         </div>
-        <div class="sub">Ra ر</div>
-        <div class="seg" id="ra" role="group" aria-label="Ra style"><button data-v="desc" aria-pressed="true">Descending</button><button data-v="short" aria-pressed="false">Flat</button><button data-v="hook" aria-pressed="false">Hooked</button></div>
-        <div class="sub">Ayn ع</div>
-        <div class="seg" id="ayn" role="group" aria-label="Ayn style"><button data-v="open" aria-pressed="true">Open C</button><button data-v="cup" aria-pressed="false">Cup on stem</button></div>
-        <div class="sub">Lam-alif لا</div>
-        <div class="seg" id="la" role="group" aria-label="Lam-alif style"><button data-v="plain" aria-pressed="false">Plain</button><button data-v="knot" aria-pressed="true">Knotted</button></div>
-        <div class="sub">Dots and vowels</div>
-        <div class="seg" id="marks" role="group" aria-label="Dots and vowels"><button data-v="off" aria-pressed="false">None</button><button data-v="dots" aria-pressed="true">Dots</button><button data-v="all" aria-pressed="false">Dots + vowels</button></div>
-        <div id="vowelOpts">
-          <div class="sub">Vowel style</div>
-          <div class="seg" id="vowels" role="group" aria-label="Vowel style"><button data-v="modern" aria-pressed="true">Modern marks</button><button data-v="early" aria-pressed="false">Early red dots</button></div>
-          <label class="check" style="margin-top:12px"><input type="checkbox" id="contrast" checked> Vowels in a second colour</label>
+        <div class="split">
+          <div class="side">
+            <p id="chHelp" class="note"></p>
+            <label for="chPhrase" class="lab" id="chPhraseLab">Your phrase</label>
+            <input id="chPhrase" class="ar" dir="rtl" type="text" value="ولد علي" />
+            <div id="chTargetRow" class="bar">
+              <label for="chYear" class="lab">Target</label
+              ><input id="chYear" type="number" value="2026" style="width: 7em" />
+              <select id="chCal">
+                <option value="g">Gregorian year</option>
+                <option value="h">Hijri year</option>
+                <option value="n">Exact number</option>
+              </select>
+            </div>
+            <p class="note" id="chTargetNote"></p>
+            <div class="breakdown" id="chBreak"></div>
+            <div class="bar spread">
+              <div class="big" id="chTotal"></div>
+              <div id="chDiff"></div>
+            </div>
+            <p class="note" id="chYears"></p>
+            <div id="chPreview" class="preview line"></div>
+            <h3>Counting</h3>
+            <div class="bar">
+              <label><input type="radio" name="chSys" value="mashriqi" checked /> Eastern (Mashriqi)</label>
+              <label><input type="radio" name="chSys" value="maghribi" /> Western (Maghribi)</label>
+            </div>
+            <div class="bar">
+              <label><input type="radio" name="chTm" value="5" checked /> ة counts 5</label>
+              <label><input type="radio" name="chTm" value="400" /> ة counts 400 (as ت)</label>
+            </div>
+            <h3>Word bank</h3>
+            <div class="chips" id="chCats"></div>
+            <textarea
+              id="chBank"
+              class="ar"
+              dir="rtl"
+              rows="2"
+              placeholder="Your own words, separated by spaces"
+            ></textarea>
+            <p class="note" id="chBankCount"></p>
+            <div id="chFindOpts" class="bar hidden">
+              <label>Must include <input id="chMust" class="ar" dir="rtl" type="text" style="width: 8em" /></label>
+              <label
+                >Up to
+                <select id="chMax">
+                  <option>2</option>
+                  <option selected>3</option>
+                  <option>4</option>
+                </select>
+                words</label
+              >
+            </div>
+            <button id="chGo" class="primary">Suggest words</button>
+            <button id="chUse">Use phrase in composition</button>
+          </div>
+          <div class="stage">
+            <p id="chStatus" class="note"></p>
+            <div id="chResults" class="results"></div>
+          </div>
         </div>
-      </div>
-    </details>
-    <div class="field" id="editor">
-      <div class="lab">Edit a letter</div>
-      <div class="lettersel" id="edLetters"></div>
-      <div class="seg" id="edForm" role="group" aria-label="Form" style="margin-top:10px">
-        <button data-v="fin" aria-pressed="false">Final</button><button data-v="med" aria-pressed="false">Medial</button><button data-v="ini" aria-pressed="false">Initial</button><button data-v="iso" aria-pressed="true">Isolated</button>
-      </div>
-      <div class="edgrid" id="edGrid"></div>
-      <div class="row3"><button id="edAddL">+ column left</button><button id="edDelL">− left</button><button id="edDelR">− right</button><button id="edAddR">+ column right</button></div>
-      <div class="row3" style="margin-top:8px"><button id="edReset">Reset this letter</button><button id="edResetAll">Reset all</button><button id="edExport">Copy set</button><button id="edImport">Paste set</button></div>
-      <textarea id="edJson" class="hidden" rows="4" style="font:12px/1.4 monospace;margin-top:8px" spellcheck="false" placeholder="Paste a letter set here, then press Paste set again."></textarea>
-      <p class="note">Click cells to draw. The accent line marks the baseline. Edits apply everywhere and are kept in this browser.</p>
-    </div>
-    <div class="field">
-      <div class="lab">Colour</div>
-      <div class="swatches" id="swatches"></div>
-      <div class="row2" style="margin-top:12px">
-        <div><label for="weight" class="lab">Line weight <output id="weightOut"></output></label><input type="range" id="weight" min="0.2" max="1" step="0.05" value="0.85"></div>
-        <div><label for="soft" class="lab">Softness <output id="softOut"></output></label><input type="range" id="soft" min="0" max="1" step="0.05" value="0.2"></div>
-      </div>
-      <div class="sub">Rotate</div>
-      <div class="seg" id="rot" role="group" aria-label="Rotation"><button data-v="0" aria-pressed="true">0°</button><button data-v="90" aria-pressed="false">90°</button><button data-v="180" aria-pressed="false">180°</button><button data-v="270" aria-pressed="false">270°</button></div>
-      <label class="check" style="margin-top:12px"><input type="checkbox" id="grid"> Show grid</label>
-    </div>
-    <div class="field">
-      <div class="saves" id="saves"><button id="saveSvg">Save SVG</button><button id="savePng">Save PNG</button></div>
-      <p class="note">Vowels only appear if your text includes them. Persian and Urdu letters map to their nearest Arabic shapes. Abjad counts ة as 5.</p>
-    </div>
-  </section>
-</div>
-</div>
-<script type="module" src="./src/ui/main.ts"></script>
-</body>
+      </section>
+
+      <!-- Letter editor -->
+      <section class="panel hidden" id="letters" role="tabpanel">
+        <div class="split">
+          <div class="side">
+            <div class="lab">Edit a letter</div>
+            <div class="lettersel" id="edLetters"></div>
+            <div class="seg" id="edForm" role="group" aria-label="Form" style="margin-top: 10px">
+              <button data-v="fin" aria-pressed="false">Final</button
+              ><button data-v="med" aria-pressed="false">Medial</button
+              ><button data-v="ini" aria-pressed="false">Initial</button
+              ><button data-v="iso" aria-pressed="true">Isolated</button>
+            </div>
+            <div class="edgrid" id="edGrid"></div>
+            <div class="row3">
+              <button id="edAddL">+ column left</button><button id="edDelL">− left</button
+              ><button id="edDelR">− right</button><button id="edAddR">+ column right</button>
+            </div>
+            <div class="row3" style="margin-top: 8px">
+              <button id="edReset">Reset this letter</button><button id="edResetAll">Reset all</button
+              ><button id="edExport">Copy set</button><button id="edImport">Paste set</button>
+            </div>
+            <textarea
+              id="edJson"
+              class="hidden"
+              rows="4"
+              spellcheck="false"
+              placeholder="Paste a letter set here, then press Paste set again."
+            ></textarea>
+            <p class="note">
+              Click cells to draw. The accent line marks the baseline. Edits apply to every composition (and the classic
+              tool) and are kept in this browser.
+            </p>
+          </div>
+          <div class="stage"><div id="letterPreview" class="preview"></div></div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./src/studio/ui/main.ts"></script>
+  </body>
 </html>

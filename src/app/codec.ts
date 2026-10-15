@@ -1,8 +1,5 @@
-// Compositions as shareable links: the settings that differ from the defaults, as JSON, deflated and base64url'd
-// into the URL fragment (#s=...). The fragment never reaches a server.
-import type { Settings } from './settings';
-
-const PREFIX = '#s=';
+// JSON values as compact URL-safe strings: deflated and base64url'd (shareable links keep compositions in the URL
+// fragment, which never reaches a server).
 
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream) {
   const writer = stream.writable.getWriter();
@@ -45,13 +42,3 @@ export async function decodeJSON(code: string): Promise<unknown> {
     return undefined;
   }
 }
-
-export const encodeSettings = (s: Settings) => encodeJSON(s);
-/** null if the string isn't a valid encoding. */
-export async function decodeSettings(code: string): Promise<Settings | null> {
-  const s = await decodeJSON(code);
-  return s && typeof s === 'object' && !Array.isArray(s) ? (s as Settings) : null;
-}
-
-export const hashToCode = (hash: string) => (hash.startsWith(PREFIX) ? hash.slice(PREFIX.length) : null);
-export const codeToHash = (code: string) => (code ? PREFIX + code : '');

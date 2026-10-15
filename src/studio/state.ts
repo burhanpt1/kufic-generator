@@ -2,7 +2,7 @@
 // Decoded trees are untrusted and validated against the schema.
 import type { Composition } from '../model/schema';
 import { CompositionSchema } from '../model/schema';
-import { decodeJSON, encodeJSON } from '../ui/url';
+import { decodeJSON, encodeJSON } from '../app/codec';
 
 const PREFIX = '#c=';
 export const encodeComposition = (c: Composition) => encodeJSON(c);

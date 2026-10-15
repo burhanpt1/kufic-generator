@@ -25,7 +25,7 @@ import { resolve } from '../src/compose/index.ts';
 import { PRESETS } from '../src/model/presets.ts';
 import { plotterSVG, laserSVG, reliefSVG, centrelines, orderForPlotting } from '../src/fabricate/index.ts';
 import { loadSealWasm } from '../src/kernels/seal.ts';
-import { saveSVG, savePNG } from '../src/ui/export.ts';
+import { saveSVG, savePNG } from '../src/app/export.ts';
 await loadSealWasm();
 const pick = document.getElementById('pick');
 PRESETS.forEach((p, i) => pick.append(new Option(p.name, i)));

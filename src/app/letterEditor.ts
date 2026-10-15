@@ -1,9 +1,48 @@
 // Letter editor: pick a letter and form, click cells to draw. Edits are glyph overrides kept in localStorage.
 import { GROUPS, getRows, setOverrides } from '../engine';
 import type { Form } from '../engine';
-import type { Lookup, State } from './controls';
-import { seg } from './controls';
-import { LETTER_CHARS } from './presets';
+
+/** What the editor reads and writes: the letter and form being edited, the letter variants, and the overrides. */
+export interface EditorState {
+  edKey: string;
+  edForm: string;
+  ra: string;
+  ayn: string;
+  la: string;
+  meem?: string;
+  sad?: string;
+  ovr: Record<string, string[] | undefined>;
+}
+type State = EditorState;
+export type Lookup = <T extends HTMLElement = HTMLInputElement>(id: string) => T;
+export const lookup =
+  (doc: Document): Lookup =>
+  <T extends HTMLElement>(id: string) =>
+    doc.getElementById(id) as T;
+
+/** Wire a segmented group: clicking a button stores its data-v in state[key], then runs after() and render(). */
+function seg(
+  $: Lookup,
+  state: State,
+  id: 'edLetters' | 'edForm',
+  key: 'edKey' | 'edForm',
+  render: () => void,
+  after: () => void,
+) {
+  $(id).addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b || b.style.visibility === 'hidden') return;
+    state[key] = b.dataset.v!;
+    [...$(id).children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+    after();
+    render();
+  });
+}
+
+export const LETTER_CHARS: Record<string, string> = {
+  ALEF: 'ا', BEH: 'ب', HAH: 'ح', DAL: 'د', REH: 'ر', SEEN: 'س', SAD: 'ص', TAH: 'ط', AIN: 'ع', FEH: 'ف',
+  QAF: 'ق', KAF: 'ك', LAM: 'ل', MEEM: 'م', NOON: 'ن', HEH: 'ه', WAW: 'و', YEH: 'ي', LAMALEF: 'لا', HAMZA: 'ء',
+}; // prettier-ignore
 
 export const STORAGE_KEY = 'kufi-glyphs';
 
@@ -18,7 +57,8 @@ export function loadOverrides(state: State) {
 }
 
 export function wireEditor($: Lookup, doc: Document, state: State, render: () => void) {
-  const letterOpts = () => ({ ra: state.ra, ayn: state.ayn, la: state.la }) as Parameters<typeof getRows>[2];
+  const letterOpts = () =>
+    ({ ra: state.ra, ayn: state.ayn, la: state.la, meem: state.meem, sad: state.sad }) as Parameters<typeof getRows>[2];
   const saveOvr = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.ovr));
@@ -67,8 +107,8 @@ export function wireEditor($: Lookup, doc: Document, state: State, render: () =>
     );
   }
 
-  seg($, state, 'edLetters', 'edKey', null, render, () => drawEditor());
-  seg($, state, 'edForm', 'edForm', null, render, () => drawEditor());
+  seg($, state, 'edLetters', 'edKey', render, () => drawEditor());
+  seg($, state, 'edForm', 'edForm', render, () => drawEditor());
   GROUPS.forEach(k => {
     const b = doc.createElement('button');
     b.dataset.v = k;

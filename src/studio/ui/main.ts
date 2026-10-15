@@ -9,7 +9,7 @@ import { resolve } from '../../compose';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
 import { renderPlaced } from '../../render/composition';
-import { saveSVG, savePNG } from '../../ui/export';
+import { saveSVG, savePNG } from '../../app/export';
 import type { Placed } from '../../compose/placed';
 import { laserSVG, plotterSVG, reliefSVG } from '../../fabricate';
 import { compositionFromHash, hashFor } from '../state';
