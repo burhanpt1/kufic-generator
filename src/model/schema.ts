@@ -118,7 +118,8 @@ export type FillerNode =
   | { type: 'strapwork'; text: string; tiling: 'square' | '488' | 'hex' | '31212' }
   /** Horizontal and vertical text straps woven in a checkerboard (lab port §7). */
   | { type: 'lattice'; text: string }
-  | { type: 'pattern'; pattern: PatternSpec }
+  /** A star pattern; with text, its lines are written in the text (the stars outlined in words). */
+  | { type: 'pattern'; pattern: PatternSpec; text?: string }
   | { type: 'rings' }
   | { type: 'vine' }
   | { type: 'solid' }
@@ -314,7 +315,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
     z.object({ type: z.literal('abjad'), text: slotName }),
     z.object({ type: z.literal('strapwork'), text: slotName, tiling: z.enum(['square', '488', 'hex', '31212']) }),
     z.object({ type: z.literal('lattice'), text: slotName }),
-    z.object({ type: z.literal('pattern'), pattern }),
+    z.object({ type: z.literal('pattern'), pattern, text: z.string().optional() }),
     z.object({ type: z.literal('rings') }),
     z.object({ type: z.literal('vine') }),
     z.object({ type: z.literal('solid') }),
@@ -353,7 +354,7 @@ export const CompositionSchema = z
       if (r.fill) filler(r.fill, [...path, 'fill']);
     };
     const filler = (f: FillerNode, path: (string | number)[]) => {
-      if ('text' in f) check(f.text, [...path, 'text']);
+      if ('text' in f && f.text !== undefined) check(f.text, [...path, 'text']);
       if (f.type === 'region') region(f.node, [...path, 'node']);
     };
     region(c.root.child as RegionNode, ['root', 'child']);

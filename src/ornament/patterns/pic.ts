@@ -5,8 +5,10 @@ import { U, acc, f2, mix } from '../../render/svg';
 import type { Poly } from './tilings';
 import { tiles } from './tilings';
 
-export function picPath(polys: Poly[], theta: number) {
-  let d = '';
+/** The pattern's lines as polylines: per tile edge pair, the two rays from the edge midpoints to where they meet
+ *  (or one straight line when they are parallel or meet behind). */
+export function picLines(polys: Poly[], theta: number): number[][][] {
+  const out: number[][][] = [];
   const rotv = ([x, y]: number[], t: number) => [x * Math.cos(t) - y * Math.sin(t), x * Math.sin(t) + y * Math.cos(t)];
   polys.forEach(p => {
     const n = p.length;
@@ -36,20 +38,23 @@ export function picPath(polys: Poly[], theta: number) {
         db = rotv([-e2[0], -e2[1]], -sg * theta);
       const det = df[0] * -db[1] - df[1] * -db[0];
       if (Math.abs(det) < 1e-6) {
-        d += `M${f2(m1[0])} ${f2(m1[1])}L${f2(m2[0])} ${f2(m2[1])}`;
+        out.push([m1, m2]);
         continue;
       }
       const rx = m2[0] - m1[0],
         ry = m2[1] - m1[1],
         t = (rx * -db[1] - ry * -db[0]) / det;
       const q = [m1[0] + t * df[0], m1[1] + t * df[1]];
-      d +=
-        t > 0
-          ? `M${f2(m1[0])} ${f2(m1[1])}L${f2(q[0])} ${f2(q[1])}L${f2(m2[0])} ${f2(m2[1])}`
-          : `M${f2(m1[0])} ${f2(m1[1])}L${f2(m2[0])} ${f2(m2[1])}`;
+      out.push(t > 0 ? [m1, q, m2] : [m1, m2]);
     }
   });
-  return d;
+  return out;
+}
+
+export function picPath(polys: Poly[], theta: number) {
+  return picLines(polys, theta)
+    .map(l => l.map(([x, y], k) => (k ? 'L' : 'M') + f2(x) + ' ' + f2(y)).join(''))
+    .join('');
 }
 
 /** Star pattern around (cx, cy) radius R, clipped to clipId; strength mixes the line colour from paper to accent. */

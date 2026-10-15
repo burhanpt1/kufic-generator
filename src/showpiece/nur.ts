@@ -37,11 +37,12 @@ export const nurStyle = (): Style => {
 export function niche(): Composition {
   const star: RegionNode = {
     type: 'region',
-    outline: { kind: 'star', points: 8, depth: 0.84 },
-    borders: [{ type: 'ornamentBorder', ornament: 'braid', width: 2 }],
+    outline: { kind: 'star', points: 8, depth: 0.9 },
+    borders: [{ type: 'ornamentBorder', ornament: 'lines', width: 1 }],
     features: { tips: 'none' },
     style: { palette: { ...GLASS } },
-    fill: { type: 'monogram', text: 'core', method: 'seal', params: { H: 7, frame: 'none' } },
+    // light upon light winding in on itself: a square Kufic spiral
+    fill: { type: 'monogram', text: 'core', method: 'spiral', params: { H: 7 } },
   };
   const glass: RegionNode = {
     type: 'region',
@@ -102,7 +103,8 @@ export function niche(): Composition {
   };
 }
 
-/** The A1 frame: the Ninety-Nine Names around a field of eight-fold stars. Portrait at A-series
+/** The A1 frame: the Ninety-Nine Names around a field of eight-fold stars whose
+ *  every line is written in the word نور, light. Portrait at A-series
  *  proportions (1 : √2). */
 export function frame(names: string): Composition {
   const h = 1 / Math.sqrt(1 + 0.5),
@@ -111,9 +113,9 @@ export function frame(names: string): Composition {
     version: 1,
     seed: 99,
     canvas: { shape: 'portrait', margin: 2 },
-    // the star field recedes in a deep blue; the names stay gold
-    style: { ...nurStyle(), palette: { ...NIGHT, ink2: '#34508F' } },
-    texts: { names: slot(names, 'once') },
+    // the star field in the pale blue of light; the names stay gold
+    style: { ...nurStyle(), palette: { ...NIGHT, ink2: '#6F96CF' } },
+    texts: { names: slot(names, 'once'), light: slot('نور') },
     root: {
       type: 'frame',
       child: {
@@ -132,7 +134,8 @@ export function frame(names: string): Composition {
           { type: 'ornamentBorder', ornament: 'pearls', width: 3 },
         ],
         features: { corners: 'star' },
-        fill: { type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 7 } },
+        // the stars of the field outlined in the word light, thousands of times
+        fill: { type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 18 }, text: 'light' },
       },
     },
   };
