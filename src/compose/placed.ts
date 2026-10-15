@@ -1,7 +1,7 @@
 // Placed: the resolved composition, renderer-agnostic and serialisable (COMPOSITION_ENGINE.md §3.3). Coordinates are
 // in cells, centred on the region's outline; canvas.origin is where that centre sits on the canvas.
 import type { Pt } from '../geometry/types';
-import type { PatternSpec, RoundelColours, SeparatorKind, Style } from '../model/schema';
+import type { IznikSpec, PatternSpec, RoundelColours, SeparatorKind, Style } from '../model/schema';
 import type { CellStrip, Strip } from '../script/types';
 
 /** Where a strip goes: strip (x, y) in cells -> canvas. y runs from the band's outer edge inward. */
@@ -52,6 +52,8 @@ export type PlacedItem =
   | { type: 'abjad'; style: number; value: number; centre: Pt; maxW: number; maxH: number; frame: Pt[] | null }
   | { type: 'pattern'; style: number; area: Area; pattern: PatternSpec; centre: Pt; radius: number; strength: number }
   | { type: 'fill'; style: number; kind: 'solid' | 'vine'; area: Area }
+  /** Iznik tilework over an area, symmetric about centre, reaching radius. */
+  | { type: 'tilework'; style: number; area: Area; centre: Pt; radius: number; iznik: IznikSpec }
   | { type: 'rule'; style: number; path: Pt[]; width: number; colour: 'accent' | 'ink' }
   /** A region's outline and the space left inside its borders (not drawn; for clipping and layering effects). */
   | { type: 'outline'; style: number; outer: Pt[]; inner: Pt[] | null }
@@ -86,7 +88,7 @@ export interface RoundelDrawing {
 export const LAYER_ORDER = ['ground', 'pattern', 'spandrels', 'letters', 'separators', 'features'] as const;
 export type Layer = (typeof LAYER_ORDER)[number];
 export const layerOf = (it: PlacedItem): Layer =>
-  it.type === 'ground' || it.type === 'fill'
+  it.type === 'ground' || it.type === 'fill' || it.type === 'tilework'
     ? 'ground'
     : it.type === 'pattern'
       ? 'pattern'

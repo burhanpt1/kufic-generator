@@ -137,6 +137,13 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
       ctx.fill = { type: 'rings', ok: n > 0 };
       return;
     }
+    case 'iznik': {
+      const cr = centreOf(res),
+        c: Pt = cr?.c ?? boundsCentre(inner.pts);
+      ctx.items.push({ type: 'tilework', style: sid, area, centre: c, radius: farthest(inner.pts, c), iznik: f.iznik });
+      ctx.fill = { type: 'iznik', ok: true };
+      return;
+    }
     case 'solid':
     case 'vine':
       ctx.items.push({ type: 'fill', style: sid, kind: f.type, area });
