@@ -11,6 +11,8 @@ export interface LetterStyle {
   meem?: 'flat' | 'drop';
   /** Initial and medial ص ض with a tall or a short tooth after the loop (absent = 'tall'). */
   sad?: 'tall' | 'short';
+  /** Justification may widen the small loops of م و ف ق ه ('stretch') or not ('rigid'); absent = 'stretch'. */
+  loops?: 'stretch' | 'rigid';
   marks: 'off' | 'dots' | 'all';
   vowels: 'modern' | 'early';
   /** Long alternates of final letters, used where a line has room (off when absent). */

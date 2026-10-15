@@ -36,6 +36,7 @@ export const DEFAULT_STYLE: Style = deepFreeze({
     lamAlif: 'knot',
     meem: 'drop',
     sad: 'short',
+    loops: 'rigid',
     marks: 'dots',
     vowels: 'modern',
   },

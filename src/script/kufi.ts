@@ -10,7 +10,14 @@ import { shape } from '../shaping/shape';
 import type { Seg, Segs, Shaped, Word } from '../types';
 import type { CellStrip, LayoutOptions, LetterStyle, ScriptEngine, Segments } from './types';
 
-const variants = (s: LetterStyle) => ({ ra: s.ra, ayn: s.ayn, la: s.lamAlif, meem: s.meem, sad: s.sad });
+const variants = (s: LetterStyle) => ({
+  ra: s.ra,
+  ayn: s.ayn,
+  la: s.lamAlif,
+  meem: s.meem,
+  sad: s.sad,
+  loops: s.loops,
+});
 
 const MAGHRIBI: Record<string, number> = { 'ص': 60, 'ض': 90, 'س': 300, 'ظ': 800, 'غ': 900, 'ش': 1000 }; // prettier-ignore
 const ARABIC_VALUE: Record<string, number> = { 'ص': 90, 'ض': 800, 'س': 60, 'ظ': 900, 'غ': 1000, 'ش': 300 }; // prettier-ignore

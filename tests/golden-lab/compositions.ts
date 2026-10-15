@@ -49,10 +49,11 @@ function styleOf(g: Record<string, unknown>): Style {
     ascenders: g.H as 9,
     lamAlif: g.la as 'knot',
     ra: (g.ra as 'desc') ?? 'desc',
-    // the lab draws the open ع, the flat final م and the tall ص tooth; the engine's defaults have since changed
+    // the lab draws the open ع, the flat final م and the tall ص tooth, and stretches loops; the defaults have changed
     ayn: (g.ayn as 'open') ?? 'open',
     meem: 'flat',
     sad: 'tall',
+    loops: 'stretch',
     marks: (g.marks as 'dots') ?? 'dots',
   };
   s.stroke = {

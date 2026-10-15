@@ -1,9 +1,12 @@
 import type { BandGlyph, MarksMode, Seg, Unit, VowelStyle, Word } from '../types';
 import { altDef } from '../glyphs/overrides';
 import { buildGlyph } from './buildGlyph';
+import { V } from '../glyphs/overrides';
 
 /** Letters whose initial and medial forms are a bare tooth. */
 const TEETH = new Set(['BEH', 'NOON', 'YEH']);
+/** Letters with a small closed loop that justification may not widen when loops are rigid (a wide م reads as ص). */
+const LOOPS = new Set(['MEEM', 'WAW', 'FEH', 'QAF', 'HEH']);
 const TAILS = new Set(['BEH', 'NOON', 'YEH', 'HAH', 'SEEN', 'SAD', 'AIN', 'FEH', 'QAF', 'KAF', 'MEEM']);
 
 export interface Prepared {
@@ -86,7 +89,7 @@ export function prepare(shaped: Unit[][], H: number, mode: MarksMode, style: Vow
       if (!ok || marks || !n) continue;
       if (n === 1 && at(x, down) === 1) {
         if ((g.form === 'fin' || g.form === 'iso') && TAILS.has(g.key)) tailC.push(x);
-      } else if (n >= 2) bodyC.push(x);
+      } else if (n >= 2 && !(V.loops === 'rigid' && LOOPS.has(g.key))) bodyC.push(x);
     }
     const str: { c: number; w: number }[] = [];
     if (tailC.length) str.push({ c: tailC[Math.floor(tailC.length / 2)], w: 3 });

@@ -31,4 +31,17 @@ describe('letter variants', () => {
     expect(rows.map(r => r[0]).join('')).toBe('.##');
     setVariants({});
   });
+  it('never widen the loop of م when a line is stretched (a wide م read as ص)', () => {
+    const loopWidth = (extra: number) => {
+      const { g, base } = wordGrid(kufi, 'سلام', { ...DEFAULT_STYLE.letter, ascenders: 7 }, extra)!;
+      // the loop's top bar: the leftmost horizontal run two rows above the baseline
+      const y = base - 2;
+      let x = 0;
+      while (x < g.w && g.data[y * g.w + x] !== 1) x++;
+      let w = 0;
+      while (x + w < g.w && g.data[y * g.w + x + w] === 1) w++;
+      return w;
+    };
+    expect(loopWidth(10)).toBe(loopWidth(0));
+  });
 });
