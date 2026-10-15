@@ -75,6 +75,12 @@ function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: numbe
   return ivs.filter(v => keep.includes(v.yb));
 }
 
+/** The n pieces nearest the middle height, in their reading order. */
+function nearestMiddle<T extends { yb: number }>(ivs: T[], n: number, centreY: number): T[] {
+  const keep = new Set([...ivs].sort((a, b) => Math.abs(a.yb - centreY) - Math.abs(b.yb - centreY)).slice(0, n));
+  return ivs.filter(v => keep.has(v));
+}
+
 /** For a short text in a shape that cuts rows into many pieces: the widest pieces nearest the middle (ignoring
  *  slivers under 40% of their row's widest), at most n of them, until they hold about 1.25× the text. */
 function middlePieces<T extends { yb: number; W: number }>(ivs: T[], total: number, n: number, centreY: number): T[] {
@@ -204,7 +210,12 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
         let ivs = lay(s);
         if (!ivs || !ivs.length) continue;
         if (trim) ivs = middlePieces(ivs, total, segs.length, (y0 + y1) / 2);
-        else if (i === 0) ivs = middleLines(ivs, total, vary > 0 ? (y0 + y1) / 2 : undefined);
+        else if (i === 0 || mode === 'words') {
+          // whole words: a short text keeps to the middle lines at every size, no more lines than it has words,
+          // rather than falling back to breaking words to fill a tall region (العلم نور in a mihrab)
+          ivs = middleLines(ivs, total, vary > 0 ? (y0 + y1) / 2 : undefined);
+          if (mode === 'words' && ivs.length > segs.length) ivs = nearestMiddle(ivs, segs.length, (y0 + y1) / 2);
+        }
         const caps = ivs.map(v => v.W),
           sum = caps.reduce((a, c) => a + c, 0);
         if (sum < total) continue; // too big: the text doesn't fit yet
