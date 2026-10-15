@@ -5,7 +5,9 @@ import { loadSealWasm } from '../src/kernels/seal';
 import { DEFAULT_STYLE } from '../src/model/style';
 import { kufi } from '../src/script/kufi';
 import { AN_NUR, rasm } from '../src/showpiece/an-nur';
-import { NUR } from '../src/showpiece/nur';
+import { frame, NUR, surahLines } from '../src/showpiece/nur';
+import { resolve } from '../src/compose';
+import { NAMES_99 } from '../src/mosque/texts';
 import { nurSheet } from '../src/showpiece/sheet';
 
 await loadSealWasm();
@@ -32,4 +34,25 @@ describe('Surat al-Nur', () => {
     expect(s.surah?.surahLines).toBeGreaterThan(0);
     expect(s.surah?.words).toEqual(words);
   }, 120000);
+});
+
+describe('Surat al-Nur in a band (the middle path)', () => {
+  it('splits into six rings only between verses, losing and repeating nothing', () => {
+    const lines = surahLines(6).split('\n');
+    expect(lines).toHaveLength(6);
+    expect(lines.join(' ')).toBe(AN_NUR.map(rasm).join(' '));
+    // every ring starts on a verse
+    const starts = new Set(AN_NUR.map(v => rasm(v).split(' ')[0]));
+    for (const l of lines) expect(starts.has(l.split(' ')[0])).toBe(true);
+  });
+  it('writes each ring once, in whole words, inside the Ninety-Nine Names', () => {
+    const p = resolve(frame(NAMES_99.join(' '), 6)),
+      band = p.meta.borders.find(b => b.slot === 'surah')!;
+    expect(p.meta.warnings).toEqual([]);
+    expect(band.rings).toHaveLength(6);
+    for (const r of band.rings) {
+      expect(r.rep).toBe(1);
+      expect(r.mode).toBe('words');
+    }
+  }, 60000);
 });

@@ -4,6 +4,7 @@
 import type { Composition, RegionNode, Style, TextSlot } from '../model/schema';
 import { SILHOUETTES } from '../model/silhouettes';
 import { DEFAULT_STYLE } from '../model/style';
+import { AN_NUR, rasm } from './an-nur';
 
 export const NUR = {
   verse:
@@ -106,7 +107,21 @@ export function niche(): Composition {
 /** The A1 frame: the Ninety-Nine Names around a field of eight-fold stars whose
  *  every line is written in the word نور, light. Portrait at A-series
  *  proportions (1 : √2). */
-export function frame(names: string): Composition {
+/** Surat al-Nur split into `n` lines of about equal length, breaking only between verses (one ring per line). */
+export function surahLines(n: number): string {
+  const verses = AN_NUR.map(rasm),
+    total = verses.reduce((a, v) => a + v.length, 0),
+    lines: string[][] = [[]];
+  let acc = 0;
+  for (const v of verses) {
+    if (acc >= (total * lines.length) / n && lines.length < n) lines.push([]);
+    lines[lines.length - 1].push(v);
+    acc += v.length;
+  }
+  return lines.map(l => l.join(' ')).join('\n');
+}
+
+export function frame(names: string, surah = 0): Composition {
   const h = 1 / Math.sqrt(1 + 0.5),
     w = h / Math.SQRT2;
   return {
@@ -115,7 +130,11 @@ export function frame(names: string): Composition {
     canvas: { shape: 'portrait', margin: 2 },
     // the star field in the pale blue of light; the names stay gold
     style: { ...nurStyle(), palette: { ...NIGHT, ink2: '#6F96CF' } },
-    texts: { names: slot(names, 'once'), light: slot('نور') },
+    texts: {
+      names: slot(names, 'once'),
+      light: slot('نور'),
+      ...(surah ? { surah: slot(surahLines(surah), 'once') } : {}),
+    },
     root: {
       type: 'frame',
       child: {
@@ -131,6 +150,10 @@ export function frame(names: string): Composition {
         },
         borders: [
           { type: 'textBorder', text: 'names', separator: { kind: 'braid', width: 4 }, ground: { kind: 'tint' } },
+          // the whole surah, in rings inside the names (the middle path: the stars stay in نور)
+          ...(surah
+            ? [{ type: 'textBorder' as const, text: 'surah', separator: { kind: 'lines' as const, width: 1 } }]
+            : []),
           { type: 'ornamentBorder', ornament: 'pearls', width: 3 },
         ],
         features: { corners: 'star' },

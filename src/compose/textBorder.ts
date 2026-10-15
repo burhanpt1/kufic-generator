@@ -233,13 +233,28 @@ export function layRing(
       if (rn.pts.length === 2) {
         const f = frameAt(rn, 0),
           O: Pt = [rn.pts[0][0] + f.t[0] * off, rn.pts[0][1] + f.t[1] * off];
-        place = { type: 'line', O, t: f.t, n: f.n, s };
+        // a straight band reads upright: one whose letters would hang upside down (the top of a frame) is turned
+        // half round in place, as an inscription across the top of a portal is; curved bands follow their curve
+        if (f.n[1] > UPRIGHT) {
+          // turned within the band's full depth, so the headroom above the letters turns with them; the letters' feet
+          // now face the next band's separator, whose margin is set at that band's (smaller) scale, so they keep a
+          // quarter cell off it (the headroom they give up is at least a cell)
+          const D = fit.room - FLIP_CLEAR,
+            O2: Pt = [O[0] + (f.t[0] * W + f.n[0] * D) * s, O[1] + (f.t[1] * W + f.n[1] * D) * s];
+          place = { type: 'line', O: O2, t: [-f.t[0], -f.t[1]], n: [-f.n[0], -f.n[1]], s };
+        } else place = { type: 'line', O, t: f.t, n: f.n, s };
       } else place = { type: 'run', pts: rn.pts, cum: rn.cum, off, sx: s, s };
     }
     out.push({ strip, place, group: gg, run: gi });
   }
   return out;
 }
+
+/** A straight band whose letters' up direction points this far down the page (sine of the tilt below level) is
+ *  turned upright. */
+export const UPRIGHT = 0.5;
+/** Cells a turned band's letters keep off the band's far edge. */
+const FLIP_CLEAR = 0.25;
 
 /** Strip (x, y) -> canvas point for a placement. */
 export function placeMap(place: StripPlace): (x: number, y: number) => Pt {

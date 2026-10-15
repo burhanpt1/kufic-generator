@@ -59,14 +59,16 @@ export interface SheetOptions {
    *  finished in نور. The surah needs each line to stop short of the star points and crossings to keep words apart,
    *  which softens the stars; نور, short and even, keeps them crisp. */
   field?: 'nur' | 'surah';
+  /** The whole of Surat al-Nur in six rings inside the Ninety-Nine Names (the field stays in نور). */
+  band?: boolean;
 }
 
 /** The chosen design: the square Kufic spiral at the core, light written in the Light Verse. */
-export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse', field: 'nur' };
+export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse', field: 'nur', band: false };
 
 export function nurSheet(opts: SheetOptions = {}): Sheet {
   const o = { ...NUR_DEFAULTS, ...opts };
-  const fr = resolve(frame(NAMES_99.join(' '))),
+  const fr = resolve(frame(NAMES_99.join(' '), o.band ? 6 : 0)),
     W = fr.canvas.w * U,
     H = fr.canvas.h * U;
   const frOutline = fr.items.find((i): i is Extract<PlacedItem, { type: 'outline' }> => i.type === 'outline')!;
@@ -201,7 +203,7 @@ export function nurSheet(opts: SheetOptions = {}): Sheet {
     surahNote: SurahField | undefined;
   if (o.field === 'surah') {
     // the field's own lines rewritten: the surah in reading order on the visible lines, the rest in نور
-    const fill = (frame(NAMES_99.join(' ')).root.child.fill as { pattern: PatternSpec }).pattern,
+    const fill = (frame(NAMES_99.join(' '), o.band ? 6 : 0).root.child.fill as { pattern: PatternSpec }).pattern,
       old = fr.items.filter(
         (it): it is Extract<PlacedItem, { type: 'strip' }> =>
           it.type === 'strip' && it.place.type === 'line' && it.place.s < 0.5,
