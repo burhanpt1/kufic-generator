@@ -7,7 +7,11 @@ import { renderPlaced } from '../render/composition';
 import { U } from '../render/svg';
 import { inside } from '../geometry/poly';
 import { NAMES_99 } from '../mosque/texts';
-import { cartouche, frame, NIGHT, niche } from './nur';
+import { cartouche, frame, NIGHT, niche, NUR } from './nur';
+import { rosette, Writer, writtenRays } from './radial';
+import { kufi } from '../script/kufi';
+import { mix } from '../render/svg';
+import type { Style } from '../model/schema';
 
 const f = (n: number) => +n.toFixed(1);
 const body = (svg: string) =>
@@ -37,7 +41,19 @@ export interface Sheet {
   h: number;
 }
 
-export function nurSheet(): Sheet {
+export interface SheetOptions {
+  /** The core of the star: the square Kufic spiral, or a rosette of نور على نور on eight spokes reading outward. */
+  core?: 'spiral' | 'rosette';
+  /** The light from the glass: plain wedges, or rays written in gold: نور, or the Light Verse word by word
+   *  (the default). */
+  rays?: 'wedges' | 'nur' | 'verse';
+}
+
+/** The chosen design: the square Kufic spiral at the core, light written in the Light Verse. */
+export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse' };
+
+export function nurSheet(opts: SheetOptions = {}): Sheet {
+  const o = { ...NUR_DEFAULTS, ...opts };
   const fr = resolve(frame(NAMES_99.join(' '))),
     W = fr.canvas.w * U,
     H = fr.canvas.h * U;
@@ -55,6 +71,38 @@ export function nurSheet(): Sheet {
     glass = bbox(ptsOf(ni, glassR.outer)),
     gc: Pt = [glass.x + glass.w / 2, glass.y + glass.h / 2],
     nb = bbox(nicheOuter);
+  // experiments: the core as a rosette, and the light written in words, added to the niche as placed strips
+  const gold = (k: number): Style => ({
+    ...ni.styles[0],
+    palette: { ...ni.styles[0].palette, ink: mix(NIGHT.paper, '#F2CF6E', k) },
+    colouring: 'solid',
+    stroke: { ...ni.styles[0].stroke, contrast: 0, taper: 0 },
+    terminals: { ...ni.styles[0].terminals, kind: 'none', flourish: 'none' },
+  });
+  const addStyle = (st: Style) => ni.styles.push(st) - 1;
+  const rayItems: PlacedItem[] = [];
+  const w = new Writer(kufi, ni.styles[0]);
+  const ctr = (P: Pt[]): Pt => {
+    const b = bbox(P);
+    return [b.x + b.w / 2, b.y + b.h / 2];
+  };
+  if (o.core === 'rosette') {
+    const starR = regions[3],
+      at = ni.items.indexOf(starR),
+      c = ctr(starR.inner!),
+      // spokes reach into the star's points
+      R = Math.max(...starR.inner!.map(q => Math.hypot(q[0] - c[0], q[1] - c[1]))) * 0.96;
+    ni.items = ni.items.filter((it, i) => !(i > at && it.type === 'grid'));
+    const ro = rosette(w, NUR.core, c, R, 8, addStyle(gold(1)), 90);
+    ni.items.push(...ro.items, { type: 'star', style: addStyle(gold(1)), centre: c, r: ro.r0 * 0.8 });
+  }
+  if (o.rays === 'nur' || o.rays === 'verse') {
+    const words = o.rays === 'nur' ? ['نور'] : NUR.verse.split(' '),
+      c = ctr(glassR.outer),
+      sids = [addStyle(gold(1))],
+      rMax = Math.hypot(nb.w, nb.h) / U;
+    rayItems.push(...writtenRays(w, words, c, lampR.outer, nicheR.inner!, 40, 0.42, sids, 91, rMax));
+  }
   // rays: alternating wedges from the glass's centre, fading outward
   const R = Math.hypot(nb.w, nb.h),
     N = 96,
@@ -76,10 +124,19 @@ export function nurSheet(): Sheet {
     `</defs>` +
     `<path d="${d(nicheOuter)}" fill="${NIGHT.paper}"/>` +
     `<g clip-path="url(#nur-light)"><rect x="${f(nb.x)}" y="${f(nb.y)}" width="${f(nb.w)}" height="${f(nb.h)}" fill="url(#nur-glow)"/>` +
-    `<path d="${rays.join('')}" fill="url(#nur-glow)" opacity=".9"/></g>` +
+    (o.rays === 'nur' || o.rays === 'verse' ? '' : `<path d="${rays.join('')}" fill="url(#nur-glow)" opacity=".9"/>`) +
+    `</g>` +
     `<clipPath id="nur-lamp"><path d="${d(lampInner)}"/></clipPath>` +
     `<g clip-path="url(#nur-lamp)" opacity=".6"><rect x="${f(nb.x)}" y="${f(nb.y)}" width="${f(nb.w)}" height="${f(nb.h)}" fill="url(#nur-glow)"/></g>` +
     `<circle cx="${f(gc[0])}" cy="${f(gc[1])}" r="${f(glass.w / 2)}" fill="url(#nur-core)"/>` +
+    // written rays: one continuous run of words per ray, fading outward through a radial mask
+    (rayItems.length
+      ? `<mask id="nur-fade" maskUnits="userSpaceOnUse" x="${f(nb.x)}" y="${f(nb.y)}" width="${f(nb.w)}" height="${f(nb.h)}">` +
+        `<radialGradient id="nur-fadeg" cx="${f(gc[0])}" cy="${f(gc[1])}" r="${f(R * 0.5)}" gradientUnits="userSpaceOnUse">` +
+        `<stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></radialGradient>` +
+        `<rect x="${f(nb.x)}" y="${f(nb.y)}" width="${f(nb.w)}" height="${f(nb.h)}" fill="url(#nur-fadeg)"/></mask>` +
+        `<g mask="url(#nur-fade)">${body(renderPlaced({ ...ni, items: rayItems }, { idPrefix: 'nr' }))}</g>`
+      : '') +
     body(renderPlaced(ni, { idPrefix: 'ni' }));
 
   // layout inside the frame's field: cartouche, niche, cartouche
