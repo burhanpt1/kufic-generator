@@ -21,7 +21,10 @@ const GROUPS: [string, Trait[]][] = [
   ['Borders', ['borders', 'taper', 'separator', 'separatorWidth', 'ground', 'tiling', 'angle', 'scale']],
   ['Centre and corners', ['fill', 'monogram', 'vary', 'interlace', 'spandrels', 'tips', 'corners']],
   ['Letters', ['ascenders', 'ra', 'lamAlif', 'marks', 'alternates', 'plait', 'terminal', 'reach']],
-  ['Style', ['palette', 'colouring', 'stroke', 'corner', 'banded', 'weight', 'softness']],
+  [
+    'Style',
+    ['palette', 'colouring', 'stroke', 'corner', 'banded', 'weight', 'softness', 'contrast', 'stemTaper', 'sprouts'],
+  ],
 ];
 const FILL_TYPES: FillerNode['type'][] = [
   'monogram',
