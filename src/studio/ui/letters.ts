@@ -1,13 +1,12 @@
-// Letters tab: the classic letter editor working on the glyph set every composition uses, with a line preview.
+// Letters tab: the letter editor working on the glyph set every composition uses, with a line preview.
 import { alphabet, compose } from '../../engine';
 import type { ComposeOptions, Grid } from '../../engine';
 import type { Style } from '../../model/schema';
 import { renderGrid } from '../../render';
 import type { RenderOptions } from '../../render/svg';
 import { clearMonogramCache } from '../../monogram/methods';
-import type { State } from '../../ui/controls';
-import { lookup } from '../../ui/controls';
-import { loadOverrides, wireEditor as wireLetterEditor } from '../../ui/editor';
+import type { EditorState } from '../../app/letterEditor';
+import { loadOverrides, lookup, wireEditor as wireLetterEditor } from '../../app/letterEditor';
 import { mainSlot } from './gallery';
 import type { App } from './main';
 import { $ } from './main';
@@ -35,7 +34,16 @@ export function linePreview(text: string, s: Style): string {
 
 export function wireLetters(app: App) {
   const s = app.comp.style.letter;
-  const state = { edKey: 'BEH', edForm: 'iso', ra: s.ra, ayn: s.ayn, la: s.lamAlif, ovr: {} } as unknown as State;
+  const state = {
+    edKey: 'BEH',
+    edForm: 'iso',
+    ra: s.ra,
+    ayn: s.ayn,
+    la: s.lamAlif,
+    meem: s.meem,
+    sad: s.sad,
+    ovr: {},
+  } as EditorState;
   loadOverrides(state);
   const draw = () => {
     const st = app.comp.style,

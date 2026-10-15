@@ -4,7 +4,7 @@ import { ALTS, D, LAMALEF_KNOT, VARIANTS } from './tables';
 import { clearBitmapCache } from './bitmap';
 
 /** Active letter variants. compose(), alphabet() and getRows() set these before drawing. */
-export const V: LetterVariants = { ra: 'desc', ayn: 'cup', la: 'plain', meem: 'flat', sad: 'tall', loops: 'stretch' };
+export const V: LetterVariants = { ra: 'desc', ayn: 'cup', la: 'plain', meem: 'drop', sad: 'short', loops: 'rigid' };
 let OVR: Record<string, Rows | undefined> = {}; // user glyph edits: 'KEY.form' -> rows
 let epoch = 0;
 /** Changes whenever the glyph edits change, for caches keyed on letter shapes. */
@@ -14,9 +14,9 @@ export function setVariants(opts: LetterOptions) {
   V.ra = opts.ra || 'desc';
   V.ayn = opts.ayn || 'cup';
   V.la = opts.la || 'plain';
-  V.meem = opts.meem || 'flat';
-  V.sad = opts.sad || 'tall';
-  V.loops = opts.loops || 'stretch';
+  V.meem = opts.meem || 'drop';
+  V.sad = opts.sad || 'short';
+  V.loops = opts.loops || 'rigid';
 }
 
 export function baseDef(key: string, form: Form): GlyphDef {
@@ -25,8 +25,8 @@ export function baseDef(key: string, form: Form): GlyphDef {
     return (g[form] || g.iso)!;
   }
   if (key === 'LAMALEF' && V.la === 'knot') return LAMALEF_KNOT.iso;
-  if (key === 'MEEM' && (form === 'fin' || form === 'iso')) return VARIANTS.meem[V.meem ?? 'flat'];
-  if (key === 'SAD' && (form === 'ini' || form === 'med')) return VARIANTS.sad[V.sad ?? 'tall'];
+  if (key === 'MEEM' && (form === 'fin' || form === 'iso')) return VARIANTS.meem[V.meem ?? 'drop'];
+  if (key === 'SAD' && (form === 'ini' || form === 'med')) return VARIANTS.sad[V.sad ?? 'short'];
   if (key === 'AIN') {
     const g = VARIANTS.ayn[V.ayn];
     return (g[form] || (form === 'iso' ? g.fin : g.ini))!;
