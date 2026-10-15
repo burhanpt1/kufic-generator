@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth compositions</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+select{font:inherit}
+</style>
+</head>
+<body>
+<h1>Thuluth in compositions</h1>
+<p>A style now names its script, and each region writes in its own: the same borders, fills, separators and features, set in thuluth with the lab's pens. Left: Kufi. Right: thuluth. The last case keeps a Kufic ring round a thuluth centre.</p>
+<label>Pen <select id="pen"><option value="band">Band (nib 1.3)</option><option value="line">Line (1.05)</option><option value="tile">Tile (0.95, 2.5:1)</option><option value="roundel">Roundel (1.6, 6:1)</option></select></label>
+<div id="out"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { PRESETS, TEXTS } from '../src/model/presets.ts';
+import { DEFAULT_STYLE, PALETTES } from '../src/model/style.ts';
+const slot = text => ({ text, repeat: 'fill', wordGap: 2 });
+const preset = id => structuredClone(PRESETS.find(p => p.id === id).comp);
+const CASES = [
+  ['Two rings of names', () => ({ version: 1, seed: 11, canvas: { shape: 'square', margin: 3 }, style: { ...structuredClone(DEFAULT_STYLE), palette: { ...PALETTES.cobalt }, colouring: 'byRing' }, texts: { names: slot(TEXTS.names) }, root: { type: 'frame', child: { type: 'region', outline: { kind: 'circle' }, borders: [{ type: 'textBorder', text: 'names', separator: { kind: 'braid', width: 2 } }] } } })],
+  ['Octagon panel', () => preset('octagon-panel')],
+  ['Mihrab with a line fill', () => preset('mihrab-ayat-al-kursi')],
+  ['Kufic ring round a thuluth centre', () => ({ version: 1, seed: 7, canvas: { shape: 'square', margin: 3 }, style: { ...structuredClone(DEFAULT_STYLE), palette: { ...PALETTES.goldOnLapis } }, texts: { ring: slot('محمد علي فاطمة الحسن الحسين'), centre: slot('مودة ورحمة') }, root: { type: 'frame', child: { type: 'region', outline: { kind: 'circle' }, borders: [{ type: 'textBorder', text: 'ring', separator: { kind: 'braid', width: 2 } }], fill: { type: 'region', node: { type: 'region', style: { script: 'thuluth' }, outline: { kind: 'circle' }, borders: [{ type: 'textBorder', text: 'centre', separator: { kind: 'pearls', width: 2 } }] } } } } }), true],
+];
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+function draw() {
+  const pen = { preset: document.getElementById('pen').value }, out = document.getElementById('out');
+  out.innerHTML = '';
+  CASES.forEach(([name, make, mixed], i) => {
+    const h = document.createElement('h2'), row = document.createElement('div');
+    h.textContent = name;
+    row.className = 'row';
+    for (const th of [false, true]) {
+      const c = make();
+      if (th && !mixed) c.style = { ...c.style, script: 'thuluth', pen };
+      if (th && mixed) c.root.child.fill.node.style = { script: 'thuluth', pen };
+      if (!th && mixed) c.root.child.fill.node.style = { script: 'kufi' };
+      const t0 = performance.now(), svg = renderPlaced(resolve(c), { idPrefix: `c${i}${th ? 't' : 'k'}` }), ms = performance.now() - t0;
+      const f = document.createElement('figure');
+      f.innerHTML = `<img alt="${name}, ${th ? 'thuluth' : 'Kufi'}" src="${url(svg)}"><figcaption>${th ? 'Thuluth' : 'Kufi'} · ${ms.toFixed(0)} ms</figcaption>`;
+      row.append(f);
+    }
+    out.append(h, row);
+  });
+}
+document.getElementById('pen').onchange = draw;
+draw();
+</script>
+</body>
+</html>

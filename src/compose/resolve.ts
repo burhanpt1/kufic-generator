@@ -11,13 +11,14 @@ import type { Pt, Ring } from '../geometry/types';
 import { parseComposition } from '../model/schema';
 import type { BorderNode, Composition, FillerNode, RegionNode, Separator, Style, TextBorder } from '../model/schema';
 import { inherit } from '../model/style';
-import { kufi } from '../script/kufi';
+import { scriptFor } from '../script/registry';
 import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
 import { bandGeom, fitRing, fitsAtFullSize, layRing } from './textBorder';
 
 export interface ResolveOptions {
+  /** One engine for every region, whatever their styles ask for (tests, tools). */
   script?: ScriptEngine;
 }
 
@@ -25,7 +26,9 @@ const DEFAULT_SEPARATOR: Separator = { kind: 'lines', width: 2 };
 
 export interface Ctx {
   comp: Composition;
+  /** The engine of the region being resolved (style.script, unless the options fix one). */
   script: ScriptEngine;
+  fixedScript?: ScriptEngine;
   styles: Style[];
   styleIndex: Map<string, number>;
   items: PlacedItem[];
@@ -102,7 +105,7 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
  *  separator beyond. Tall stems end at about 83% of the band, and whatever rises above them (leaf and palmette
  *  endings, marks) keeps at least a cell clear. */
 export function bandRoom(p: Prepared, style: Style): number {
-  const t = style.terminals.kind,
+  const t = style.script === 'thuluth' ? 'none' : style.terminals.kind,
     k = 0.8 + 0.4 * style.stroke.weight, // as the renderer sizes leaf and palmette endings
     reach = t === 'leaf' ? 0.3 + 1.05 * k - 0.5 : t === 'palmette' ? 0.3 + k - 0.5 : t === 'none' ? 0 : 0.25,
     stem = p.base + p.ascenders,
@@ -147,6 +150,16 @@ export const MIN_FILL_RATIO = 0.42;
 /** Resolve one region: at its fixed size, or (auto) at the smallest enlargement of the first text border's size at
  *  which every border and the fill fit. */
 export function resolveRegion(node: RegionNode, parentStyle: Style, ctx: Ctx, fixedSize?: number): RegionResult | null {
+  // each region writes in its own script (a Kufic ring round a thuluth centre)
+  const prev = ctx.script;
+  ctx.script = ctx.fixedScript ?? scriptFor(inherit(parentStyle, node.style));
+  try {
+    return resolveRegionIn(node, parentStyle, ctx, fixedSize);
+  } finally {
+    ctx.script = prev;
+  }
+}
+function resolveRegionIn(node: RegionNode, parentStyle: Style, ctx: Ctx, fixedSize?: number): RegionResult | null {
   const style = inherit(parentStyle, node.style),
     shape = shapeOf(node.outline);
   const firstText = node.borders.find((b): b is TextBorder => b.type === 'textBorder');
@@ -409,7 +422,8 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
   const comp = parseComposition(input);
   const ctx: Ctx = {
     comp,
-    script: opts.script ?? kufi,
+    script: opts.script ?? scriptFor(comp.style),
+    fixedScript: opts.script,
     styles: [],
     styleIndex: new Map(),
     items: [],
