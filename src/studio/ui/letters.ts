@@ -1,4 +1,4 @@
-// Letters tab: the classic letter editor working on the glyph set every composition uses, with a line preview.
+// Letters tab: the letter editor working on the glyph set every composition uses, with a line preview.
 import { alphabet, compose } from '../../engine';
 import type { ComposeOptions, Grid } from '../../engine';
 import type { Style } from '../../model/schema';
