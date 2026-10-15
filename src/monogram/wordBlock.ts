@@ -42,17 +42,18 @@ function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
   return out;
 }
 
-/** Stems of a new line that stand right under a stem of the line above, a little apart, join it as one stem
- *  (owner's review: the alifs of الله over اكبر should share a stem; الرحمن over الرحيم were too close). */
+/** An alif of a new line that stands right under an alif of the line above, a little apart, joins it as one stem
+ *  (owner's review: the alifs of الله over اكبر, of اله over الله, share a stem; other stems never join, they keep
+ *  a clear gap instead). */
 export const STEM_GAP = 3;
 /** Straight vertical cells each end needs to count as a stem (a lam-alif knot's short legs don't). */
 const STEM_RUN = 4;
-function shareStems(out: CellGrid, above: Uint8Array, H: number) {
+function shareStems(out: CellGrid, above: Uint8Array, H: number, cols: Set<number>) {
   const W = out.w,
     up = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && above[y * W + x] === 1,
     any = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && out.data[y * W + x] !== 0,
     own = (x: number, y: number) => any(x, y) && !above[y * W + x] && out.data[y * W + x] === 1;
-  for (let x = 0; x < W; x++)
+  for (const x of cols)
     for (let t = 1; t < H - 2; t++) {
       // the top of a thin vertical stem of the new line
       if (any(x, t - 1) || any(x - 1, t) || any(x + 1, t)) continue;
@@ -69,20 +70,30 @@ function shareStems(out: CellGrid, above: Uint8Array, H: number) {
     }
 }
 
+/** Empty cells kept straight above a stem's top (any letter cell) under ink of the line above, unless it is an alif
+ *  under an alif, which joins it. */
+export const STEM_CLEAR = 2;
 /** Stack line grids (all `W` wide), each as high as clearance allows under the ones above. */
-function stack(lines: { g: CellGrid; base: number }[], W: number): CellGrid {
+function stack(lines: { g: CellGrid; base: number }[], W: number, H: number): CellGrid {
   const total = lines.reduce((a, l) => a + l.g.h + MARK_CLEAR + 1, 0);
   const out = G(W, total);
   let bottom = 0, // one past the lowest inked row so far
-    base = -1; // the previous line's baseline row
+    base = -1, // the previous line's baseline row
+    prevAlifs = new Set<number>();
   for (const { g, base: gb } of lines) {
+    const alifs = new Set(alifCols(g, gb, H)),
+      joins = new Set([...alifs].filter(x => prevAlifs.has(x)));
     const ink = new Uint8Array(W * total),
       marks = new Uint8Array(W * total);
     for (let k = 0; k < out.data.length; k++) if (out.data[k]) (isMark(out.data[k]) ? marks : ink)[k] = 1;
     const all = ink.map((v, k) => v | marks[k]),
       nearAll = dilate(all, W, total, LINE_CLEAR),
       farAll = dilate(all, W, total, MARK_CLEAR),
-      farMarks = dilate(marks, W, total, MARK_CLEAR);
+      farMarks = dilate(marks, W, total, MARK_CLEAR),
+      // straight below ink, STEM_CLEAR cells: no letter of the new line may start there
+      under = new Uint8Array(W * total);
+    for (let k = 0; k < all.length; k++)
+      if (ink[k]) for (let d = 1; d <= STEM_CLEAR && k + d * W < under.length; d++) under[k + d * W] = 1;
     let top = -1;
     for (let y = 0; y < g.h && top < 0; y++) for (let x = 0; x < g.w; x++) if (g.data[y * g.w + x]) top = y;
     const fits = (oy: number) => {
@@ -94,7 +105,7 @@ function stack(lines: { g: CellGrid; base: number }[], W: number): CellGrid {
           if (Y < 0) return false;
           if (Y >= total) continue;
           const k = Y * W + x;
-          if (isMark(v) ? farAll[k] : nearAll[k] || farMarks[k]) return false;
+          if (isMark(v) ? farAll[k] : nearAll[k] || farMarks[k] || (under[k] && !joins.has(x))) return false;
         }
       return true;
     };
@@ -110,7 +121,8 @@ function stack(lines: { g: CellGrid; base: number }[], W: number): CellGrid {
           Y = y + oy;
         if (v && Y >= 0 && Y < total) out.data[Y * W + x] = v;
       }
-    if (bottom) shareStems(out, above, total);
+    if (bottom) shareStems(out, above, total, joins);
+    prevAlifs = alifs;
     for (let y = total - 1; y >= 0; y--)
       if (out.data.subarray(y * W, y * W + W).some(v => v)) {
         bottom = y + 1;
@@ -156,14 +168,22 @@ function tallCols(g: CellGrid, base: number, H: number): number[] {
   }
   return out;
 }
+/** Columns where a line has an alif: a full stem joined to nothing on its left, with nothing beside its lower body
+ *  (lam, kaf and ط stems join or carry strokes there). */
+function alifCols(g: CellGrid, base: number, H: number): number[] {
+  const at = (x: number, y: number) => (x < 0 || x >= g.w || y < 0 ? 0 : g.data[y * g.w + x]);
+  return tallCols(g, base, H).filter(
+    x => !at(x - 1, base) && !at(x - 1, base - 1) && !at(x + 1, base - 1) && !at(x + 1, base - 2),
+  );
+}
 type LineGrid = { g: CellGrid; base: number };
 /** Word gaps a line laid out word by word may use beyond the natural one, and kashida per word. */
 const GAP_MORE = 2,
   ALIGN = 4;
 /** Kashida a word may take for alignment: a quarter of its width, so it never pulls apart (رب in the Hamd). */
 const wordExtra = (w: number) => Math.ceil(w / 4);
-/** A line `W` wide built word by word, each word's kashida and each gap chosen so that as many of its stems as
- *  possible stand right under stems of the line above (owner's review, seals round 7: the alifs of اله and الله in
+/** A line `W` wide built word by word, each word's kashida and each gap chosen so that as many of its alifs as
+ *  possible stand right under alifs of the line above (owner's review, seals round 7: the alifs of اله and الله in
  *  the Shahada share one stem). Within that, kashida and gaps spread as evenly as they can. */
 function alignLine(
   ws: string[],
@@ -179,7 +199,7 @@ function alignLine(
     const w0 = word(w, 0)?.g.w ?? 0;
     for (let e = 0; e <= wordExtra(w0); e++) {
       const lg = word(w, e);
-      if (lg && lg.g.w === (o[0]?.lg.g.w ?? lg.g.w - e) + e) o.push({ e, lg, tall: tallCols(lg.g, lg.base, H) });
+      if (lg && lg.g.w === (o[0]?.lg.g.w ?? lg.g.w - e) + e) o.push({ e, lg, tall: alifCols(lg.g, lg.base, H) });
     }
     return o;
   });
@@ -268,8 +288,8 @@ export function wordBlock(
         });
         // lower lines: rebuilt word by word where that puts more of their stems under stems of the line above
         for (let k = 1; k < grids.length; k++) {
-          const above = new Set(tallCols(grids[k - 1].g, grids[k - 1].base, H)),
-            have = tallCols(grids[k].g, grids[k].base, H).filter(c => above.has(c)).length,
+          const above = new Set(alifCols(grids[k - 1].g, grids[k - 1].base, H)),
+            have = alifCols(grids[k].g, grids[k].base, H).filter(c => above.has(c)).length,
             [i, j] = spans[k],
             a = alignLine(words.slice(i, j), W, above, wordOf, H, wordGap);
           if (a && a.aligned > have) {
@@ -280,9 +300,9 @@ export function wordBlock(
         // then upper lines over the line below, where the lower one had no slack to move (keeping what they share
         // with the line above them)
         for (let k = grids.length - 2; k >= 0; k--) {
-          const below = new Set(tallCols(grids[k + 1].g, grids[k + 1].base, H)),
-            prev = k ? new Set(tallCols(grids[k - 1].g, grids[k - 1].base, H)) : null,
-            mine = (lg: LineGrid) => tallCols(lg.g, lg.base, H),
+          const below = new Set(alifCols(grids[k + 1].g, grids[k + 1].base, H)),
+            prev = k ? new Set(alifCols(grids[k - 1].g, grids[k - 1].base, H)) : null,
+            mine = (lg: LineGrid) => alifCols(lg.g, lg.base, H),
             have = mine(grids[k]).filter(c => below.has(c)).length,
             kept = prev ? mine(grids[k]).filter(c => prev.has(c)).length : 0,
             [i, j] = spans[k],
@@ -292,7 +312,7 @@ export function wordBlock(
             grids[k] = a.line;
           }
         }
-        const grid = stack(grids, W),
+        const grid = stack(grids, W, H),
           sq = Math.abs(grid.w - grid.h) / Math.max(grid.w, grid.h),
           // square first; then little kashida, and the shorter ascenders when it's close
           score = sq + (0.25 * stretched) / (W * L) + (H > Hs[0] ? 0.03 : 0);

@@ -4,7 +4,7 @@ import { ALTS, D, LAMALEF_KNOT, VARIANTS } from './tables';
 import { clearBitmapCache } from './bitmap';
 
 /** Active letter variants. compose(), alphabet() and getRows() set these before drawing. */
-export const V: LetterVariants = { ra: 'desc', ayn: 'open', la: 'plain' };
+export const V: LetterVariants = { ra: 'desc', ayn: 'cup', la: 'plain' };
 let OVR: Record<string, Rows | undefined> = {}; // user glyph edits: 'KEY.form' -> rows
 let epoch = 0;
 /** Changes whenever the glyph edits change, for caches keyed on letter shapes. */
@@ -12,7 +12,7 @@ export const glyphEpoch = () => epoch;
 
 export function setVariants(opts: LetterOptions) {
   V.ra = opts.ra || 'desc';
-  V.ayn = opts.ayn || 'open';
+  V.ayn = opts.ayn || 'cup';
   V.la = opts.la || 'plain';
 }
 

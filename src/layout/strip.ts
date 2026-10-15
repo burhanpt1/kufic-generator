@@ -237,37 +237,54 @@ export function strip(
     });
     if (si < segs.length - 1) x -= gapAfter(si) + get('g' + si);
   });
-  // ي before a tall letter (يا, يل): its dots below centre under the cup between its tooth and that letter's stem
-  // (owner's review, seals round 6)
+  // a tooth letter next to a tall letter (يا, بل, كتب): its dots, above and below, centre in the hollow between its
+  // tooth and that letter's stem, the following letter's first (owner's review: dots go in the hollow the letter makes)
   for (const row of placed)
     row.forEach(({ g, col, join }, i) => {
-      const nx = row[i + 1];
-      if (!g.cup || !join || !nx || !nx.g.tall.length) return;
+      if (!g.cup) return;
+      const nx = join ? row[i + 1] : undefined,
+        pv = i && row[i - 1].join ? row[i - 1] : undefined,
+        stem = nx?.g.tall.length
+          ? nx.col(Math.max(...nx.g.tall))
+          : pv?.g.tall.length
+            ? pv.col(Math.min(...pv.g.tall))
+            : null;
+      if (stem == null) return;
       let tooth = -1;
       for (let gx = 0; gx < g.w; gx++) if (g.data[(base + 1) * g.w + gx] === 1) tooth = gx;
       if (tooth < 0) return;
       const t = col(tooth),
-        stem = nx.col(Math.max(...nx.g.tall)),
-        cells: [number, number, number][] = [];
-      // the dots below, as written: inside the glyph's own stretched span
-      const x0 = col(0),
+        x0 = col(0),
         x1 = col(g.w - 1);
-      for (let y = 0; y < base; y++)
-        for (let X = x0; X <= x1; X++) {
-          const v = data[y * width + X];
-          if (v === 2 || v === 3) cells.push([X, y, v]);
-        }
-      if (!cells.length) return;
-      const lo = Math.min(...cells.map(c => c[0])),
-        hi = Math.max(...cells.map(c => c[0])),
-        d = Math.round((t + stem) / 2 - (lo + hi) / 2);
-      if (!d || cells.some(([X, y]) => data[y * width + X + d] === 1)) return;
-      const tg = cells.map(([X, y]) => tag[y * width + X]);
-      cells.forEach(([X, y]) => (data[y * width + X] = tag[y * width + X] = 0));
-      cells.forEach(([X, y, v], k) => {
-        data[y * width + X + d] = v;
-        tag[y * width + X + d] = tg[k];
-      });
+      // the marks above, then those below, as written inside the glyph's own stretched span
+      for (const above of [true, false]) {
+        const cells: [number, number, number][] = [];
+        for (let y = 0; y < Hb; y++)
+          if (above ? y > base : y < base)
+            for (let X = x0; X <= x1; X++) {
+              const v = data[y * width + X];
+              if (v === 2 || v === 3) cells.push([X, y, v]);
+            }
+        if (!cells.length) continue;
+        const lo = Math.min(...cells.map(c => c[0])),
+          hi = Math.max(...cells.map(c => c[0])),
+          d = Math.round((t + stem) / 2 - (lo + hi) / 2);
+        const mine = new Set(cells.map(([X, y]) => y * width + X));
+        // never onto a stroke or another letter's mark
+        if (
+          !d ||
+          cells.some(
+            ([X, y]) => X + d < 0 || X + d >= width || (data[y * width + X + d] && !mine.has(y * width + X + d)),
+          )
+        )
+          continue;
+        const tg = cells.map(([X, y]) => tag[y * width + X]);
+        cells.forEach(([X, y]) => (data[y * width + X] = tag[y * width + X] = 0));
+        cells.forEach(([X, y, v], k) => {
+          data[y * width + X + d] = v;
+          tag[y * width + X + d] = tg[k];
+        });
+      }
     });
   return { W: width, data, tag };
 }

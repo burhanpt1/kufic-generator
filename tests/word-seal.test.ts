@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadSealWasm } from '../src/kernels/seal';
 import { buildMonogram, clearMonogramCache, MONO_DEFAULTS } from '../src/monogram/methods';
-import { MARK_CLEAR, wordBlock } from '../src/monogram/wordBlock';
+import { MARK_CLEAR, STEM_CLEAR, wordBlock } from '../src/monogram/wordBlock';
 import type { CellGrid } from '../src/monogram/grid';
 import { DEFAULT_STYLE } from '../src/model/style';
 import { kufi } from '../src/script/kufi';
@@ -106,6 +106,30 @@ describe('word seals', () => {
     expect(Math.max(...runs)).toBeGreaterThan(2 * b.H);
     // the knot (rightmost strokes) is not joined to the line below: its columns stay shorter than one line
     expect(runs[g.w - 2]).toBeLessThanOrEqual(b.H + 1);
+  });
+  it('join only an alif to an alif; other aligned stems keep a clear gap (الرحمن over الرحيم)', () => {
+    const g = wordBlock(kufi, words('بسم الله الرحمن الرحيم'), DEFAULT_STYLE.letter, [7, 10])!.grid,
+      ink = (x: number, y: number) => at(g, x, y) === 1 || at(g, x, y) === 4;
+    let joined = 0,
+      gaps = 0;
+    for (let x = 0; x < g.w; x++) {
+      // vertical runs in this column, as [start, end]
+      const runs: [number, number][] = [];
+      for (let y = 0; y < g.h; y++)
+        if (ink(x, y)) {
+          if (runs.length && runs[runs.length - 1][1] === y - 1) runs[runs.length - 1][1] = y;
+          else runs.push([y, y]);
+        }
+      if (runs.some(([a, b]) => b - a + 1 > 2 * 7)) joined++;
+      // two stems one above the other, not joined: a clear gap of at least STEM_CLEAR cells
+      for (let k = 1; k < runs.length; k++)
+        if (runs[k - 1][1] - runs[k - 1][0] >= 3 && runs[k][1] - runs[k][0] >= 3) {
+          gaps++;
+          expect(runs[k][0] - runs[k - 1][1] - 1).toBeGreaterThanOrEqual(STEM_CLEAR);
+        }
+    }
+    expect(joined).toBe(1); // the alif of الرحمن into the alif of الرحيم
+    expect(gaps).toBeGreaterThan(0); // their lams, one above the other, stay apart
   });
   it('are deterministic', () => {
     const a = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!,

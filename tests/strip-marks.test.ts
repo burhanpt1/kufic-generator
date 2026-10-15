@@ -43,4 +43,38 @@ describe('marks on a stretched line', () => {
   it('leave ي alone where no tall letter follows (بيت)', () => {
     expect(below('بيت', 0)).toEqual({ dots: [6, 8, 10], w: 11 });
   });
+  // the rule for every tooth letter (ب ت ث ن ي): its dots, above or below, sit in the hollow between its tooth and the
+  // stem of a tall letter it joins, the following letter's first, then the preceding one's
+  const marks = (text: string) => {
+    const { g, base } = wordGrid(kufi, text, { ...DEFAULT_STYLE.letter, ascenders: 7, marks: 'dots' }, 0)!,
+      cols = (pred: (y: number) => boolean) => {
+        const out: number[] = [];
+        for (let y = 0; y < g.h; y++)
+          if (pred(y)) for (let x = 0; x < g.w; x++) if (g.data[y * g.w + x] === 3) out.push(x);
+        return out.sort((a, b) => a - b);
+      };
+    return { g, base, above: cols(y => y < base - 1), below: cols(y => y > base) };
+  };
+  const midOf = (d: number[]) => (d[0] + d[d.length - 1]) / 2;
+  it.each([
+    ['تا', 'above'],
+    ['نا', 'above'],
+    ['بل', 'below'],
+  ] as const)('centre a tooth’s dots in the hollow before a tall letter: %s', (text, side) => {
+    const m = marks(text),
+      row = m.base - 1,
+      ink: number[] = [];
+    for (let x = 0; x < m.g.w; x++) if (m.g.data[row * m.g.w + x] === 1) ink.push(x);
+    // the stem (left) and the tooth (right) of the first two columns with ink just above the baseline, read leftward
+    const tooth = ink[ink.length - 1],
+      stem = ink.filter(x => x < tooth).pop()!;
+    expect(Math.abs(midOf(m[side]) - (stem + tooth) / 2)).toBeLessThanOrEqual(0.5);
+  });
+  it('take the preceding stem when no tall letter follows (كتب)', () => {
+    const m = marks('كتب');
+    // ت's two dots sit between its tooth and the stem of ك, clear of both
+    expect(m.above).toHaveLength(2);
+    expect(m.g.data[(m.base - 1) * m.g.w + m.above[0]]).toBe(0);
+    expect(m.g.data[(m.base - 1) * m.g.w + m.above[1]]).toBe(0);
+  });
 });

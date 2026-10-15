@@ -29,7 +29,7 @@ export const PALETTE_NAMES: Record<keyof typeof PALETTES, string> = {
 /** Frozen: copy before changing (structuredClone, or inherit() with an override). */
 export const DEFAULT_STYLE: Style = deepFreeze({
   script: 'kufi',
-  letter: { ascenders: 9, ra: 'desc', ayn: 'open', lamAlif: 'knot', marks: 'dots', vowels: 'modern' },
+  letter: { ascenders: 9, ra: 'desc', ayn: 'cup', lamAlif: 'knot', marks: 'dots', vowels: 'modern' },
   stroke: { kind: 'blocks', corner: 0.6, weight: 0.85, softness: 0.2, banded: false },
   terminals: { kind: 'none', reach: 'tails' },
   palette: { ...PALETTES.carvedStone },
