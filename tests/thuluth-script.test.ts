@@ -87,6 +87,15 @@ describe('thuluth ScriptEngine', () => {
     // a single word cannot spread into gaps: its kashida takes the room
     expect(wide.x1 - wide.x0).toBeGreaterThan(tight.x1 - tight.x0 + 5);
   });
+  it('never pulls the pieces of a word apart: spare room goes to kashida, word gaps, then the margins', () => {
+    const p = eng.prepare(eng.shape('رسول', letter), letter),
+      segs = eng.segments(p, 'breaks', 2) as Segments<ThuluthSegment>,
+      natural = segs.reduce((a, s, i) => a + s.minW + (i < segs.length - 1 ? 1 : 0), 0),
+      st = eng.layout(segs, p, natural + 14, opts) as VectorStrip,
+      boxes = st.paths.filter(q => q.role === 'letter').map(q => inkBox({ ...st, paths: [q] }));
+    expect(boxes).toHaveLength(3);
+    for (let i = 0; i + 1 < boxes.length; i++) expect(boxes[i].x0 - boxes[i + 1].x1).toBeCloseTo(1, 1);
+  });
   it('writes vowels when the letter style shows all marks, inside the band', () => {
     const v = eng.prepare(eng.shape('زَيْنَب وَقُصَيّ', vowelled), vowelled),
       plain = eng.prepare(eng.shape('زَيْنَب وَقُصَيّ', letter), letter);

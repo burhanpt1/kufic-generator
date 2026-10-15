@@ -182,27 +182,27 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       segs.forEach((s, i) => (natural += s.w + gapAfter(i)));
       const W = width ?? Math.ceil(natural);
       if (natural > W + 1e-6) return null;
-      // kashida first: an equal share for every piece that has a join to stretch, within limits
+      // the word gaps (wrapping round a circle, the closing gap too); never the breaks inside a word, which would
+      // pull its pieces apart
+      const wordGaps = segs.map((s, i) => (gapAfter(i) > 0 && s.endsWord ? 1 : 0) as number),
+        nWord = wordGaps.reduce((a, b) => a + b, 0);
+      // kashida first: an equal share for every piece with a join to stretch, within limits; with no word gap to
+      // take the rest, kashida takes all it can
       const slack = W - natural,
         stretchy = segs.filter(s => s.kashJoin != null).length,
-        L = stretchy ? Math.min(KASH_MAX, (KASH_SHARE * slack) / stretchy) : 0,
+        L = stretchy ? Math.min(KASH_MAX, ((nWord ? KASH_SHARE : 1) * slack) / stretchy) : 0,
         use = L >= 0.5 ? Math.floor(L * 4) / 4 : 0;
       const pieces = segs.map(s => {
         const b = build(s.text, s.kashJoin, s.kashJoin != null ? use : 0),
           box = inkOf(b);
         return { s, b, box, w: box.x1 - box.x0 };
       });
-      // then the word gaps (or, in a single word cut at its breaks, the breaks); a lone piece is centred
+      // then the word gaps; what no gap can take centres the line
       let used = 0;
       pieces.forEach((p, i) => (used += p.w + gapAfter(i)));
       const rest = Math.max(0, W - used),
-        wordGaps = segs.map((s, i) => (gapAfter(i) > 0 && s.endsWord ? 1 : 0) as number),
-        nWord = wordGaps.reduce((a, b) => a + b, 0),
-        anyGaps = segs.map((_, i) => (gapAfter(i) > 0 ? 1 : 0) as number),
-        nAny = anyGaps.reduce((a, b) => a + b, 0),
-        share = nWord ? wordGaps : anyGaps,
-        per = (nWord || nAny) ? rest / (nWord || nAny) : 0; // prettier-ignore
-      let x = W - (opts.wrap ? (gapAfter(n - 1) + (share[n - 1] ? per : 0)) / 2 : nAny ? 0 : rest / 2);
+        per = nWord ? rest / nWord : 0;
+      let x = W - (opts.wrap ? (gapAfter(n - 1) + (wordGaps[n - 1] ? per : 0)) / 2 : nWord ? 0 : rest / 2);
       const paths: VectorStrip['paths'] = [];
       const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
       const pathOf = (polys: Poly[], dx: number) =>
@@ -223,7 +223,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
               tag,
             });
         }
-        x -= p.w + gapAfter(i) + (share[i] ? per : 0);
+        x -= p.w + gapAfter(i) + (wordGaps[i] ? per : 0);
       });
       return { kind: 'vector', W, Hb: P.Hb, base: P.base, paths };
     },
@@ -232,21 +232,4 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
   };
 }
 
-/** The polygons of a VectorStrip path (its d is straight-line polygons only). */
-export function parsePolys(d: string): Poly[] {
-  const out: Poly[] = [];
-  for (const part of d.split('Z')) {
-    const body = part.trim();
-    if (!body) continue;
-    out.push(
-      body
-        .slice(1)
-        .split('L')
-        .map(pt => {
-          const [x, y] = pt.trim().split(/\s+/).map(Number);
-          return [x, y] as [number, number];
-        }),
-    );
-  }
-  return out;
-}
+export { parsePolys } from '../vector';
