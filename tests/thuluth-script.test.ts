@@ -31,7 +31,7 @@ describe('thuluth ScriptEngine', () => {
     for (const t of LINES) {
       const p = eng.prepare(eng.shape(t, letter), letter),
         segs = eng.segments(p, 'words', 2) as Segments<ThuluthSegment>,
-        natural = segs.reduce((a, s, i) => a + s.minW + (i < segs.length - 1 ? 2 : 0), 0);
+        natural = segs.reduce((a, s, i) => a + s.minW + (i < segs.length - 1 ? segs.wg! : 0), 0);
       for (const W of [natural, natural + 3, natural + 11, natural + 40]) {
         const st = eng.layout(segs, p, W, opts) as VectorStrip;
         expect(st.kind, t).toBe('vector');
@@ -43,6 +43,16 @@ describe('thuluth ScriptEngine', () => {
         expect(b.y1, t).toBeLessThanOrEqual(st.Hb + 0.01);
       }
       expect(eng.layout(segs, p, natural - 3, opts), t).toBeNull();
+    }
+  });
+  it('closes a ring at the width the solvers measured (the closing gap takes what is left)', () => {
+    const p = eng.prepare(eng.shape('مودة ورحمة', letter), letter),
+      segs = eng.segments(p, 'words', 2),
+      inner = segs.reduce((a, s, i) => a + s.minW + (i < segs.length - 1 ? segs.wg! : 0), 0);
+    for (const W of [inner, inner + 2, inner + 9]) {
+      const st = eng.layout(segs, p, W, { ...opts, wrap: true }) as VectorStrip;
+      expect(st?.W, `${W}`).toBe(W);
+      expect(inkBox(st).x1).toBeLessThanOrEqual(W + 0.01);
     }
   });
   it('fills the width: a wider line spreads its ink across it', () => {
@@ -61,7 +71,7 @@ describe('thuluth ScriptEngine', () => {
     expect(breaks.filter(s => s.endsWord)).toHaveLength(4);
     for (const s of words as ThuluthSegment[]) expect(s.minW).toBeGreaterThanOrEqual(s.w);
     const rep = repeatSegs(words as unknown as Segs, 3),
-      total = rep.reduce((a, s, i) => a + s.minW + (i < rep.length - 1 ? 2 : 0), 0),
+      total = rep.reduce((a, s, i) => a + s.minW + (i < rep.length - 1 ? rep.wg! : 0), 0),
       part = partition(rep, [Math.ceil(total / 3) + 4, Math.ceil(total / 3) + 4, Math.ceil(total / 3) + 4]);
     expect(part).not.toBeNull();
     // every group lays out at its capacity, and repeats keep their tags

@@ -43,13 +43,16 @@ export interface CellStrip {
   /** Repeat index + 1 per cell. */
   tag: Uint8Array;
 }
-/** Reserved for a future cursive engine: outlines in strip units. */
+/** A pen-stroke script's line (thuluth): outlines in strip cells, y up from the band's outer edge. Paths are
+ *  straight-line polygons only (M x y L … Z), so every point maps through any placement. */
 export interface VectorStrip {
   kind: 'vector';
   W: number;
   Hb: number;
   base: number;
   paths: { d: string; role: 'letter' | 'mark' | 'vowel'; tag: number }[];
+  /** The pen's centrelines (open polylines, M x y L …), for single-line output such as a plotter. */
+  lines?: { d: string; role: 'letter' | 'mark' | 'vowel' }[];
 }
 
 export interface Prepared {

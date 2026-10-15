@@ -18,6 +18,8 @@ const MARK_ROOM_UP = 2.6,
 /** Longest kashida one word takes (pen units), and the share of a line's slack kashida may take. */
 const KASH_MAX = 10,
   KASH_SHARE = 0.6;
+/** Thuluth words hold more air than Kufi's filled cells, so a word gap is this much wider than the slot asks for. */
+export const WORD_SPACE = 1.6;
 /** Joins worth elongating: after tooth letters first (the classical place), then letters with a flat exit. */
 const KASH_PREF: Partial<Record<Family, number>> = { tooth: 3, sin: 3, sad: 2, ta: 2, kaf: 2, fa: 2, qaf: 2, hah: 2, ain: 2, lam: 1, ha: 1, mim: 1 }; // prettier-ignore
 
@@ -168,23 +170,27 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
           kashJoin: kashidaJoin(p.text),
         };
       });
-      segs.wg = wordGap;
+      segs.wg = wordGap * WORD_SPACE;
       return segs;
     },
     layout(segments, prepared, width, opts): VectorStrip | null {
       const P = prepared as ThuluthPrepared,
         segs = segments as Segments<ThuluthSegment>,
         n = segs.length,
-        wg = segs.wg ?? opts.wordGap;
+        wg = segs.wg ?? opts.wordGap * WORD_SPACE; // groups from the solvers are plain arrays
       if (!n) return null;
-      const gapAfter = (i: number) => (i < n - 1 || opts.wrap ? (segs[i].endsWord ? wg : 1) : 0);
-      let natural = 0;
-      segs.forEach((s, i) => (natural += s.w + gapAfter(i)));
-      const W = width ?? Math.ceil(natural);
-      if (natural > W + 1e-6) return null;
+      // the solvers measure a line without the gap that closes a ring; round a circle that gap takes what room is
+      // left, up to a full word gap
+      let inner = 0;
+      segs.forEach((s, i) => (inner += s.w + (i < n - 1 ? (s.endsWord ? wg : 1) : 0)));
+      const W = width ?? Math.ceil(inner + (opts.wrap ? wg : 0));
+      if (inner > W + 1e-6) return null;
+      const closing = opts.wrap ? Math.min(wg, W - inner) : 0,
+        gapAfter = (i: number) => (i < n - 1 ? (segs[i].endsWord ? wg : 1) : closing);
+      const natural = inner + closing;
       // the word gaps (wrapping round a circle, the closing gap too); never the breaks inside a word, which would
       // pull its pieces apart
-      const wordGaps = segs.map((s, i) => (gapAfter(i) > 0 && s.endsWord ? 1 : 0) as number),
+      const wordGaps = segs.map((s, i) => ((i < n - 1 || opts.wrap) && s.endsWord ? 1 : 0) as number),
         nWord = wordGaps.reduce((a, b) => a + b, 0);
       // kashida first: an equal share for every piece with a join to stretch, within limits; with no word gap to
       // take the rest, kashida takes all it can
@@ -203,7 +209,10 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       const rest = Math.max(0, W - used),
         per = nWord ? rest / nWord : 0;
       let x = W - (opts.wrap ? (gapAfter(n - 1) + (wordGaps[n - 1] ? per : 0)) / 2 : nWord ? 0 : rest / 2);
-      const paths: VectorStrip['paths'] = [];
+      const paths: VectorStrip['paths'] = [],
+        lines: NonNullable<VectorStrip['lines']> = [];
+      const lineOf = (strokes: Built['strokes'], dx: number) =>
+        strokes.map(s => 'M' + s.s.map(q => fmt(q.x + dx) + ' ' + fmt(q.y + P.base)).join('L')).join('');
       const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
       const pathOf = (polys: Poly[], dx: number) =>
         polys.map(q => 'M' + q.map(([px, py]) => fmt(px + dx) + ' ' + fmt(py + P.base)).join('L') + 'Z').join('');
@@ -211,6 +220,12 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
         const dx = x - p.box.x1,
           tag = (p.s.rep ?? 0) + 1;
         paths.push({ d: pathOf([...p.b.strokes.flatMap(s => th.strokePolys(s)), ...p.b.dots.flatMap(([a, b]) => th.dotPolysAt(a, b))], dx), role: 'letter', tag }); // prettier-ignore
+        lines.push({ d: lineOf(p.b.strokes, dx), role: 'letter' });
+        // dots as a short stroke across the nib, the way the pen writes them
+        const da = ((th.style.ang + 90) * Math.PI) / 180,
+          dl = th.style.nib * 0.47;
+        if (p.b.dots.length)
+          lines.push({ d: p.b.dots.map(([a, b]) => `M${fmt(a - Math.cos(da) * dl + dx)} ${fmt(b - Math.sin(da) * dl + P.base)}L${fmt(a + Math.cos(da) * dl + dx)} ${fmt(b + Math.sin(da) * dl + P.base)}`).join(''), role: 'mark' }); // prettier-ignore
         if (p.s.marks.length) {
           const m = lineMarks(th, p.b, [p.s.marks], P.Hb - P.base, -P.base);
           if (m.strokes.length)
@@ -225,7 +240,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
         }
         x -= p.w + gapAfter(i) + (wordGaps[i] ? per : 0);
       });
-      return { kind: 'vector', W, Hb: P.Hb, base: P.base, paths };
+      return { kind: 'vector', W, Hb: P.Hb, base: P.base, paths, lines };
     },
     abjad: abjadValue,
     capabilities: { grid: false, seals: false, mazes: false },
