@@ -2,6 +2,7 @@
 import { deepestPoint } from '../geometry/deepest';
 import { insetRing } from '../geometry/offset';
 import { unitRing } from '../geometry/outlines';
+import { bounds, inside } from '../geometry/poly';
 import type { Pt, Ring } from '../geometry/types';
 import type { FillerNode, RegionNode, Style } from '../model/schema';
 import type { Ctx, RegionResult } from './resolve';
@@ -14,6 +15,33 @@ export function centreOf(res: RegionResult): { c: Pt; r: number } | null {
   if (!res.inner) return null;
   const d = deepestPoint(res.inner.pts);
   return { c: d.p, r: d.r };
+}
+
+const boundsCentre = (P: Pt[]): Pt => {
+  const b = bounds(P);
+  return [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2];
+};
+/** The largest scale s (and which of the given centres) at which outline U, scaled by s about its origin and moved
+ *  to the centre, lies inside polygon P: every point of U inside P, and no corner of P inside it. */
+export function fitInside(U: Pt[], P: Pt[], centres: Pt[]): { c: Pt; s: number } | null {
+  const ok = (c: Pt, s: number) => {
+    const Q = U.map(([x, y]) => [c[0] + x * s, c[1] + y * s] as Pt);
+    return Q.every(([x, y]) => inside(P, x, y)) && !P.some(([x, y]) => inside(Q, x, y));
+  };
+  let best: { c: Pt; s: number } | null = null;
+  for (const c of centres) {
+    if (!inside(P, c[0], c[1])) continue;
+    let lo = 0,
+      hi = 1;
+    while (ok(c, hi) && hi < 1e4) hi *= 2;
+    for (let k = 0; k < 30; k++) {
+      const m = (lo + hi) / 2;
+      if (ok(c, m)) lo = m;
+      else hi = m;
+    }
+    if (lo > 0 && (!best || lo > best.s)) best = { c, s: lo };
+  }
+  return best;
 }
 
 const farthest = (P: Pt[], c: Pt) => Math.max(...P.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])));
@@ -90,12 +118,38 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
       const cr = centreOf(res);
       if (!cr) break;
       const unit = unitRing(f.node.outline),
-        reach = Math.max(...unit.pts.map(([x, y]) => Math.hypot(x, y))),
-        size = typeof f.node.size === 'number' ? Math.min(f.node.size, (cr.r * 0.96) / reach) : (cr.r * 0.96) / reach;
-      const before = ctx.items.length;
-      ctx.fill = null;
-      resolveRegion(f.node, style, ctx, size);
-      for (let i = before; i < ctx.items.length; i++) ctx.items[i] = translateItem(ctx.items[i], cr.c);
+        reach = Math.max(...unit.pts.map(([x, y]) => Math.hypot(x, y)));
+      // the largest size at which the nested outline itself fits the space left inside (an arch in an arch fills it),
+      // never smaller than its circle fitting the largest clear circle
+      const circle = { c: cr.c, s: (cr.r * 0.96) / reach };
+      let fit = circle;
+      if (res.inner && res.innerCircle == null) {
+        const b = fitInside(unit.pts, res.inner.pts, [[0, 0], cr.c, boundsCentre(res.inner.pts)]);
+        if (b && b.s * 0.96 > fit.s) fit = { c: b.c, s: b.s * 0.96 };
+      }
+      const place = (at: { c: Pt; s: number }) => {
+        const size = typeof f.node.size === 'number' ? Math.min(f.node.size, at.s) : at.s,
+          before = ctx.items.length;
+        ctx.fill = null;
+        resolveRegion(f.node, style, ctx, size);
+        for (let i = before; i < ctx.items.length; i++) ctx.items[i] = translateItem(ctx.items[i], at.c);
+      };
+      const snap = {
+        items: ctx.items.length,
+        borders: ctx.borders.length,
+        warnings: ctx.warnings.length,
+        ring: ctx.ring,
+      };
+      place(fit);
+      // a larger nested region whose own fill no longer fits falls back to the clear-circle size
+      const failed = (ctx.fill as { ok?: boolean } | null)?.ok === false || ctx.warnings.length > snap.warnings;
+      if (fit !== circle && failed) {
+        ctx.items.length = snap.items;
+        ctx.borders.length = snap.borders;
+        ctx.warnings.length = snap.warnings;
+        ctx.ring = snap.ring;
+        place(circle);
+      }
       const innerFill = ctx.fill as { type: string } | null;
       ctx.fill = { type: 'region', ok: true, note: innerFill ? `inner fill: ${innerFill.type}` : undefined };
       return;
