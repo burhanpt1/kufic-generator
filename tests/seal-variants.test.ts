@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { loadSealWasm, loadSealWasmSync, unloadSealWasm } from '../src/kernels/seal';
 import { buildMonogram, clearMonogramCache } from '../src/monogram/methods';
 import { letterShape } from '../src/monogram/words';
-import { DEFAULT_STYLE } from '../src/model/style';
+import { DEFAULT_STYLE as BASE_STYLE } from '../src/model/style';
+
+// these letter-seal tests were tuned on the prototype's flat final م and tall ص tooth
+const DEFAULT_STYLE = { ...BASE_STYLE, letter: { ...BASE_STYLE.letter, meem: 'flat' as const, sad: 'tall' as const } };
 import { kufi } from '../src/script/kufi';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

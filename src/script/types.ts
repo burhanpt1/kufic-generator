@@ -7,6 +7,10 @@ export interface LetterStyle {
   ra: 'desc' | 'short' | 'hook';
   ayn: 'open' | 'cup';
   lamAlif: 'plain' | 'knot';
+  /** Final م with its tail on the line ('flat') or dropped below it (absent = 'flat'). */
+  meem?: 'flat' | 'drop';
+  /** Initial and medial ص ض with a tall or a short tooth after the loop (absent = 'tall'). */
+  sad?: 'tall' | 'short';
   marks: 'off' | 'dots' | 'all';
   vowels: 'modern' | 'early';
   /** Long alternates of final letters, used where a line has room (off when absent). */

@@ -152,6 +152,8 @@ const letter = z.object({
   ra: z.enum(['desc', 'short', 'hook']),
   ayn: z.enum(['open', 'cup']),
   lamAlif: z.enum(['plain', 'knot']),
+  meem: z.enum(['flat', 'drop']).optional(),
+  sad: z.enum(['tall', 'short']).optional(),
   marks: z.enum(['off', 'dots', 'all']),
   vowels: z.enum(['modern', 'early']),
   alternates: z.boolean().optional(),
