@@ -59,12 +59,12 @@ export interface SheetOptions {
    *  finished in نور. The surah needs each line to stop short of the star points and crossings to keep words apart,
    *  which softens the stars; نور, short and even, keeps them crisp. */
   field?: 'nur' | 'surah';
-  /** The whole of Surat al-Nur in six rings inside the Ninety-Nine Names (the field stays in نور). */
+  /** The whole of Surat al-Nur in six rings inside the Ninety-Nine Names (the default; the field stays in نور). */
   band?: boolean;
 }
 
 /** The chosen design: the square Kufic spiral at the core, light written in the Light Verse. */
-export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse', field: 'nur', band: false };
+export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse', field: 'nur', band: true };
 
 export function nurSheet(opts: SheetOptions = {}): Sheet {
   const o = { ...NUR_DEFAULTS, ...opts };

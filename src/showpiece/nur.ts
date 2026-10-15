@@ -151,8 +151,12 @@ export function frame(names: string, surah = 0): Composition {
         borders: [
           { type: 'textBorder', text: 'names', separator: { kind: 'braid', width: 4 }, ground: { kind: 'tint' } },
           // the whole surah, in rings inside the names (the middle path: the stars stay in نور)
+          // a broad braid between the names and the surah sets them apart as two different texts
           ...(surah
-            ? [{ type: 'textBorder' as const, text: 'surah', separator: { kind: 'lines' as const, width: 1 } }]
+            ? [
+                { type: 'ornamentBorder' as const, ornament: 'braid' as const, width: 12 },
+                { type: 'textBorder' as const, text: 'surah', separator: { kind: 'lines' as const, width: 1 } },
+              ]
             : []),
           { type: 'ornamentBorder', ornament: 'pearls', width: 3 },
         ],
