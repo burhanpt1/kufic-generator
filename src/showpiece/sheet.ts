@@ -11,7 +11,13 @@ import { cartouche, frame, NIGHT, niche, NUR } from './nur';
 import { rosette, Writer, writtenRays } from './radial';
 import { kufi } from '../script/kufi';
 import { mix } from '../render/svg';
-import type { Style } from '../model/schema';
+import type { PatternSpec, Style } from '../model/schema';
+import { insetRing } from '../geometry/offset';
+import { deepestPoint } from '../geometry/deepest';
+import { WORD_LINE } from '../compose/patternText';
+import { AN_NUR, rasm } from './an-nur';
+import { surahField } from './surahField';
+import type { SurahField } from './surahField';
 
 const f = (n: number) => +n.toFixed(1);
 const body = (svg: string) =>
@@ -36,6 +42,8 @@ const bbox = (P: Pt[]) => {
 export interface Sheet {
   svg: string;
   warnings: string[];
+  /** With the surah field: how it was written (letter scale, lines used). */
+  surah?: Omit<SurahField, 'items'>;
   /** Width and height in SVG units (A-series proportions). */
   w: number;
   h: number;
@@ -47,10 +55,14 @@ export interface SheetOptions {
   /** The light from the glass: plain wedges, or rays written in gold: نور, or the Light Verse word by word
    *  (the default). */
   rays?: 'wedges' | 'nur' | 'verse';
+  /** The star field: outlined in نور (the default), or written with the whole of Surat al-Nur, once, in order, then
+   *  finished in نور. The surah needs each line to stop short of the star points and crossings to keep words apart,
+   *  which softens the stars; نور, short and even, keeps them crisp. */
+  field?: 'nur' | 'surah';
 }
 
 /** The chosen design: the square Kufic spiral at the core, light written in the Light Verse. */
-export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse' };
+export const NUR_DEFAULTS: Required<SheetOptions> = { core: 'spiral', rays: 'verse', field: 'nur' };
 
 export function nurSheet(opts: SheetOptions = {}): Sheet {
   const o = { ...NUR_DEFAULTS, ...opts };
@@ -185,9 +197,45 @@ export function nurSheet(opts: SheetOptions = {}): Sheet {
     cy = fo.y + fo.h / 2 - ch / 2;
   // field words hidden behind the niche and the cartouches are not drawn
   const hidden = covers.map(P => ({ P, b: bbox(P) }));
+  let frItems = fr.items,
+    surahNote: SurahField | undefined;
+  if (o.field === 'surah') {
+    // the field's own lines rewritten: the surah in reading order on the visible lines, the rest in نور
+    const fill = (frame(NAMES_99.join(' ')).root.child.fill as { pattern: PatternSpec }).pattern,
+      old = fr.items.filter(
+        (it): it is Extract<PlacedItem, { type: 'strip' }> =>
+          it.type === 'strip' && it.place.type === 'line' && it.place.s < 0.5,
+      ),
+      sid = old[0].style,
+      inner = frOutline.inner!,
+      ring = { pts: inner, corners: [], area: 0, perimeter: 0 },
+      clip = insetRing(ring, WORD_LINE * fill.scale)?.pts ?? inner,
+      dp = deepestPoint(inner).p,
+      radius = Math.max(...inner.map(q => Math.hypot(q[0] - dp[0], q[1] - dp[1]))) * 1.05,
+      [ox, oy] = fr.canvas.origin,
+      toFrame = (P: Pt[]) => P.map(([x, y]) => [x / U - ox, y / U - oy] as Pt),
+      wf = new Writer(kufi, fr.styles[sid]);
+    const sf = surahField(
+      wf,
+      AN_NUR.map(rasm).join(' ').split(' '),
+      'نور',
+      fill,
+      clip,
+      dp,
+      radius,
+      covers.map(toFrame),
+      sid,
+      old[0].ring,
+    );
+    if (!sf) warnings.push("Surat al-Nur doesn't fit the field's visible lines");
+    else {
+      frItems = [...fr.items.filter(it => !old.includes(it as (typeof old)[number])), ...sf.items];
+      surahNote = sf;
+    }
+  }
   const frShown: Placed = {
     ...fr,
-    items: fr.items.filter(it => {
+    items: frItems.filter(it => {
       if (it.type !== 'strip' || it.place.type !== 'line') return true;
       const [x, y] = ptsOf(fr, [it.place.O])[0];
       return !hidden.some(({ P, b }) => x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h && inside(P, x, y));
@@ -201,5 +249,12 @@ export function nurSheet(opts: SheetOptions = {}): Sheet {
     '</svg>';
   void W;
   void H;
-  return { svg, warnings, w: cw, h: ch };
+  const surah = surahNote && {
+    s: surahNote.s,
+    factor: surahNote.factor,
+    surahLines: surahNote.surahLines,
+    fillLines: surahNote.fillLines,
+    words: surahNote.words,
+  };
+  return { svg, warnings, w: cw, h: ch, ...(surah ? { surah } : {}) };
 }

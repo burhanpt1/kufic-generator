@@ -84,23 +84,24 @@ export function patternTextItems(
       return cache.get(k)!;
     };
   const items: PlacedItem[] = [];
-  const lay = (P0: Pt, Q0: Pt) => {
-    let P = P0,
-      Q = Q0;
+  const lay = (P: Pt, Q: Pt) => {
     const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]),
       // words as many as fit at their natural spacing, then centred on the line
       k = Math.floor((L - 2 * gap) / s / unitW + 2 / unitW);
     if (k < 1) return;
     const st = stripOf(k);
     if (!st || st.W * s > L - 2 * gap + 1e-6) return;
-    // read left to right, upright: the strip's x runs along +t with t pointing right (or down on a vertical)
-    if (Q[0] < P[0] - 1e-9 || (Math.abs(Q[0] - P[0]) < 1e-9 && Q[1] < P[1])) [P, Q] = [Q, P];
-    const t: Pt = [(Q[0] - P[0]) / L, (Q[1] - P[1]) / L],
-      n: Pt = [t[1], -t[0]],
-      off = (L - st.W * s) / 2,
-      O: Pt = [P[0] + t[0] * off - n[0] * mid * s, P[1] + t[1] * off - n[1] * mid * s];
-    items.push({ type: 'strip', style: sid, strip: st, place: { type: 'line', O, t, n, s }, ring });
+    items.push(stripOnSegment(P, Q, st, s, mid, sid, ring));
   };
+  for (const [P, Q] of patternSegments(pattern, R, c, radius)) lay(P, Q);
+  return items;
+}
+
+/** The pattern's lines as straight segments within region R: the two rays crossing at each tile-edge midpoint
+ *  joined into one line, and at each crossing one line passing over whole and the other broken, as in interlace. */
+export function patternSegments(pattern: PatternSpec, R: Pt[], c: Pt, radius: number, cutGap = 0): [Pt, Pt][] {
+  const a = pattern.scale,
+    out: [Pt, Pt][] = [];
   // the pattern's rays meet in pairs at each tile-edge midpoint, crossing straight through it: join each pair
   // into one line, and where two lines cross let one pass over whole and break the other, as in interlace
   const key = (p: number[]) => Math.round(p[0] * 100) + ',' + Math.round(p[1] * 100);
@@ -152,9 +153,77 @@ export function patternTextItems(
       for (const [U, V] of parts) {
         if (U === V) continue;
         const seg = trim(U, V, R);
-        if (seg) lay(seg[0], seg[1]);
+        if (seg) out.push(seg);
       }
     }
   }
-  return items;
+  return cutGap > 0 ? cutCrossings(out, cutGap) : out;
+}
+
+/** Where two segments cross away from their ends, the earlier one passes over and the later one breaks, leaving a
+ *  gap of `gap` on each side of the crossing (interlace for lines that cross mid-span). */
+export function cutCrossings(segs: [Pt, Pt][], gap: number): [Pt, Pt][] {
+  const cuts: number[][] = segs.map(() => []);
+  const bb = segs.map(([P, Q]) => [
+    Math.min(P[0], Q[0]),
+    Math.min(P[1], Q[1]),
+    Math.max(P[0], Q[0]),
+    Math.max(P[1], Q[1]),
+  ]);
+  for (let i = 0; i < segs.length; i++)
+    for (let j = i + 1; j < segs.length; j++) {
+      const A = bb[i],
+        B = bb[j];
+      if (A[2] < B[0] || B[2] < A[0] || A[3] < B[1] || B[3] < A[1]) continue;
+      const [p, q] = segs[i],
+        [r, t] = segs[j],
+        dx1 = q[0] - p[0],
+        dy1 = q[1] - p[1],
+        dx2 = t[0] - r[0],
+        dy2 = t[1] - r[1],
+        den = dx1 * dy2 - dy1 * dx2;
+      if (Math.abs(den) < 1e-12) continue;
+      const u = ((r[0] - p[0]) * dy2 - (r[1] - p[1]) * dx2) / den,
+        v = ((r[0] - p[0]) * dy1 - (r[1] - p[1]) * dx1) / den,
+        e = 1e-6;
+      if (u <= e || u >= 1 - e || v <= e || v >= 1 - e) continue;
+      // the later segment breaks (alternating which is over keeps the weave even across the field)
+      if ((i + j) % 2) cuts[j].push(v);
+      else cuts[i].push(u);
+    }
+  const out: [Pt, Pt][] = [];
+  segs.forEach(([P, Q], k) => {
+    const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]),
+      g = gap / L,
+      at = (f: number): Pt => [P[0] + (Q[0] - P[0]) * f, P[1] + (Q[1] - P[1]) * f];
+    let from = 0;
+    for (const f of cuts[k].sort((x, y) => x - y)) {
+      if (f - g > from) out.push([at(from), at(f - g)]);
+      from = Math.max(from, f + g);
+    }
+    if (from < 1) out.push([at(from), Q]);
+  });
+  return out;
+}
+
+/** A strip laid centred on segment PQ (its band's row `mid` on the line), reading left to right and upright. */
+export function stripOnSegment(
+  P0: Pt,
+  Q0: Pt,
+  st: CellStrip,
+  s: number,
+  mid: number,
+  sid: number,
+  ring: number,
+): PlacedItem {
+  let P = P0,
+    Q = Q0;
+  const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]);
+  // read left to right, upright: the strip's x runs along +t with t pointing right (or down on a vertical)
+  if (Q[0] < P[0] - 1e-9 || (Math.abs(Q[0] - P[0]) < 1e-9 && Q[1] < P[1])) [P, Q] = [Q, P];
+  const t: Pt = [(Q[0] - P[0]) / L, (Q[1] - P[1]) / L],
+    n: Pt = [t[1], -t[0]],
+    off = (L - st.W * s) / 2,
+    O: Pt = [P[0] + t[0] * off - n[0] * mid * s, P[1] + t[1] * off - n[1] * mid * s];
+  return { type: 'strip', style: sid, strip: st, place: { type: 'line', O, t, n, s }, ring };
 }
