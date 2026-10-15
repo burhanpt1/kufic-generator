@@ -170,6 +170,7 @@ const letter = z.object({
   meem: z.enum(['flat', 'drop']).optional(),
   sad: z.enum(['tall', 'short']).optional(),
   loops: z.enum(['stretch', 'rigid']).optional(),
+  set: z.enum(['square', 'fatimid']).optional(),
   marks: z.enum(['off', 'dots', 'all']),
   vowels: z.enum(['modern', 'early']),
   alternates: z.boolean().optional(),

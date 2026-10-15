@@ -13,7 +13,7 @@ const NAMES: Record<string, string> = {
   hex: '6-fold', '31212': '12-fold', finial: 'Finials', diamond: 'Diamonds', notch: 'Notched', bevel: 'Bevelled',
   leaf: 'Leaf', palmette: 'Palmette', tall: 'Tall stems', tails: 'Tall stems + tails', all: 'Every stem',
   byRing: 'By ring', byRepeat: 'By repeat', radial: 'Radial', blocks: 'Grid blocks', curved: 'Curved', pen: 'Broad pen',
-  knot: 'Knotted', desc: 'Descending', short: 'Flat', hook: 'Hooked', dots: 'Dots', off: 'None',
+  fatimid: 'Fatimid', knot: 'Knotted', desc: 'Descending', short: 'Flat', hook: 'Hooked', dots: 'Dots', off: 'None',
 }; // prettier-ignore
 
 export function valueLabel(trait: Trait | string, v: string | number | boolean): string {

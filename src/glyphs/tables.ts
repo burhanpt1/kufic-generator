@@ -99,6 +99,35 @@ export const ALTS: Record<string, Partial<Record<Form, GlyphDef>>> = (() => {
     MEEM: { fin: meem, iso: meem },
   };
 })();
+/** The Fatimid letter set (letter.set = 'fatimid'): original designs for this engine's grid after the general
+ *  conventions of Fatimid Kufic (ر and و dropping below the line and turning back in a long tail, a medial ه of two
+ *  loops above and below it, a د with an upturned beak). Strokes stay orthogonal:
+ *  diagonal links draw as crossings in block style. Nothing is copied from a font. */
+export const FATIMID: Record<string, Partial<Record<Form, GlyphDef>>> = {
+  DAL: { iso: ['#..', '###', '..#', '..#', '###'] },
+  REH: { iso: { rows: ['...#', '...#', '...#', '...#', '####'], base: 2 } },
+  WAW: { iso: { rows: ['.###', '.#.#', '.###', '...#', '####'], base: 2 } },
+  // initial ه keeps its square form: two loops at the start of a word read as the numeral 8
+  HEH: { med: { rows: ['###', '#.#', '###', '#.#', '###'], base: 2 } },
+};
+/** Long alternates of the Fatimid set, on top of ALTS: final ف ق ص س with tails rising and curling back. */
+export const FATIMID_ALTS: Record<string, Partial<Record<Form, GlyphDef>>> = (() => {
+  const feh = ['......###', '##....#.#', '#.....###', '#.....#..', '#########'],
+    qaf = ['##...###', '#....#.#', '#....###', '#....#..', '########'],
+    sad = ['##........', '#.........', '#....#####', '#....#...#', '##########'],
+    seen = ['##........', '#.........', '#....#.#.#', '#....#.#.#', '##########'];
+  return {
+    FEH: { fin: feh, iso: feh },
+    QAF: { fin: qaf, iso: qaf },
+    SAD: { fin: sad, iso: sad },
+    SEEN: { fin: seen, iso: seen },
+  };
+})();
+/** Mark anchors of Fatimid forms whose ink sits off their middle column. */
+export const FATIMID_ANCHOR: Record<string, Partial<Record<Form, number>>> = {
+  REH: { iso: 3, fin: 3 },
+  WAW: { iso: 2, fin: 2 },
+};
 export const LAMALEF_KNOT = { iso: ['#...#', '#...#', '.#.#.', '..#..', '.#.#.', '#...#', '#####'] };
 
 // where dots/marks centre, when not the glyph's middle column

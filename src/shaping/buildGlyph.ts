@@ -1,7 +1,7 @@
 import { bitmap } from '../glyphs/bitmap';
 import { COMB, DOTS, HAMZA_ON, ORDER, S } from '../glyphs/marks';
-import { def } from '../glyphs/overrides';
-import { ANCHOR, ANCHOR_BELOW } from '../glyphs/tables';
+import { anchorOf as anchorTable, def } from '../glyphs/overrides';
+import { ANCHOR_BELOW } from '../glyphs/tables';
 import type { Form, GlyphDef, MarksMode, Unit, VowelStyle } from '../types';
 
 interface Mark {
@@ -88,9 +88,11 @@ export function buildGlyph(u: Unit, H: number, mode: MarksMode, style: VowelStyl
   const all = unitMarks(u, mode, style).map(
     m => ({ ...m, s: shapeCells(S[m.shape]), v: m.layer === 2 ? 2 : 3 }) as PlacedMark,
   );
-  const centre = Math.floor((bm.w - 1) / 2);
+  const centre = Math.floor((bm.w - 1) / 2),
+    // a long alternate keeps the letter's right part and grows on the left, so table anchors shift with it
+    shift = d ? bm.w - bitmap(def(u.key, u.form), H).w : 0;
   const anchorOf = (m: PlacedMark, tbl: Partial<Record<Form, number>> | undefined) =>
-    m.ax != null ? m.ax : tbl && tbl[u.form] != null ? tbl[u.form]! : centre;
+    m.ax != null ? m.ax : tbl && tbl[u.form] != null ? tbl[u.form]! + shift : centre;
   const colTop = new Array(bm.w).fill(-1),
     colBot = new Array(bm.w).fill(0);
   for (let y = 0; y < bm.h; y++)
@@ -115,7 +117,7 @@ export function buildGlyph(u: Unit, H: number, mode: MarksMode, style: VowelStyl
   // group above marks by anchor (lam-alef has two anchors)
   const groups = new Map<number, PlacedMark[]>();
   above.forEach(m => {
-    const a = anchorOf(m, ANCHOR[u.key]);
+    const a = anchorOf(m, anchorTable(u.key));
     if (!groups.has(a)) groups.set(a, []);
     groups.get(a)!.push(m);
   });
@@ -136,7 +138,7 @@ export function buildGlyph(u: Unit, H: number, mode: MarksMode, style: VowelStyl
   });
   const bGroups = new Map<number, PlacedMark[]>();
   below.forEach(m => {
-    const a = anchorOf(m, ANCHOR_BELOW[u.key] || ANCHOR[u.key]);
+    const a = anchorOf(m, ANCHOR_BELOW[u.key] || anchorTable(u.key));
     if (!bGroups.has(a)) bGroups.set(a, []);
     bGroups.get(a)!.push(m);
   });

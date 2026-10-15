@@ -20,7 +20,7 @@ const GROUPS: [string, Trait[]][] = [
   ['Shape', ['outline', 'sides', 'points', 'depth', 'spread']],
   ['Borders', ['borders', 'taper', 'separator', 'separatorWidth', 'ground', 'tiling', 'angle', 'scale']],
   ['Centre and corners', ['fill', 'monogram', 'vary', 'interlace', 'spandrels', 'tips', 'corners']],
-  ['Letters', ['ascenders', 'ra', 'lamAlif', 'marks', 'alternates', 'plait', 'terminal', 'reach']],
+  ['Letters', ['letterSet', 'ascenders', 'ra', 'lamAlif', 'marks', 'alternates', 'plait', 'terminal', 'reach']],
   [
     'Style',
     ['palette', 'colouring', 'stroke', 'corner', 'banded', 'weight', 'softness', 'contrast', 'stemTaper', 'sprouts'],
