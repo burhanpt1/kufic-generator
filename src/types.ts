@@ -17,6 +17,9 @@ export interface LetterVariants {
   /** Whether justification may widen the small closed loops of م و ف ق ه: 'rigid' (default; a widened م read as
    *  ص) or 'stretch' (the prototype's). */
   loops?: 'stretch' | 'rigid';
+  /** Letter set: 'square' (default) or 'fatimid' (sweeping tails below the line, a two-loop medial ه, a footed
+   *  alif, and more long alternates). */
+  set?: 'square' | 'fatimid';
 }
 export type LetterOptions = Partial<LetterVariants>;
 

@@ -13,6 +13,8 @@ export interface LetterStyle {
   sad?: 'tall' | 'short';
   /** Justification may widen the small loops of م و ف ق ه ('stretch') or not ('rigid'); absent = 'rigid'. */
   loops?: 'stretch' | 'rigid';
+  /** Letter set: 'square' (absent) or 'fatimid'. */
+  set?: 'square' | 'fatimid';
   marks: 'off' | 'dots' | 'all';
   vowels: 'modern' | 'early';
   /** Long alternates of final letters, used where a line has room (off when absent). */

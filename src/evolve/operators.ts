@@ -243,6 +243,9 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'sprouts':
       s.terminals.flourish = v ? 'sprouts' : 'none';
       break;
+    case 'letterSet':
+      s.letter.set = v as 'fatimid';
+      break;
   }
 }
 

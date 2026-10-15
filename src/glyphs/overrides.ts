@@ -1,10 +1,18 @@
 // The engine's mutable glyph state: active letter variants and the user's glyph edits.
 import type { Form, GlyphDef, LetterOptions, LetterVariants, Rows } from '../types';
-import { ALTS, D, LAMALEF_KNOT, VARIANTS } from './tables';
+import { ALTS, ANCHOR, D, FATIMID, FATIMID_ALTS, FATIMID_ANCHOR, LAMALEF_KNOT, VARIANTS } from './tables';
 import { clearBitmapCache } from './bitmap';
 
 /** Active letter variants. compose(), alphabet() and getRows() set these before drawing. */
-export const V: LetterVariants = { ra: 'desc', ayn: 'cup', la: 'plain', meem: 'drop', sad: 'short', loops: 'rigid' };
+export const V: LetterVariants = {
+  ra: 'desc',
+  ayn: 'cup',
+  la: 'plain',
+  meem: 'drop',
+  sad: 'short',
+  loops: 'rigid',
+  set: 'square',
+};
 let OVR: Record<string, Rows | undefined> = {}; // user glyph edits: 'KEY.form' -> rows
 let epoch = 0;
 /** Changes whenever the glyph edits change, for caches keyed on letter shapes. */
@@ -17,9 +25,16 @@ export function setVariants(opts: LetterOptions) {
   V.meem = opts.meem || 'drop';
   V.sad = opts.sad || 'short';
   V.loops = opts.loops || 'rigid';
+  V.set = opts.set || 'square';
 }
 
 export function baseDef(key: string, form: Form): GlyphDef {
+  if (V.set === 'fatimid') {
+    const f = FATIMID[key];
+    // a set with only an isolated form uses it for the final too (the letter joins only from the right)
+    const d = f?.[form] ?? (form === 'fin' ? f?.iso : undefined);
+    if (d && !(key === 'LAMALEF' && V.la === 'knot')) return d;
+  }
   if (key === 'REH') {
     const g = VARIANTS.ra[V.ra];
     return (g[form] || g.iso)!;
@@ -54,4 +69,8 @@ export function setOverrides(o: Record<string, Rows | undefined>) {
 }
 
 /** The long alternate of a letter form, if it has one. */
-export const altDef = (key: string, form: Form): GlyphDef | null => ALTS[key]?.[form] ?? null;
+export const altDef = (key: string, form: Form): GlyphDef | null =>
+  (V.set === 'fatimid' ? FATIMID_ALTS[key]?.[form] : undefined) ?? ALTS[key]?.[form] ?? null;
+/** Where marks above a letter form centre, when not its middle column (per the active letter set). */
+export const anchorOf = (key: string): Partial<Record<Form, number>> | undefined =>
+  (V.set === 'fatimid' && FATIMID_ANCHOR[key]) || ANCHOR[key];
