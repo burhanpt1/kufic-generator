@@ -39,9 +39,9 @@ export const kufi: ScriptEngine = {
     setVariants(variants(style));
     return shape(text);
   },
-  prepare(shaped: Shaped, style) {
+  prepare(shaped, style) {
     setVariants(variants(style));
-    const p = prepare(shaped.words, style.ascenders, style.marks, style.vowels, !!style.alternates);
+    const p = prepare((shaped as Shaped).words, style.ascenders, style.marks, style.vowels, !!style.alternates);
     return { words: p.words, Hb: p.Hb, base: p.base, ascenders: style.ascenders };
   },
   prepareLines(lines, style) {

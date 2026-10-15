@@ -24,8 +24,8 @@ export function wordGrid(
   extra: number,
   wordGap = 2,
 ): { g: CellGrid; base: number } | null {
-  const sh = script.shape(text, letter);
-  if (!sh.words.length) return null;
+  const sh = script.shape(text, letter) as { words?: unknown[] };
+  if (!sh.words?.length) return null;
   const p = script.prepare(sh, letter),
     segs = script.segments(p, 'words', wordGap),
     opts = { wrap: false, rhythm: false, wordGap, terminals: 'none' as const };

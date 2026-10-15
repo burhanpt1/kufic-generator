@@ -6,3 +6,6 @@ export { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
 export { dotPolys, nibPolys, polyPath, sampleStroke } from './pen';
 export { Alpha, toPixels } from './raster';
 export * from './shape';
+export { kashidaJoin, parsePolys, thuluthScript } from './adapter';
+export type { ThuluthPrepared, ThuluthSegment } from './adapter';
+export { MARK_SHAPES, MARK_SIZE, lineMarks, markStrokes } from './marks';

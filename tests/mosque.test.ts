@@ -1,5 +1,6 @@
 // The mosque programme (src/mosque): nested, stacked compositions of scripture, and the qibla wall that sets them
 // into one elevation. `npm run mosque` writes the renders to docs/mosque.
+import type { Shaped } from '../src/types';
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from '../src/compose';
@@ -23,7 +24,7 @@ describe('mosque texts', () => {
     expect(new Set(NAMES_99).size).toBe(99);
   });
   it('uses only letters the engine draws', () => {
-    for (const t of Object.values(T)) expect(kufi.shape(t, DEFAULT_STYLE.letter).unsupported).toEqual([]);
+    for (const t of Object.values(T)) expect((kufi.shape(t, DEFAULT_STYLE.letter) as Shaped).unsupported).toEqual([]);
   });
 });
 

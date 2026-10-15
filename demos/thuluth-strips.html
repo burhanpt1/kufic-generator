@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth strips</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+figure{margin:0 0 10px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure svg{display:block;width:100%;height:auto;background:#f4efe3;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}input[type=text]{font:inherit;padding:4px 8px;flex:1 1 14em;min-width:0;direction:rtl}select{font:inherit}
+</style>
+</head>
+<body>
+<h1>Thuluth strips</h1>
+<p>Thuluth behind the script interface: a line comes back as a vector strip of exactly the width asked, so the composition engine can set it in any band. It widens the thuluth way, one long kashida per word (after a tooth letter where it can, as in بســم), then the word gaps; below its natural width it declines (that needs stacking). The dashed box is the strip; vowels appear in the band when the letter style shows all marks.</p>
+<div class="bar"><input type="text" id="t" value="بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيمِ" aria-label="Text"><select id="pen" aria-label="Pen"><option value="tile">Tile pen</option><option value="roundel">Roundel pen</option></select><label><input type="checkbox" id="v" checked> vowels</label><select id="mode" aria-label="Segments"><option value="words">whole words</option><option value="breaks">breaks inside words</option></select></div>
+<div id="out" style="margin-top:10px"></div>
+<script type="module">
+import { thuluthScript, parsePolys } from '../src/script/thuluth/adapter.ts';
+import { ROUNDEL_PEN, TILE_PEN } from '../src/script/thuluth/engine.ts';
+import { DEFAULT_STYLE } from '../src/model/style.ts';
+const $ = id => document.getElementById(id);
+function draw() {
+  const eng = thuluthScript($('pen').value === 'tile' ? TILE_PEN : ROUNDEL_PEN), letter = { ...DEFAULT_STYLE.letter, marks: $('v').checked ? 'all' : 'dots' };
+  const p = eng.prepare(eng.shape($('t').value, letter), letter), segs = eng.segments(p, $('mode').value, 2);
+  const natural = segs.reduce((a, s, i) => a + s.minW + (i < segs.length - 1 ? (s.endsWord ? 2 : 1) : 0), 0);
+  $('out').innerHTML = '';
+  for (const W of [natural - 4, natural, natural + 12, natural + 30]) {
+    const st = eng.layout(segs, p, W, { wrap: false, rhythm: true, wordGap: 2, terminals: 'none' }), f = document.createElement('figure'), U = 8;
+    if (!st) { f.innerHTML = `<figcaption>${W} cells: below the natural width, no line (needs stacking)</figcaption>`; $('out').append(f); continue; }
+    const d = role => st.paths.filter(q => q.role === role).map(q => parsePolys(q.d).map(poly => 'M' + poly.map(([x, y]) => `${(x * U).toFixed(1)} ${((st.Hb - y) * U).toFixed(1)}`).join('L') + 'Z').join('')).join('');
+    f.innerHTML = `<svg viewBox="-4 -4 ${st.W * U + 8} ${st.Hb * U + 8}"><rect x="0" y="0" width="${st.W * U}" height="${st.Hb * U}" fill="none" stroke="#b8a98a" stroke-dasharray="4 4"/><line x1="0" x2="${st.W * U}" y1="${(st.Hb - st.base) * U}" y2="${(st.Hb - st.base) * U}" stroke="#d8ccb2"/><path d="${d('letter')}" fill="#1b1b1b"/><path d="${d('vowel')}" fill="#a3352b"/></svg><figcaption>${W} cells${W === natural ? ' (natural)' : ''} · band ${st.Hb} rows, baseline row ${st.base}</figcaption>`;
+    $('out').append(f);
+  }
+}
+['t', 'pen', 'v', 'mode'].forEach(id => ($(id).oninput = draw));
+draw();
+</script>
+</body>
+</html>

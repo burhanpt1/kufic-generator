@@ -1,5 +1,6 @@
 // "Light upon light" (src/showpiece): the Light Verse as one A1 sheet, nested as the verse nests (niche → lamp →
 // glass → star). `npm run showpiece` writes the print file to docs/showpiece.
+import type { Shaped } from '../src/types';
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from '../src/compose';
@@ -17,7 +18,7 @@ describe('Light upon light', () => {
   it('quotes the verse whole, and every phrase it nests is part of it', () => {
     for (const [k, t] of Object.entries(NUR)) {
       if (k !== 'verse') expect(NUR.verse.includes(t)).toBe(true);
-      expect(kufi.shape(t, DEFAULT_STYLE.letter).unsupported).toEqual([]);
+      expect((kufi.shape(t, DEFAULT_STYLE.letter) as Shaped).unsupported).toEqual([]);
     }
   });
   it.each([
