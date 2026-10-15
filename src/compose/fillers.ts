@@ -7,6 +7,7 @@ import type { Pt, Ring } from '../geometry/types';
 import type { FillerNode, RegionNode, Style } from '../model/schema';
 import type { Ctx, RegionResult } from './resolve';
 import { resolveRegion, styleId } from './resolve';
+import { patternTextItems, WORD_LINE } from './patternText';
 import { translateItem } from './transform';
 
 /** Centre and clear radius of a region (exact for circles). */
@@ -86,6 +87,33 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
     }
     case 'pattern': {
       const cr = centreOf(res)!;
+      if (f.text && ctx.comp.texts[f.text]) {
+        // the lines written in the text, in the accent colour, one colour throughout
+        const ws = styleId(ctx, {
+            ...style,
+            palette: { ...style.palette, ink: style.palette.ink2 },
+            colouring: 'solid',
+            // words this small are drawn plain: no thick and thin, no stem endings, no leaves
+            stroke: { ...style.stroke, contrast: 0, taper: 0 },
+            terminals: { ...style.terminals, kind: 'none', flourish: 'none' },
+          }),
+          // lines stop a word's height inside the region, so no word crosses its edge
+          clipTo = insetRing(inner, WORD_LINE * f.pattern.scale)?.pts ?? inner.pts,
+          items = patternTextItems(
+            ctx.comp.texts[f.text].text,
+            f.pattern,
+            clipTo,
+            cr.c,
+            farthest(inner.pts, cr.c) * 1.05,
+            style,
+            ctx.script,
+            ws,
+            ++ctx.ring,
+          );
+        ctx.items.push(...items);
+        ctx.fill = { type: 'pattern', ok: items.length > 0, note: `${items.length} lines in words` };
+        return;
+      }
       ctx.items.push({
         type: 'pattern',
         style: sid,

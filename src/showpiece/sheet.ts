@@ -5,6 +5,7 @@ import type { Placed, PlacedItem } from '../compose/placed';
 import type { Pt } from '../geometry/types';
 import { renderPlaced } from '../render/composition';
 import { U } from '../render/svg';
+import { inside } from '../geometry/poly';
 import { NAMES_99 } from '../mosque/texts';
 import { cartouche, frame, NIGHT, niche } from './nur';
 
@@ -87,15 +88,21 @@ export function nurSheet(): Sheet {
     top = cartouche('بسم الله الرحمن الرحيم', 1),
     bottom = cartouche('صدق الله العظيم', 2);
   const parts: string[] = [];
+  // outlines of what is set over the field, in sheet coordinates
+  const covers: Pt[][] = [];
   const nest = (
     svgBody: string,
     crop: { x: number; y: number; w: number; h: number },
     slot: { x: number; y: number; w: number; h: number },
+    cover: Pt[],
   ) => {
     const k = Math.min(slot.w / crop.w, slot.h / crop.h),
       w = crop.w * k,
-      h = crop.h * k;
-    return `<svg x="${f(slot.x + (slot.w - w) / 2)}" y="${f(slot.y + (slot.h - h) / 2)}" width="${f(w)}" height="${f(h)}" viewBox="${f(crop.x)} ${f(crop.y)} ${f(crop.w)} ${f(crop.h)}" overflow="visible">${svgBody}</svg>`;
+      h = crop.h * k,
+      x0 = slot.x + (slot.w - w) / 2,
+      y0 = slot.y + (slot.h - h) / 2;
+    covers.push(cover.map(([x, y]) => [x0 + (x - crop.x) * k, y0 + (y - crop.y) * k] as Pt));
+    return `<svg x="${f(x0)}" y="${f(y0)}" width="${f(w)}" height="${f(h)}" viewBox="${f(crop.x)} ${f(crop.y)} ${f(crop.w)} ${f(crop.h)}" overflow="visible">${svgBody}</svg>`;
   };
   const cart = (c: ReturnType<typeof cartouche>, y: number, id: string) => {
     const pl = resolve(c),
@@ -103,13 +110,13 @@ export function nurSheet(): Sheet {
       P = ptsOf(pl, o.outer),
       b = bbox(P);
     const svgBody = `<path d="${d(P)}" fill="${NIGHT.paper}"/>` + body(renderPlaced(pl, { idPrefix: id }));
-    parts.push(nest(svgBody, b, { x: field.x + field.w * 0.22, y, w: field.w * 0.56, h: cH }));
+    parts.push(nest(svgBody, b, { x: field.x + field.w * 0.22, y, w: field.w * 0.56, h: cH }, P));
     return pl.meta.warnings;
   };
   const warnings = [...fr.meta.warnings, ...ni.meta.warnings];
   warnings.push(...cart(top, field.y + g, 'ct'));
   const nicheSlot = { x: field.x + g, y: field.y + 2 * g + cH, w: field.w - 2 * g, h: field.h - 4 * g - 2 * cH };
-  parts.push(nest(nicheLayers, { x: nb.x, y: nb.y, w: nb.w, h: nb.h }, nicheSlot));
+  parts.push(nest(nicheLayers, { x: nb.x, y: nb.y, w: nb.w, h: nb.h }, nicheSlot, nicheOuter));
   warnings.push(...cart(bottom, field.y + field.h - g - cH, 'cb'));
 
   // crop to the frame plus an even margin, at exactly 1 : √2 (A-series), sized for A1
@@ -119,10 +126,20 @@ export function nurSheet(): Sheet {
     ch = cw * Math.SQRT2,
     cx = fo.x - m,
     cy = fo.y + fo.h / 2 - ch / 2;
+  // field words hidden behind the niche and the cartouches are not drawn
+  const hidden = covers.map(P => ({ P, b: bbox(P) }));
+  const frShown: Placed = {
+    ...fr,
+    items: fr.items.filter(it => {
+      if (it.type !== 'strip' || it.place.type !== 'line') return true;
+      const [x, y] = ptsOf(fr, [it.place.O])[0];
+      return !hidden.some(({ P, b }) => x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h && inside(P, x, y));
+    }),
+  };
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(cx)} ${f(cy)} ${f(cw)} ${f(ch)}" width="594mm" height="841mm" role="img" aria-label="Light upon light: the Light Verse in square Kufic">` +
     `<rect x="${f(cx)}" y="${f(cy)}" width="${f(cw)}" height="${f(ch)}" fill="${NIGHT.paper}"/>` +
-    body(renderPlaced(fr, { idPrefix: 'fr' })) +
+    body(renderPlaced(frShown, { idPrefix: 'fr' })) +
     parts.join('') +
     '</svg>';
   void W;
