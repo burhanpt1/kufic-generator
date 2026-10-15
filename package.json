@@ -17,7 +17,8 @@
     "golden:lab": "node scripts/golden-lab.mjs",
     "compare:lab": "node scripts/compare-lab.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
-    "mosque": "MOSQUE=1 vitest run tests/mosque.test.ts"
+    "mosque": "MOSQUE=1 vitest run tests/mosque.test.ts",
+    "showpiece": "SHOWPIECE=1 vitest run tests/showpiece.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
