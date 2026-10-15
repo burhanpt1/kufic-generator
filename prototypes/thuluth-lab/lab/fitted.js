@@ -1,0 +1,31 @@
+
+// ================= LETTERS FITTED TO A MASTER =================
+// Waw, initial ain and medial mim fitted, and initial and medial hah rebuilt from the master's centreline, to the gold jali panel in the photo (analysis by synthesis),
+// kept at the master's letter-to-pen proportion.
+const FITTED = {"waw": {"fin": {"s": [{"pts": [[0.0, 0.0, 1], [-2.3, 0.17, 1], [-2.38, 0.89, 1], [-2.12, 1.28, 1], [-1.2, 1.22, 1], [-0.23, 0.32, 1], [-0.66, -0.59, 1], [-0.21, -0.93, 1], [-2.31, -2.31, 1], [-4.48, -3.59, 1], [-5.64, -3.9, 1], [-6.46, -3.39, 1], [-6.55, -2.26, 1], [-6.36, -1.2, 0.4]]}], "exit": null, "dotX": -2.92}}, "ain": {"ini": {"s": [{"pts": [[-1.17, 2.6, 0.55], [-2.97, 2.86, 1], [-4.28, 2.48, 1], [-4.27, 1.98, 1], [-4.23, 1.03, 1], [-3.41, -0.13, 1], [-2.12, -0.4, 1], [-0.98, -0.02, 1], [0.0, 0.74, 1], [-1.78, -0.36, 1], [-3.53, -0.93, 1], [-4.58, -0.86, 1], [-5.48, 0.0, 1]]}], "exit": -5.48, "dotX": -2.98}}, "mim": {"med": {"s": [{"pts": [[0.0, 0.0, 1], [-0.71, 0.81, 1], [-1.5, 0.81, 1], [-2.39, -0.49, 1], [-1.85, -1.41, 1], [-1.06, -1.18, 1], [-0.86, -0.43, 1], [-2.18, -0.29, 1], [-3.03, 0.0, 1]]}], "exit": -3.03, "dotX": null}}, "hah": {"ini": {"dotX": -2.82, "s": [{"pts": [[0.0, 2.5, 0.25], [-0.65, 2.55, 0.7], [-1.74, 2.93, 1], [-2.82, 3.26, 1], [-4.18, 3.53, 1], [-4.99, 3.42, 1], [-5.37, 2.99, 1], [-5.48, 2.17, 1], [-5.43, 1.36, 1], [-5.16, 0.81, 1], [-4.45, 0.65, 1], [-3.37, 0.92, 1], [-2.28, 1.41, 1], [-1.19, 1.95, 1], [-0.38, 2.39, 0.35]]}, {"pts": [[-5.16, 0.81, 1], [-5.48, 0.33, 1], [-5.3975, 0.08, 1], [-6.35, 0, 1]]}], "exit": -6.35}, "med": {"dotX": -3.52, "s": [{"pts": [[0, 0, 1], [-0.35, 0.35, 1], [-0.55, 1.2, 0.8], [-1.35, 2.55, 0.6]]}, {"pts": [[-0.7, 2.5, 0.25], [-1.35, 2.55, 0.7], [-2.44, 2.93, 1], [-3.52, 3.26, 1], [-4.88, 3.53, 1], [-5.69, 3.42, 1], [-6.07, 2.99, 1], [-6.18, 2.17, 1], [-6.13, 1.36, 1], [-5.86, 0.81, 1], [-5.15, 0.65, 1], [-4.07, 0.92, 1], [-2.98, 1.41, 1], [-1.89, 1.95, 1], [-1.08, 2.39, 0.35]]}, {"pts": [[-5.86, 0.81, 1], [-6.18, 0.33, 1], [-6.1, 0.08, 1], [-7.05, 0, 1]]}], "exit": -7.05}}};
+
+// Roundel-scale gestures fitted to the Husayn roundel in Hagia Sophia (Kazasker Mustafa Izzet): the great final nun bowl and
+// the long-headed initial hah. Swapped in for roundels with useGreat(true).
+const GREAT = {"nun": {"fin": {"s": [{"pts": [[0.0, 0.0, 1], [-0.41, -1.1, 1], [0.0, -3.75, 1], [1.9, -5.56, 1], [4.27, -6.15, 1], [7.54, -5.25, 1], [9.42, -3.16, 1], [9.67, -1.29, 1], [7.67, 0.63, 0.3]]}], "exit": null, "dotX": 4.45}}, "hah": {"ini": {"s": [{"pts": [[-0.61, 3.07, 0.25], [-1.46, 3.08, 0.7], [-3.02, 3.58, 1], [-4.38, 4.04, 1], [-6.28, 4.43, 1], [-7.4, 4.29, 1], [-7.87, 3.68, 1], [-8.05, 2.6, 1], [-8.36, 1.57, 1], [-8.43, 0.97, 1], [-6.91, 1.09, 1], [-4.32, 0.87, 1], [-1.6, 0.38, 1], [0.0, 0.11, 1], [-1.09, 2.74, 0.35]]}, {"pts": [[-8.96, 0.78, 1], [-8.17, -0.47, 1], [-6.99, -1.05, 1], [-8.96, 0.0, 1]]}], "exit": -8.96, "dotX": -5.41}}};
+let GREAT_BACKUP = null;
+function useGreat(on, which = { nun: true, hah: true, ya: false }) {
+  if (on) { GREAT_BACKUP = { nun: { ...T.nun }, hah: { ...T.hah }, ya: { ...T.ya } };
+    if (which.nun) T.nun = { ...T.nun, fin: JSON.parse(JSON.stringify(GREAT.nun.fin)) };
+    if (which.hah) T.hah = { ...T.hah, ini: JSON.parse(JSON.stringify(GREAT.hah.ini)) };
+    if (which.ya) { const g = JSON.parse(JSON.stringify(GREAT.nun.fin)), sx = which.yaWide || 1.7, sy = which.yaDeep || 0.6; // wide and low, as the master's bowl sits in its disc
+      g.s.forEach(st => st.pts.forEach(p => { p[0] *= sx; p[1] *= sy; })); g.dotX = -0.9; T.ya = { ...T.ya, fin: g }; } } // the ya's marks sit where its bowl begins, beside the letter before it // the great bowl as a returning ya, wrapping back under the word
+  else if (GREAT_BACKUP) { T.nun = GREAT_BACKUP.nun; T.hah = GREAT_BACKUP.hah; T.ya = GREAT_BACKUP.ya; GREAT_BACKUP = null; }
+  gcache.clear();
+}
+
+// The sad (and dad) loop rebuilt from the master's dad in the Husayn roundel's blessing (رضي): a broad, open teardrop, rounded
+// where the pen comes in on the right and pointed on the left before the tooth, with a counter generous enough to stay open
+// under a heavy pen.
+const SAD_MASTER = {"med": {"s": [{"pts": [[0, 0, 1], [0.15, 0.25, 1], [0.0, 0.47, 1], [0.4, 1.34, 1], [0.13, 2.35, 1], [-0.87, 3.02, 1], [-2.41, 3.08, 1], [-3.75, 2.41, 1], [-4.56, 1.54, 1], [-4.82, 0.94, 1], [-3.89, 0.54, 1], [-2.41, 0.4, 1], [-0.94, 0.54, 1], [-0.2, 0.8, 0.8]]}, {"pts": [[-5.17, 1.75, 0.3], [-5.27, 1.0, 0.9], [-5.37, 0.12, 1], [-5.77, 0.0, 1], [-6.27, 0.0, 1]]}], "exit": -6.27}, "ini": {"s": [{"pts": [[0.1, 1.0699999999999998, 0.5], [0.0, 0.47, 1], [0.4, 1.34, 1], [0.13, 2.35, 1], [-0.87, 3.02, 1], [-2.41, 3.08, 1], [-3.75, 2.41, 1], [-4.56, 1.54, 1], [-4.82, 0.94, 1], [-3.89, 0.54, 1], [-2.41, 0.4, 1], [-0.94, 0.54, 1], [-0.2, 0.8, 0.8]]}, {"pts": [[-5.17, 1.75, 0.3], [-5.27, 1.0, 0.9], [-5.37, 0.12, 1], [-5.77, 0.0, 1], [-6.27, 0.0, 1]]}], "exit": -6.27}};
+
+// The fa and qaf head built from the master-fitted waw head (the same round, open loop sitting on the stroke).
+const FA_MASTER_OLD = {"ini": {"s": [{"pts": [[0.25, 0.55, 0.5], [-2.64, 0.2, 1], [-2.74, 1.02, 1], [-2.44, 1.47, 1], [-1.38, 1.4, 1], [-0.26, 0.37, 1], [-0.96, 0.08, 1], [-3.14, 0.0, 1], [-4.14, 0.0, 1]]}], "exit": -4.14, "dotX": -1.37}, "med": {"s": [{"pts": [[0.0, 0.0, 1], [-2.64, 0.2, 1], [-2.74, 1.02, 1], [-2.44, 1.47, 1], [-1.38, 1.4, 1], [-0.26, 0.37, 1], [-0.96, 0.08, 1], [-3.14, 0.0, 1], [-4.14, 0.0, 1]]}], "exit": -4.14, "dotX": -1.37}};
+
+// The fa and qaf head redrawn as a round, open loop about twice the pen width across, so its counter stays open under a heavy
+// pen (the hand-drawn head filled in at roundel weight).
+const FA_MASTER = {"ini": {"s": [{"pts": [[0.15, 1.15, 0.45], [-0.15, 1.55, 1], [-0.95, 2.1, 1], [-1.85, 1.85, 1], [-2.25, 1.1, 1], [-1.95, 0.35, 1], [-1.15, 0.05, 1], [-0.35, 0.2, 0.9], [-1.3, -0.02, 1], [-2.7, 0.0, 1], [-3.3, 0.0, 1]]}], "exit": -3.3, "dotX": -1.1}, "med": {"s": [{"pts": [[0, 0, 1], [0.1, 0.6, 1], [-0.15, 1.55, 1], [-0.95, 2.1, 1], [-1.85, 1.85, 1], [-2.25, 1.1, 1], [-1.95, 0.35, 1], [-1.15, 0.05, 1], [-0.35, 0.2, 0.9], [-1.3, -0.02, 1], [-2.7, 0.0, 1], [-3.3, 0.0, 1]]}], "exit": -3.3, "dotX": -1.1}};

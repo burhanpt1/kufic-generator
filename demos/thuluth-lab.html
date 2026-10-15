@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thuluth lab</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px;min-width:0}
+figure img,figure svg{display:block;width:100%;height:auto;background:#fff;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input{font:inherit;padding:4px 8px;flex:1 1 14em;min-width:0;direction:rtl}select{font:inherit}
+</style>
+</head>
+<body>
+<h1>Thuluth lab (vendored)</h1>
+<p>The thuluth lab as it arrived (prototypes/thuluth-lab/): a pen-stroke engine, not a font. Letters are skeletons drawn with a broad nib at 69°; the letter set is master fits over Calliar-learned forms over hand-drawn ones. This page runs the lab's own code; the repo's TypeScript port is checked against the references below.</p>
+<h2>Write</h2>
+<div class="bar"><input id="t" value="مودة ورحمة" aria-label="Text"><select id="pen" aria-label="Pen"><option value="roundel">Roundel pen (1.6)</option><option value="tile">Tile pen (0.95)</option></select></div>
+<figure style="margin-top:8px"><div id="live"></div><figcaption id="note"></figcaption></figure>
+<h2>Lab references (tests/golden-thuluth-lab)</h2>
+<div class="g" id="refs"></div>
+<script type="module">
+import labSrc from '../prototypes/thuluth-lab/thuluth-lab.bundle.js?raw';
+import manifest from '../tests/golden-thuluth-lab/manifest.json';
+const pngs = import.meta.glob('../tests/golden-thuluth-lab/*.png', { eager: true, query: '?url', import: 'default' });
+// the lab shares globals between its files, so it runs as one classic script
+const s = document.createElement('script');
+s.textContent = labSrc + ';window.__lab={renderLine,useLearned,set:o=>{BODY=o.body;NIB_FLOOR=o.floor;LOOP_GAP=o.gap;}};';
+document.head.append(s);
+const lab = window.__lab, PENS = { roundel: { body: 1.45, floor: 0.3, gap: 1.8, nib: 1.6 }, tile: { body: 1.25, floor: 0.43, gap: 0.9, nib: 0.95 } };
+function draw() {
+  const p = PENS[document.getElementById('pen').value], t0 = performance.now();
+  lab.set(p);
+  lab.useLearned(true, 1 / 1.25 * 1.12);
+  const svg = lab.renderLine(document.getElementById('t').value || ' ', { U: 10, nib: p.nib, ang: 69, pad: 2 });
+  document.getElementById('live').innerHTML = svg;
+  document.getElementById('note').textContent = `${(performance.now() - t0).toFixed(0)} ms in the lab engine`;
+}
+document.getElementById('t').oninput = draw;
+document.getElementById('pen').onchange = draw;
+draw();
+for (const { id } of manifest) {
+  const f = document.createElement('figure');
+  f.innerHTML = `<img alt="${id}" loading="lazy" src="${pngs[`../tests/golden-thuluth-lab/${id}.png`]}"><figcaption>${id}</figcaption>`;
+  document.getElementById('refs').append(f);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+ "text": "زَيْنَب وَقُصَيّ",
+ "layout": {
+  "lv": [
+   2,
+   5,
+   2,
+   0
+  ],
+  "wp": [
+   {
+    "x": 29.672053156432536,
+    "y": -43.52125893293541
+   },
+   {
+    "x": 27.687673586216018,
+    "y": -52.90845246673958
+   }
+  ]
+ },
+ "globals": {
+  "BODY": 1.45,
+  "NIB_FLOOR": 0.3,
+  "LOOP_GAP": 1.8,
+  "useLearned": [
+   true,
+   0.8960000000000001
+  ],
+  "useGreat": {
+   "ya": true,
+   "yaWide": 2.6,
+   "yaDeep": 1.3
+  }
+ },
+ "pen": {
+  "nib": 1.6,
+  "ang": 69
+ },
+ "compose": {
+  "elongate": true,
+  "cross": true,
+  "fillTarget": 0.5,
+  "noRise": true,
+  "cradle": true,
+  "oval": 1.45,
+  "emph": "ب",
+  "kern": true,
+  "tries": 1,
+  "fixed": "layout (with wp[0].y += 1.4)"
+ },
+ "after": [
+  "scaleGroup(r, index of 'و', 0.62, nib)",
+  "r.groups[that].tint = '#2aa6a0'",
+  "placeUnder(r, that, 1, 0.7, 0)",
+  "shapeBowl(r, { oval: 1.45, clear: 5.6, autoOval: true })",
+  "fitFrame(r, { ...pen, markReach: 2.2, ornaments: true, density: 0.6 })"
+ ],
+ "render": {
+  "U": 12,
+  "discScale": 1.0,
+  "noOutline": true,
+  "cobalt": {
+   "field": "#1f3f8f",
+   "gold": "#f4f6f7",
+   "goldDark": "#16306e",
+   "outline": "#16306e",
+   "bg": "#f4f6f7",
+   "counters": "#2aa6a0"
+  },
+  "tiles": {
+   "illum": "iznik",
+   "fold": 8,
+   "density": 3
+  }
+ }
+}
