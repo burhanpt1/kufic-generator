@@ -19,7 +19,15 @@ export interface Polyline {
   kind: 'outline' | 'letter' | 'mark' | 'separator' | 'rule' | 'pattern';
 }
 
-const TILING: Record<string, Tiling> = { square: 'sq', '488': '488', hex: 'hex', '31212': '31212' };
+const TILING: Record<string, Tiling> = {
+  square: 'sq',
+  '488': '488',
+  hex: 'hex',
+  '31212': '31212',
+  mg8: 'mg8',
+  mg10: 'mg10',
+  mg12: 'mg12',
+};
 
 /** Inside test for an even-odd area. */
 function insideArea(a: Area, x: number, y: number): boolean {

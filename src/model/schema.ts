@@ -76,15 +76,25 @@ export interface Separator {
   width: number;
 }
 export interface PatternSpec {
-  tiling: 'square' | '488' | 'hex' | '31212';
+  /** mg8, mg10, mg12: quasi-periodic rhomb tilings (de Bruijn multigrids) with 8-, 10- and 12-fold symmetry. */
+  tiling: 'square' | '488' | 'hex' | '31212' | 'mg8' | 'mg10' | 'mg12';
   /** Contact angle in degrees. */
   angle: number;
   /** Tile edge in cells. */
   scale: number;
 }
+/** Iznik tilework (the thuluth lab's dressing of a multigrid): cobalt vines, saz leaves and hatayi flowers on a
+ *  quasi-periodic rhomb tiling with fold-fold symmetry; scale = rhomb edge in cells. */
+export interface IznikSpec {
+  fold: 8 | 10 | 12;
+  scale: number;
+  /** Square ceramic joints drawn over the field. */
+  seams?: boolean;
+}
 export interface Ground {
-  kind: 'plain' | 'tint' | 'vine' | 'pattern';
+  kind: 'plain' | 'tint' | 'vine' | 'pattern' | 'iznik';
   pattern?: PatternSpec;
+  iznik?: IznikSpec;
 }
 
 export interface TextBorder {
@@ -139,6 +149,8 @@ export type FillerNode =
   | { type: 'lattice'; text: string }
   /** A star pattern; with text, its lines are written in the text (the stars outlined in words). */
   | { type: 'pattern'; pattern: PatternSpec; text?: string }
+  /** Iznik tilework over the whole space. */
+  | { type: 'iznik'; iznik: IznikSpec }
   | { type: 'rings' }
   | { type: 'vine' }
   | { type: 'solid' }
@@ -346,11 +358,20 @@ const separator = z.object({
   width: z.number().min(0).max(12),
 });
 const pattern = z.object({
-  tiling: z.enum(['square', '488', 'hex', '31212']),
+  tiling: z.enum(['square', '488', 'hex', '31212', 'mg8', 'mg10', 'mg12']),
   angle: z.number().min(10).max(85),
   scale: z.number().min(1).max(30),
 });
-const ground = z.object({ kind: z.enum(['plain', 'tint', 'vine', 'pattern']), pattern: pattern.optional() });
+const iznik = z.object({
+  fold: z.union([z.literal(8), z.literal(10), z.literal(12)]),
+  scale: z.number().min(1).max(30),
+  seams: z.boolean().optional(),
+});
+const ground = z.object({
+  kind: z.enum(['plain', 'tint', 'vine', 'pattern', 'iznik']),
+  pattern: pattern.optional(),
+  iznik: iznik.optional(),
+});
 const slotName = z.string().min(1).max(64);
 const border = z.discriminatedUnion('type', [
   z.object({
@@ -432,6 +453,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
     z.object({ type: z.literal('strapwork'), text: slotName, tiling: z.enum(['square', '488', 'hex', '31212']) }),
     z.object({ type: z.literal('lattice'), text: slotName }),
     z.object({ type: z.literal('pattern'), pattern, text: z.string().optional() }),
+    z.object({ type: z.literal('iznik'), iznik }),
     z.object({ type: z.literal('rings') }),
     z.object({ type: z.literal('vine') }),
     z.object({ type: z.literal('solid') }),

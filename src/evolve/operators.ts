@@ -18,6 +18,9 @@ import type { Trait, TraitSpec, Traits } from './genes';
 import type { Rng } from './rng';
 import type { Taste } from './taste';
 
+/** The periodic tilings, the only ones strapwork and breeding use. */
+type StrapTiling = 'square' | '488' | 'hex' | '31212';
+
 export interface OperatorOptions {
   rng: Rng;
   taste?: Taste;
@@ -105,7 +108,7 @@ function fillFor(kind: string, c: Composition, t: Traits, rng: Rng): FillerNode 
     case 'maze':
       return { type: 'maze', text, corridors: 0.7, wall: false, seed: rng.seed(), interlace: !!t.interlace };
     case 'strapwork':
-      return { type: 'strapwork', text, tiling: patternOf(t).tiling };
+      return { type: 'strapwork', text, tiling: patternOf(t).tiling as StrapTiling };
     case 'lattice':
       return { type: 'lattice', text };
     default:
@@ -203,8 +206,7 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
       const key = trait === 'tiling' ? 'tiling' : trait === 'angle' ? 'angle' : 'scale';
       const set = (p?: PatternSpec) => p && ((p as unknown as Record<string, V>)[key] = v);
       if (r.fill?.type === 'pattern') set(r.fill.pattern);
-      if (r.fill?.type === 'strapwork' && trait === 'tiling')
-        r.fill = { ...r.fill, tiling: v as PatternSpec['tiling'] };
+      if (r.fill?.type === 'strapwork' && trait === 'tiling') r.fill = { ...r.fill, tiling: v as StrapTiling };
       tb.forEach(b => set(b.ground?.pattern));
       if (c.root.spandrels?.type === 'pattern') set(c.root.spandrels.pattern);
       break;

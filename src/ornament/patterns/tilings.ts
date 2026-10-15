@@ -1,6 +1,10 @@
 // Tilings for star patterns, as polygons (vertex lists) covering a disc of radius R around (cx, cy). a = edge length.
 export type Poly = number[][];
-export type Tiling = 'sq' | '488' | 'hex' | '31212';
+import { multigrid } from './multigrid';
+
+export type Tiling = 'sq' | '488' | 'hex' | '31212' | 'mg8' | 'mg10' | 'mg12';
+/** The quasi-periodic tilings: symmetry fold of each multigrid. */
+const FOLD: Partial<Record<Tiling, number>> = { mg8: 8, mg10: 10, mg12: 12 };
 
 export function tiles(kind: Tiling, a: number, cx: number, cy: number, R: number): Poly[] {
   const out: Poly[] = [],
@@ -12,6 +16,8 @@ export function tiles(kind: Tiling, a: number, cx: number, cy: number, R: number
       }
       return p;
     };
+  const fold = FOLD[kind];
+  if (fold) return multigrid(fold / 2, R + a * 2, a).map(t => t.q.map(([x, y]) => [cx + x, cy + y]));
   if (kind === 'sq') {
     const n = Math.ceil(R / a) + 1;
     for (let i = -n; i <= n; i++)

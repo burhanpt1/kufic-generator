@@ -12,7 +12,15 @@ import { parsePolys } from '../script/vector';
 import type { PlacedItem } from './placed';
 import { layoutOpts } from './resolve';
 
-const TILING: Record<PatternSpec['tiling'], Tiling> = { square: 'sq', '488': '488', hex: 'hex', '31212': '31212' };
+const TILING: Record<PatternSpec['tiling'], Tiling> = {
+  square: 'sq',
+  '488': '488',
+  hex: 'hex',
+  '31212': '31212',
+  mg8: 'mg8',
+  mg10: 'mg10',
+  mg12: 'mg12',
+};
 /** Height of the letters' ink as a share of the tile edge (a plain pattern line is 0.16 of it). */
 export const WORD_LINE = 0.09;
 

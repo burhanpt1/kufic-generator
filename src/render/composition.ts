@@ -19,6 +19,7 @@ import { NIB, nibSweep, simplify } from './strokes';
 import type { Source } from './letters';
 import type { RenderOptions, Shapes } from './svg';
 import { U, acc, diamond, f2, groupsOut, keyColour, merge, mix, wrap } from './svg';
+import { iznikField } from '../ornament/patterns/multigrid';
 
 export interface RenderPlacedOptions {
   /** Prefix for every id in the SVG; default derived from the seed. */
@@ -26,7 +27,15 @@ export interface RenderPlacedOptions {
   label?: string;
 }
 
-const TILING: Record<string, RenderOptions['tiling']> = { square: 'sq', '488': '488', hex: 'hex', '31212': '31212' };
+const TILING: Record<string, RenderOptions['tiling']> = {
+  square: 'sq',
+  '488': '488',
+  hex: 'hex',
+  '31212': '31212',
+  mg8: 'mg8',
+  mg10: 'mg10',
+  mg12: 'mg12',
+};
 
 export function renderOptions(s: Style, label = ''): RenderOptions {
   return {
@@ -200,6 +209,15 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
           out = pattern(it, o, cid, 0.16);
         } else
           out = `<path fill-rule="evenodd" fill="${it.kind === 'vine' ? vine(s) : it.index % 2 ? mix(o.paper, o.ink, 0.07) : mix(o.paper, o.ink2, 0.15)}" d="${dArea(it.area)}"/>`;
+        break;
+      }
+      case 'tilework': {
+        // the tiling is symmetric about the item's centre; the field is clipped to the area
+        const cid = id('t'),
+          [cx, cy] = P(it.centre),
+          edge = it.iznik.scale * U;
+        defs += `<clipPath id="${cid}"><path clip-rule="evenodd" d="${dArea(it.area)}"/></clipPath>`;
+        out = `<g clip-path="url(#${cid})">${iznikField(Math.max(W, H), { fold: it.iznik.fold, edge, cx, cy, reach: it.radius * U + edge * 2, seams: !!it.iznik.seams, tile: edge * 3, ground: o.paper, cobalt: o.ink, turq: o.ink2, red: o.mark })}</g>`; // prettier-ignore
         break;
       }
       case 'fill':

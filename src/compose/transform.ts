@@ -24,6 +24,8 @@ export function translateItem(it: PlacedItem, d: Pt): PlacedItem {
       return { ...it, area: it.area.map(r => mvs(r, d)), centre: mv(it.centre, d) } as PlacedItem;
     case 'fill':
       return { ...it, area: it.area.map(r => mvs(r, d)) };
+    case 'tilework':
+      return { ...it, area: it.area.map(r => mvs(r, d)), centre: mv(it.centre, d) };
     case 'star':
       return { ...it, centre: mv(it.centre, d) };
     case 'strip':

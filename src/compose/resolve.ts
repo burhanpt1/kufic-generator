@@ -9,7 +9,16 @@ import { shapeOf } from '../geometry/shape';
 import type { ShapeGeometry } from '../geometry/shape';
 import type { Pt, Ring } from '../geometry/types';
 import { parseComposition } from '../model/schema';
-import type { BorderNode, Composition, FillerNode, RegionNode, Separator, Style, TextBorder } from '../model/schema';
+import type {
+  BorderNode,
+  Composition,
+  FillerNode,
+  IznikSpec,
+  RegionNode,
+  Separator,
+  Style,
+  TextBorder,
+} from '../model/schema';
 import { inherit } from '../model/style';
 import { scriptFor } from '../script/registry';
 import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
@@ -23,6 +32,8 @@ export interface ResolveOptions {
 }
 
 const DEFAULT_SEPARATOR: Separator = { kind: 'lines', width: 2 };
+/** Iznik tilework when a ground asks for it without saying which. */
+export const IZNIK: IznikSpec = { fold: 8, scale: 4 };
 
 export interface Ctx {
   comp: Composition;
@@ -284,17 +295,28 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
           i = ringPts(shape, size, dBand + room * fit.s);
         if (o && i) {
           const area: Area = [o, i],
-            dp = deepestPoint(outer);
-          ctx.items.push({
-            type: 'ground',
-            style: sid,
-            kind: b.ground.kind,
-            index: ringNo - 1,
-            area,
-            pattern: b.ground.pattern,
-            centre: dp.p,
-            radius: Math.max(...outer.map(q => Math.hypot(q[0] - dp.p[0], q[1] - dp.p[1]))),
-          });
+            dp = deepestPoint(outer),
+            radius = Math.max(...outer.map(q => Math.hypot(q[0] - dp.p[0], q[1] - dp.p[1])));
+          if (b.ground.kind === 'iznik')
+            ctx.items.push({
+              type: 'tilework',
+              style: sid,
+              area,
+              centre: dp.p,
+              radius,
+              iznik: b.ground.iznik ?? IZNIK,
+            });
+          else
+            ctx.items.push({
+              type: 'ground',
+              style: sid,
+              kind: b.ground.kind,
+              index: ringNo - 1,
+              area,
+              pattern: b.ground.pattern,
+              centre: dp.p,
+              radius,
+            });
         }
       }
       const laid = layRing(bg, fit, ctx.script, p, {
@@ -471,6 +493,8 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
         .forEach(p => ctx.items.push({ type: 'star', style: sid, centre: p.c, r: p.r * 0.92 }));
     else if (sp.type === 'pattern')
       ctx.items.push({ type: 'spandrels', style: sid, kind: 'pattern', area, pattern: sp.pattern, centre, radius });
+    else if (sp.type === 'iznik')
+      ctx.items.push({ type: 'tilework', style: sid, area, centre, radius, iznik: sp.iznik });
     else if (sp.type === 'vine' || sp.type === 'solid')
       ctx.items.push({ type: 'spandrels', style: sid, kind: sp.type, area, centre, radius });
     else ctx.warnings.push(`spandrels of type ${sp.type} are not supported`);

@@ -168,6 +168,8 @@ export function defaultFill(type: FillerNode['type'], c: Composition): FillerNod
       return { type, text: slot };
     case 'pattern':
       return { type, pattern: { tiling: '488', angle: 67, scale: 5 } };
+    case 'iznik':
+      return { type, iznik: { fold: 8, scale: 4 } };
     case 'region':
       return { type, node: { type: 'region', outline: { kind: 'circle' }, borders: [], fill: { type: 'rings' } } };
     default:

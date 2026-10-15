@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quasi-periodic tilings</title>
+<style>
+:root{--bg:#E4E7E2;--surface:#F2F3EF;--ink:#18302F;--muted:#56676A;--line:#C7CDC6}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1B1B;--surface:#162626;--ink:#E1EAE7;--muted:#93A5A2;--line:#2A3C3B}}
+body{margin:0;padding:16px;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px}p{margin:0 0 12px;color:var(--muted);max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
+figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<h1>Quasi-periodic tilings</h1>
+<p>De Bruijn's multigrid, from the thuluth lab: rhomb tilings with exact 8-, 10- and 12-fold symmetry that never repeat. They are now a source for both scripts: the star-pattern tilings <code>mg8</code>, <code>mg10</code> and <code>mg12</code>, with Hankin's polygons-in-contact drawn on the rhombs, and Iznik tilework (cobalt vines, saz leaves, hatayi flowers) as a fill, a band ground, or the corners of a frame.</p>
+<h2>Iznik dressing: the lab's reference, then the port with fewer tiles (at the same settings the port is pixel-identical; see tests/multigrid.test.ts)</h2>
+<div class="row" id="iznik"></div>
+<h2>Star patterns on the rhombs</h2>
+<div class="row" id="stars"></div>
+<h2>In compositions</h2>
+<div class="row" id="comp"></div>
+<script type="module">
+import { resolve } from '../src/compose/index.ts';
+import { renderPlaced } from '../src/render/composition.ts';
+import { DEFAULT_STYLE, PALETTES } from '../src/model/style.ts';
+import { iznikField } from '../src/ornament/patterns/multigrid.ts';
+const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+const png = f => new URL(`../tests/golden-thuluth-lab/tiling-${f}fold.png`, import.meta.url).href;
+const fig = (el, src, cap) => { const f = document.createElement('figure'); f.innerHTML = `<img alt="${cap}" src="${src}"><figcaption>${cap}</figcaption>`; el.append(f); };
+const el = id => document.getElementById(id);
+for (const fold of [8, 10, 12]) {
+  fig(el('iznik'), png(fold), `${fold}-fold, the lab`);
+  fig(el('iznik'), url(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">${iznikField(800, { fold, density: 2 })}</svg>`), `${fold}-fold, here (fewer tiles)`);
+}
+const style = p => ({ ...structuredClone(DEFAULT_STYLE), palette: { ...PALETTES[p] } });
+const comp = (p, fill, frame = {}, ground) => ({ version: 1, seed: 1, canvas: { shape: 'square', margin: 3 }, style: style(p), texts: { m: { text: 'محمد علي فاطمة الحسن الحسين', repeat: 'fill', wordGap: 2 } },
+  root: { type: 'frame', ...frame, child: { type: 'region', outline: { kind: 'circle' }, borders: [{ type: 'textBorder', text: 'm', separator: { kind: 'braid', width: 2 }, ...(ground ? { ground } : {}) }], fill } } });
+for (const [t, a] of [['mg8', 67], ['mg10', 60], ['mg12', 60]])
+  fig(el('stars'), url(renderPlaced(resolve(comp('goldOnLapis', { type: 'pattern', pattern: { tiling: t, angle: a, scale: 4 } })), { idPrefix: t })), `${t}, contact angle ${a}°`);
+fig(el('comp'), url(renderPlaced(resolve(comp('cobalt', { type: 'iznik', iznik: { fold: 10, scale: 4, seams: true } })), { idPrefix: 'f' })), 'Iznik fill, 10-fold, with tile joints');
+fig(el('comp'), url(renderPlaced(resolve(comp('cobalt', { type: 'pattern', pattern: { tiling: 'mg8', angle: 67, scale: 4 } }, { spandrels: { type: 'iznik', iznik: { fold: 8, scale: 4 } } })), { idPrefix: 's' })), 'Iznik corners round an 8-fold star centre');
+fig(el('comp'), url(renderPlaced(resolve(comp('goldOnLapis', { type: 'rings' }, {}, { kind: 'iznik', iznik: { fold: 12, scale: 3 } })), { idPrefix: 'g' })), 'Iznik band ground, gold on lapis');
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ export interface RenderOptions {
   ground: 'plain' | 'tint' | 'vine' | 'geo';
   corners: 'none' | 'stars' | 'geo' | 'vine';
   bandStyle: 'none' | 'lines' | 'pearls' | 'chevron' | 'braid';
-  tiling: 'sq' | '488' | 'hex' | '31212';
+  tiling: 'sq' | '488' | 'hex' | '31212' | 'mg8' | 'mg10' | 'mg12';
   geoAngle: number;
   geoScale: number;
   letterStyle: 'solid' | 'banded';

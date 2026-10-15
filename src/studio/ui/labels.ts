@@ -10,7 +10,7 @@ const NAMES: Record<string, string> = {
   rings: 'Rings', solid: 'Solid', maze: 'Maze', strapwork: 'Strapwork', lattice: 'Woven lattice', flow: 'Flowing lines', seal: 'Seal', mirror: 'Mirror', quad: 'Four-way mirror',
   pinwheel: 'Pinwheel', pinwheelIn: 'Pinwheel inward', block: 'Stacked block', spiral: 'Spiral', tughra: 'Tughra',
   below: 'Above and below', pair: 'Facing pair', stars: 'Stars', square: 'Square', '488': '8-fold',
-  hex: '6-fold', '31212': '12-fold', finial: 'Finials', diamond: 'Diamonds', notch: 'Notched', bevel: 'Bevelled',
+  hex: '6-fold', '31212': '12-fold', mg8: '8-fold rhombs', mg10: '10-fold rhombs', mg12: '12-fold rhombs', iznik: 'Iznik tiles', finial: 'Finials', diamond: 'Diamonds', notch: 'Notched', bevel: 'Bevelled',
   leaf: 'Leaf', palmette: 'Palmette', tall: 'Tall stems', tails: 'Tall stems + tails', all: 'Every stem',
   byRing: 'By ring', byRepeat: 'By repeat', radial: 'Radial', blocks: 'Grid blocks', curved: 'Curved', pen: 'Broad pen',
   fatimid: 'Fatimid', knot: 'Knotted', desc: 'Descending', short: 'Flat', hook: 'Hooked', dots: 'Dots', off: 'None',

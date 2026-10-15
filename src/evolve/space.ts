@@ -61,6 +61,7 @@ export function rasterise(placed: Placed): Uint8Array {
         else if (it.type === 'spandrels') for (const r of it.area) poly(r.map(P), true);
         break;
       case 'pattern':
+      case 'tilework':
         texture(it.area);
         break;
       case 'fill':

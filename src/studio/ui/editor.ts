@@ -39,12 +39,13 @@ const FILL_TYPES: FillerNode['type'][] = [
   'strapwork',
   'lattice',
   'pattern',
+  'iznik',
   'rings',
   'vine',
   'solid',
   'region',
 ];
-const SPANDREL_TYPES = ['stars', 'pattern', 'vine', 'solid'] as const;
+const SPANDREL_TYPES = ['stars', 'pattern', 'iznik', 'vine', 'solid'] as const;
 
 const valid = (c: Composition) => {
   const r = CompositionSchema.safeParse(c);
