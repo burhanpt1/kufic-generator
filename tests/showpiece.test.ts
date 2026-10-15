@@ -45,4 +45,18 @@ describe('Light upon light', () => {
       writeFileSync('docs/showpiece/light-upon-light.svg', s.svg);
     }
   }, 120000);
+  it.each([
+    ['rosette', 'verse'],
+    ['rosette', 'nur'],
+  ] as const)(
+    'experiments: a %s core with rays of %s',
+    (core, rays) => {
+      const plain = nurSheet(),
+        s = nurSheet({ core, rays });
+      expect(s.warnings).toEqual([]);
+      expect(s.svg).not.toBe(plain.svg);
+      expect(s.svg).toContain('mask="url(#nur-fade)"');
+    },
+    120000,
+  );
 });
