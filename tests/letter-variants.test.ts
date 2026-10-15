@@ -44,4 +44,8 @@ describe('letter variants', () => {
     };
     expect(loopWidth(10)).toBe(loopWidth(0));
   });
+  it('draw گ with a second arm, not as ك', () => {
+    const grid = (t: string) => Array.from(wordGrid(kufi, t, { ...DEFAULT_STYLE.letter, ascenders: 7 }, 0)!.g.data);
+    expect(grid('گل')).not.toEqual(grid('كل'));
+  });
 });

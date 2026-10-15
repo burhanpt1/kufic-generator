@@ -7,7 +7,7 @@ import { V } from '../glyphs/overrides';
 const TEETH = new Set(['BEH', 'NOON', 'YEH']);
 /** Letters with a small closed loop that justification may not widen when loops are rigid (a wide م reads as ص). */
 const LOOPS = new Set(['MEEM', 'WAW', 'FEH', 'QAF', 'HEH']);
-const TAILS = new Set(['BEH', 'NOON', 'YEH', 'HAH', 'SEEN', 'SAD', 'AIN', 'FEH', 'QAF', 'KAF', 'MEEM']);
+const TAILS = new Set(['BEH', 'NOON', 'YEH', 'HAH', 'SEEN', 'SAD', 'AIN', 'FEH', 'QAF', 'KAF', 'GAF', 'MEEM']);
 
 export interface Prepared {
   words: Word[];

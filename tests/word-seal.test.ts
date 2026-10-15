@@ -131,6 +131,29 @@ describe('word seals', () => {
     expect(joined).toBe(1); // the alif of الرحمن into the alif of الرحيم
     expect(gaps).toBeGreaterThan(0); // their lams, one above the other, stay apart
   });
+  it.each(['نور', 'سلام', 'دوست'])('frame a one-word seal: %s', text => {
+    clearMonogramCache();
+    const m = buildMonogram('seal', { H: 7, frame: 'square' }, text, kufi, DEFAULT_STYLE.letter)!;
+    expect(m.grid.w).toBe(m.grid.h);
+    for (let t = 0; t < m.grid.w; t++) expect(m.grid.data[t]).toBeTruthy();
+  });
+  it('centre a short lone word rather than stretch it across the block (يا over لطيف)', () => {
+    const b = wordBlock(kufi, words('يا لطيف'), DEFAULT_STYLE.letter, [7, 10])!,
+      g = b.grid;
+    expect(b.lines).toEqual([['يا'], ['لطيف']]);
+    // the first line's ink spans well under the block's width
+    let top = -1;
+    for (let y = 0; y < g.h && top < 0; y++) if (g.data.subarray(y * g.w, y * g.w + g.w).some(v => v)) top = y;
+    let x0 = g.w,
+      x1 = -1;
+    for (let y = top; y < top + b.H; y++)
+      for (let x = 0; x < g.w; x++)
+        if (g.data[y * g.w + x] === 1 || g.data[y * g.w + x] === 4) {
+          x0 = Math.min(x0, x);
+          x1 = Math.max(x1, x);
+        }
+    expect(x1 - x0 + 1).toBeLessThan(0.8 * (g.w - 2));
+  });
   it('are deterministic', () => {
     const a = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!,
       b = wordBlock(kufi, words('الحمد لله رب العالمين'), DEFAULT_STYLE.letter, [9, 12])!;
