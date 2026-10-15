@@ -48,6 +48,9 @@ export function renderOptions(s: Style, label = ''): RenderOptions {
     letterStyle: s.stroke.banded ? 'banded' : 'solid',
     stroke: s.stroke.kind,
     curve: s.stroke.corner,
+    contrast: s.stroke.contrast ?? 0,
+    taper: s.stroke.taper ?? 0,
+    flourish: s.terminals.flourish ?? 'none',
   };
 }
 

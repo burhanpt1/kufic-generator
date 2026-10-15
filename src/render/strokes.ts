@@ -78,6 +78,52 @@ export function nibSweep(P: P2[], L: number, t: number, angle: number, colour: s
   return `<path d="${d}" fill="${colour}" stroke="${colour}" stroke-width="${f2(t)}" stroke-linejoin="round"/>`;
 }
 
+/** A stroke of varying width as one filled outline: a quad per segment, each end at its own width, and a disc at
+ *  every point for round joins and caps. Screen coordinates; one winding throughout, so nonzero fill unions them. */
+function widthOutline(P: P2[], W: number[], colour: string): string {
+  let d = '';
+  for (let i = 0; i + 1 < P.length; i++) {
+    const [ax, ay] = P[i],
+      [bx, by] = P[i + 1],
+      l = Math.hypot(bx - ax, by - ay) || 1,
+      nx = -(by - ay) / l,
+      ny = (bx - ax) / l,
+      ha = W[i] / 2,
+      hb = W[i + 1] / 2;
+    let q: P2[] = [
+      [ax + nx * ha, ay + ny * ha],
+      [bx + nx * hb, by + ny * hb],
+      [bx - nx * hb, by - ny * hb],
+      [ax - nx * ha, ay - ny * ha],
+    ];
+    const area = (q[1][0] - q[0][0]) * (q[2][1] - q[0][1]) - (q[1][1] - q[0][1]) * (q[2][0] - q[0][0]);
+    if (area < 0) q = q.reverse();
+    d += 'M' + q.map(([x, y]) => f2(x) + ' ' + f2(y)).join('L') + 'Z';
+  }
+  P.forEach(([x, y], i) => {
+    const r = W[i] / 2;
+    d += `M${f2(x - r)} ${f2(y)}A${f2(r)} ${f2(r)} 0 1 1 ${f2(x + r)} ${f2(y)}A${f2(r)} ${f2(r)} 0 1 1 ${f2(x - r)} ${f2(y)}Z`;
+  });
+  return `<path d="${d}" fill="${colour}"/>`;
+}
+
+/** Straight runs of a chain's cells in one direction (dx, dy), as index ranges [i, j] of at least `min` cells. */
+function runs(P: P2[], dx: number, dy: number, min: number): [number, number][] {
+  const out: [number, number][] = [];
+  let i = 0;
+  for (let j = 1; j <= P.length; j++) {
+    const go =
+      j < P.length &&
+      Math.abs(P[j][0] - P[j - 1][0]) === Math.abs(dx) &&
+      Math.abs(P[j][1] - P[j - 1][1]) === Math.abs(dy);
+    if (!go) {
+      if (j - i >= min) out.push([i, j - 1]);
+      i = j;
+    }
+  }
+  return out;
+}
+
 export function strokeLetters(
   src: Source,
   opt: RenderOptions & StrokeOptions,
@@ -108,7 +154,48 @@ export function strokeLetters(
   const pen = opt.stroke === 'pen',
     cap = R > 0 ? 'round' : 'square',
     join = R > 0 ? 'round' : 'miter';
-  const drawPath = (pts: P2[], closed: boolean, s: number, colour: string, width: number) => {
+  const contrast = pen ? 0 : (opt.contrast ?? 0),
+    taper = pen ? 0 : (opt.taper ?? 0),
+    shaped = contrast > 0 || taper > 0;
+  /** Width factor at each point of a chain: thinner where it runs across the band (contrast) and toward a free stem
+   *  end (taper, over its last three cells). `ends` marks which ends are stem tips. */
+  const widths = (pts: P2[], ends: [boolean, boolean]) => {
+    const n = pts.length,
+      len = [0];
+    for (let i = 1; i < n; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    return pts.map((_, i) => {
+      const a = pts[Math.max(0, i - 1)],
+        b = pts[Math.min(n - 1, i + 1)],
+        tx = Math.abs(b[0] - a[0]),
+        ty = Math.abs(b[1] - a[1]),
+        across = tx + ty ? ty / (tx + ty) : 0;
+      let f = 1 - 0.5 * contrast * across;
+      const T = 3;
+      if (ends[0] && len[i] < T) f *= 1 - taper * 0.6 * (1 - len[i] / T);
+      if (ends[1] && len[n - 1] - len[i] < T) f *= 1 - taper * 0.6 * (1 - (len[n - 1] - len[i]) / T);
+      return f;
+    });
+  };
+  const drawPath = (
+    pts: P2[],
+    closed: boolean,
+    s: number,
+    colour: string,
+    width: number,
+    ends?: [boolean, boolean],
+  ) => {
+    if (!pen && shaped) {
+      const f = widths(pts, ends ?? [false, false]);
+      push(
+        col,
+        widthOutline(
+          mapped(pts),
+          f.map(k => k * width * s),
+          colour,
+        ),
+      );
+      return;
+    }
     if (!pen) {
       push(
         col,
@@ -130,8 +217,10 @@ export function strokeLetters(
         push(col, `<circle cx="${f2(X)}" cy="${f2(Y)}" r="${f2((w * s) / 2)}" fill="${col}"/>`);
         return null;
       }
-      drawPath(pts, ch.closed, s, col, w);
-      if (banded) drawPath(pts, ch.closed, s, paper, w * 0.4);
+      const tip = (e: P2) => !ch.closed && src.at(e[0], e[1]) === 4,
+        ends: [boolean, boolean] = [tip(ch.pts[0]), tip(ch.pts[ch.pts.length - 1])];
+      drawPath(pts, ch.closed, s, col, w, ends);
+      if (banded) drawPath(pts, ch.closed, s, paper, w * 0.4, ends);
       return { ch, pts, s };
     })
     .filter((d): d is { ch: { pts: P2[]; closed: boolean }; pts: P2[]; s: number } => !!d);
@@ -169,6 +258,40 @@ export function strokeLetters(
       break;
     }
   });
+  // flourishes: a leaf sprouting from each long free stem (one ending in open space), on its open side, angled
+  // toward its tip (Fatimid floriated Kufic). Only where a clear patch beside the stem leaves room, so a leaf never
+  // reads as a stroke of the letter; never on bowls and bodies, never on frames.
+  if (!pen && opt.flourish === 'sprouts') {
+    const empty = (x: number, y: number) => !isInk(x, y),
+      // not on frames (closed rings, or strokes running along the grid's edge)
+      edge = (P: P2[]) => P.some(([x, y]) => x <= 0 || y <= 0 || x >= W - 1 || y >= H - 1),
+      clear = (x: number, y: number, side: number) =>
+        [-1, 0, 1].every(dy => empty(x + side, y + dy) && empty(x + 2 * side, y + dy));
+    drawn.forEach(({ ch }, k) => {
+      if (ch.closed || edge(ch.pts)) return;
+      const last = ch.pts.length - 1;
+      for (const [i, j] of runs(ch.pts, 0, 1, 5)) {
+        // the run must end the strand: its tip is free
+        const tipAt = j === last ? j : i === 0 ? i : -1;
+        if (tipAt < 0) continue;
+        const from = tipAt === j ? i : j,
+          m = ch.pts[Math.round(from + (tipAt - from) * 0.6)],
+          [x, y] = m,
+          dyTip = Math.sign(ch.pts[tipAt][1] - y) || -1,
+          openL = clear(x, y, -1),
+          openR = clear(x, y, 1);
+        if (!openL && !openR) continue;
+        const side = openL && openR ? (k % 2 ? 1 : -1) : openL ? -1 : 1,
+          l = Math.SQRT2,
+          ux = side / l,
+          uy = dyTip / l,
+          rx = -uy,
+          ry = ux;
+        const at = (u: number, v: number) => mapPt(x + 0.5 + u * rx + v * ux, y + 0.5 + u * ry + v * uy);
+        push(col, pathFrom(termCmds('leaf', w * 0.8), at).replace('<path ', `<path fill="${col}" `));
+      }
+    });
+  }
   // floriated ends, oriented along the last stretch of each strand
   if (ts !== 'none')
     drawn.forEach(({ ch }) => {

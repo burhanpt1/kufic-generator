@@ -57,6 +57,10 @@ export const TRAITS = {
   marks: { values: ['dots', 'off'], label: 'Dots' },
   alternates: { values: [false, true], label: 'Long letter forms' },
   plait: { values: [false, true], label: 'Plaited stems' },
+  // curved strokes only: thick horizontals and thin verticals, stem ends thinning to a point, leaves on free stems
+  contrast: { values: [0, 0.4, 0.7], ordinal: true, label: 'Thick and thin' },
+  stemTaper: { values: [0, 0.5, 0.8], ordinal: true, label: 'Tapered stem ends' },
+  sprouts: { values: [false, true], label: 'Leaves on stems', prior: { true: 0.5 } },
 } as const satisfies Record<string, TraitSpec>;
 export type Trait = keyof typeof TRAITS;
 export type Traits = { [K in Trait]?: string | number | boolean };
@@ -124,6 +128,9 @@ export function traitsOf(c: Composition): Traits {
   t.marks = c.style.letter.marks;
   t.alternates = !!c.style.letter.alternates;
   t.plait = !!tb[0]?.plait;
+  t.contrast = c.style.stroke.contrast ?? 0;
+  t.stemTaper = c.style.stroke.taper ?? 0;
+  t.sprouts = c.style.terminals.flourish === 'sprouts';
   return t;
 }
 

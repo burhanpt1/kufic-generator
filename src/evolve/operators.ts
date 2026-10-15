@@ -234,6 +234,15 @@ export function applyTrait(c: Composition, trait: Trait, v: V, rng: Rng): void {
     case 'plait':
       tb.forEach(b => (b.plait = !!v && s.stroke.kind !== 'blocks'));
       break;
+    case 'contrast':
+      s.stroke.contrast = v as number;
+      break;
+    case 'stemTaper':
+      s.stroke.taper = v as number;
+      break;
+    case 'sprouts':
+      s.terminals.flourish = v ? 'sprouts' : 'none';
+      break;
   }
 }
 
@@ -252,6 +261,7 @@ export function relevantTraits(c: Composition): Trait[] {
       return t.fill === 'pattern' || t.ground === 'pattern' || t.spandrels === 'pattern';
     if (k === 'reach') return t.terminal !== 'none';
     if (k === 'corner') return t.stroke !== 'blocks';
+    if (k === 'contrast' || k === 'stemTaper' || k === 'sprouts') return t.stroke === 'curved';
     // plaits need tall stems, and text in bands, lines or a maze
     if (k === 'plait') return (t.ascenders as number) >= 9 && (t.borders as number) > 0 && t.stroke !== 'blocks';
     return true;

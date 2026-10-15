@@ -17,8 +17,23 @@ export interface Palette {
 export interface Style {
   script: 'kufi';
   letter: LetterStyle;
-  stroke: { kind: 'blocks' | 'curved' | 'pen'; corner: number; weight: number; softness: number; banded: boolean };
-  terminals: { kind: 'none' | 'notch' | 'bevel' | 'leaf' | 'palmette'; reach: 'tall' | 'tails' | 'all' };
+  stroke: {
+    kind: 'blocks' | 'curved' | 'pen';
+    corner: number;
+    weight: number;
+    softness: number;
+    banded: boolean;
+    /** Curved strokes: verticals thinner than horizontals by up to half (0 = even width, the default). */
+    contrast?: number;
+    /** Curved strokes: free stem ends thin toward their tips (0 = none, the default). */
+    taper?: number;
+  };
+  terminals: {
+    kind: 'none' | 'notch' | 'bevel' | 'leaf' | 'palmette';
+    reach: 'tall' | 'tails' | 'all';
+    /** Curved strokes: leaves sprouting from long free stems, where there is room beside them. */
+    flourish?: 'none' | 'sprouts';
+  };
   palette: Palette;
   colouring: 'solid' | 'byRing' | 'byRepeat' | 'radial';
   /** Abjad conventions: ة counts 5 or 400; Eastern (mashriqi) or Western (maghribi) values. */
@@ -165,10 +180,13 @@ const stroke = z.object({
   weight: z.number().min(0.1).max(1.2),
   softness: z.number().min(0).max(1),
   banded: z.boolean(),
+  contrast: z.number().min(0).max(1).optional(),
+  taper: z.number().min(0).max(1).optional(),
 });
 const terminals = z.object({
   kind: z.enum(['none', 'notch', 'bevel', 'leaf', 'palmette']),
   reach: z.enum(['tall', 'tails', 'all']),
+  flourish: z.enum(['none', 'sprouts']).optional(),
 });
 const palette = z.object({ ink: colour, ink2: colour, paper: colour, mark: colour });
 const abjadOpts = z.object({

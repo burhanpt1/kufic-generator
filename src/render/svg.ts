@@ -29,6 +29,11 @@ export interface RenderOptions {
   stroke?: 'blocks' | 'curved' | 'pen';
   /** Corner rounding for curved and pen strokes. */
   curve?: number;
+  /** Curved strokes: verticals thinner than horizontals (0..1), and free stem ends thinning to their tips (0..1). */
+  contrast?: number;
+  taper?: number;
+  /** Curved strokes: leaves along long stems and tendrils along long horizontal runs. */
+  flourish?: 'none' | 'sprouts';
 }
 
 /** Letter output grouped by fill colour, plus vowel marks (drawn in the mark colour). */
