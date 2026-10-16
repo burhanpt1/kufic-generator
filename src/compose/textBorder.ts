@@ -120,43 +120,55 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
   if (!o.fixed && hi < lo) return null; // the band can't be drawn at an acceptable size here
   const range = (a: number, b: number) => Array.from({ length: 29 }, (_, i) => a - (i * (a - b)) / 28);
   const search = (scales: number[], mode: 'words' | 'breaks', scaleCost: boolean): RingFit | null => {
-    let best: RingFit | null = null;
     const segs0 = script.segments(prepared, mode, o.wordGap) as Segs;
     if (!segs0.length) return null;
     const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length,
       minSeg = Math.min(...segs0.map(x => x.minW));
-    for (const s of scales) {
+    // every (scale, runs used) to try, with the least score any fit there can have: its partition's slack is never
+    // negative, so the rest of the score is a floor. Tried cheapest floor first, a candidate whose floor can't beat
+    // the best so far is skipped without partitioning; ties go to the earlier candidate in scale order, as when they
+    // were tried in that order, so the fit found is the same.
+    type Cand = { s: number; c: number[]; use: NonNullable<ReturnType<typeof usableRuns>>; sc: number; floor: number; order: number }; // prettier-ignore
+    const cands: Cand[] = [];
+    scales.forEach((s, si) => {
       const c = capacities(bg, prepared.Hb, s, room);
-      if (!c) continue;
+      if (!c) return;
       // runs that would hold only a lone word may also stay blank, as a master leaves a finial or a neck plain
       const uses = [usableRuns(bg, c, minSeg), usableRuns(bg, c, minSeg * ORPHAN_RUN)].filter(
         (u, i, a): u is NonNullable<typeof u> => !!u && (i === 0 || u.ord.length !== a[0]?.ord.length),
       );
-      for (const use of uses) {
-        const G = c.length,
-          cOrd = use.ord.map(g => c[(G - g) % G]),
-          sum = cOrd.reduce((a, b) => a + b, 0);
-        const rep0 = Math.max(1, Math.ceil(cOrd.length / segs0.length)),
-          // enough repeats to fill the band, however short the text is against it
-          repMax = o.once ? rep0 : Math.max(14, Math.ceil((sum + o.wordGap) / one) + 1);
-        if (o.once && rep0 > 1) continue;
-        for (let rep = rep0; rep <= repMax; rep++) {
-          if (rep * one - o.wordGap > sum + 1) break;
-          const p = partition(repeat(segs0, rep), cOrd);
-          if (!p) continue;
-          const orphans = cOrd.length > 1 ? p.groups.filter(g => g.length === 1).length : 0,
-            score =
-              p.score +
-              (o.fixed || !scaleCost ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget) +
-              (mode === 'breaks' ? 0.15 : 0) +
-              SKIP_COST * use.skip +
-              ORPHAN_COST * orphans;
-          if (!best || score < best.score) {
-            // groups in reading order for every run; skipped runs get none
-            const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
-            use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
-            best = { s, rep, groups, caps: c, mode, score, room, slack: p.score };
-          }
+      uses.forEach((use, ui) => {
+        const sc = o.fixed || !scaleCost ? 0 : (0.5 * Math.abs(s - o.sTarget)) / o.sTarget,
+          // a hair under the true floor, so rounding can never skip a candidate that could win
+          floor = sc + (mode === 'breaks' ? 0.15 : 0) + SKIP_COST * use.skip - 1e-9;
+        cands.push({ s, c, use, sc, floor, order: si * 2 + ui });
+      });
+    });
+    cands.sort((a, b) => a.floor - b.floor || a.order - b.order);
+    let best: RingFit | null = null,
+      bestOrder = Infinity;
+    for (const { s, c, use, sc, floor, order } of cands) {
+      if (best && floor > best.score) continue;
+      const G = c.length,
+        cOrd = use.ord.map(g => c[(G - g) % G]),
+        sum = cOrd.reduce((a, b) => a + b, 0);
+      const rep0 = Math.max(1, Math.ceil(cOrd.length / segs0.length)),
+        // enough repeats to fill the band, however short the text is against it
+        repMax = o.once ? rep0 : Math.max(14, Math.ceil((sum + o.wordGap) / one) + 1);
+      if (o.once && rep0 > 1) continue;
+      for (let rep = rep0; rep <= repMax; rep++) {
+        if (rep * one - o.wordGap > sum + 1) break;
+        const p = partition(repeat(segs0, rep), cOrd);
+        if (!p) continue;
+        const orphans = cOrd.length > 1 ? p.groups.filter(g => g.length === 1).length : 0,
+          // summed in the same order as ever, so equal fits compare equal
+          score: number = p.score + sc + (mode === 'breaks' ? 0.15 : 0) + SKIP_COST * use.skip + ORPHAN_COST * orphans;
+        if (!best || score < best.score || (score === best.score && order < bestOrder)) {
+          // groups in reading order for every run; skipped runs get none
+          const groups: Segs[] = Array.from({ length: G }, () => [] as unknown as Segs);
+          use.ord.forEach((g, k) => (groups[g] = p.groups[k] as Segs));
+          best = { s, rep, groups, caps: c, mode, score, room, slack: p.score };
+          bestOrder = order;
         }
       }
     }
