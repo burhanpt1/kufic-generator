@@ -1,5 +1,6 @@
 // Robust polygon offsetting with Clipper2 (replaces the prototype's offsetPoly, which folded over at sharp tips).
 import { EndType, JoinType, inflatePathsD } from '@countertype/clipper2-ts';
+import { clipper2, fromPathsD, toPathsD } from '../kernels/clipper2';
 import { detectCorners } from './corners';
 import type { CornerOptions } from './corners';
 import { area, dedupe, orientCCW, perimeter } from './poly';
@@ -10,18 +11,32 @@ const PRECISION = 4;
 const MITER_LIMIT = 4;
 
 /** All pieces of the outline offset inward by d (outward if negative), counter-clockwise, largest first. */
-export function offsetPolyline(P: Pt[], d: number): Pt[][] {
-  if (Math.abs(d) < 1e-12) return [P.slice()];
-  const out = inflatePathsD(
-    [P.map(([x, y]) => ({ x, y }))],
-    -d,
+/** Mitred offset of closed polygons by d (outward if positive): Clipper2's C++ once it has loaded (2–3× faster; the
+ *  same shapes, though rounding can move a point by a hair), else its TypeScript port. */
+export function inflate(paths: Pt[][], d: number, miterLimit = MITER_LIMIT, precision = PRECISION): Pt[][] {
+  const C = clipper2();
+  if (C) {
+    const ps = toPathsD(C, paths),
+      r = C.InflatePathsD(ps, d, C.JoinType.Miter, C.EndType.Polygon, miterLimit, precision, 0);
+    ps.delete();
+    const out = fromPathsD(r);
+    r.delete();
+    return out;
+  }
+  return inflatePathsD(
+    paths.map(P => P.map(([x, y]) => ({ x, y }))),
+    d,
     JoinType.Miter,
     EndType.Polygon,
-    MITER_LIMIT,
-    PRECISION,
-  );
-  return out
-    .map(path => orientCCW(dedupe(path.map(q => [q.x, q.y] as Pt))))
+    miterLimit,
+    precision,
+  ).map(path => path.map(q => [q.x, q.y] as Pt));
+}
+
+export function offsetPolyline(P: Pt[], d: number): Pt[][] {
+  if (Math.abs(d) < 1e-12) return [P.slice()];
+  return inflate([P], -d)
+    .map(path => orientCCW(dedupe(path)))
     .filter(p => p.length >= 3)
     .sort((a, b) => area(b) - area(a));
 }

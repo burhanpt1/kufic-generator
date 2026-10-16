@@ -1,9 +1,9 @@
 // resolve(composition) -> Placed (COMPOSITION_ENGINE.md §3.3): regions, then their borders outermost first (each
 // yields the inner outline for the next), then the fill, with features on every ring.
-import { EndType, FillRule, JoinType, differenceD, inflatePathsD, intersectD } from '@countertype/clipper2-ts';
+import { FillRule, differenceD, intersectD } from '@countertype/clipper2-ts';
 import polylabel from 'polylabel';
 import { deepestPoint } from '../geometry/deepest';
-import { insetRing } from '../geometry/offset';
+import { inflate, insetRing } from '../geometry/offset';
 import { area, bounds, dedupe, orientCCW } from '../geometry/poly';
 import { shapeOf } from '../geometry/shape';
 import type { ShapeGeometry } from '../geometry/shape';
@@ -525,13 +525,6 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
 }
 
 /** Outward offset helper (for spandrel frames and nested regions). */
-export const outsetPts = (P: Pt[], d: number): Pt[] =>
-  orientCCW(
-    dedupe(
-      inflatePathsD([P.map(([x, y]) => ({ x, y }))], d, JoinType.Miter, EndType.Polygon, 4, 4)[0].map(
-        q => [q.x, q.y] as Pt,
-      ),
-    ),
-  );
+export const outsetPts = (P: Pt[], d: number): Pt[] => orientCCW(dedupe(inflate([P], d, 4, 4)[0]));
 export { insetRing };
 export type { FillerNode };
