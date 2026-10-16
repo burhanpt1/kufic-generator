@@ -20,6 +20,8 @@ figure svg{display:block;width:100%;height:auto;background:#f4efe3;border-radius
 <div class="bar"><input type="text" id="t" value="بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيمِ" aria-label="Text"><select id="pen" aria-label="Pen"><option value="tile">Tile pen</option><option value="roundel">Roundel pen</option></select><label><input type="checkbox" id="v" checked> vowels</label><select id="mode" aria-label="Segments"><option value="words">whole words</option><option value="breaks">breaks inside words</option></select></div>
 <div id="out" style="margin-top:10px"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { thuluthScript, parsePolys } from '../src/script/thuluth/adapter.ts';
 import { ROUNDEL_PEN, TILE_PEN } from '../src/script/thuluth/engine.ts';
 import { DEFAULT_STYLE } from '../src/model/style.ts';

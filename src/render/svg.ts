@@ -2,8 +2,19 @@
 
 /** Screen units per cell. */
 export const U = 10;
-/** Number formatting used in every coordinate: at most 2 decimals, no trailing zeros. */
-export const f2 = (n: number) => (Math.round(n * 100) / 100).toString();
+/** Number formatting used in every coordinate: at most 2 decimals, no trailing zeros. The same string as
+ *  `(Math.round(n * 100) / 100).toString()`, built from the integer of hundredths, which is about twice as fast (it is
+ *  the hottest function in a large render). */
+const HUNDREDTHS = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09'];
+export const f2 = (n: number): string => {
+  const r = Math.round(n * 100);
+  if (!(r > -9e15 && r < 9e15)) return (r / 100).toString(); // NaN, infinities, huge values: the plain path
+  if (r === 0) return '0';
+  const a = r < 0 ? -r : r,
+    f = a % 100,
+    s = (r < 0 ? '-' : '') + (a - f) / 100;
+  return f === 0 ? s : f % 10 === 0 ? s + '.' + f / 10 : s + '.' + (f < 10 ? HUNDREDTHS[f] : f);
+};
 export const markW = (w: number) => Math.min(w, 0.5);
 export const diamondR = (w: number) => 0.42 + 0.22 * w;
 

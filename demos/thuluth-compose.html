@@ -21,6 +21,8 @@ select{font:inherit}
 <label>Pen <select id="pen"><option value="band">Band (nib 1.3)</option><option value="line">Line (1.05)</option><option value="tile">Tile (0.95, 2.5:1)</option><option value="roundel">Roundel (1.6, 6:1)</option></select></label>
 <div id="out"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { resolve } from '../src/compose/index.ts';
 import { renderPlaced } from '../src/render/composition.ts';
 import { PRESETS, TEXTS } from '../src/model/presets.ts';

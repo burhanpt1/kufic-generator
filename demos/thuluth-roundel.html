@@ -21,6 +21,8 @@ figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{fon
 <h2>As a composition fill</h2>
 <div class="row" id="comp"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { resolve } from '../src/compose/index.ts';
 import { renderPlaced } from '../src/render/composition.ts';
 import { DEFAULT_STYLE, PALETTES } from '../src/model/style.ts';

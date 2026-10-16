@@ -4,7 +4,7 @@ import { EvalPool } from '../../evolve/pool';
 import type { Taste } from '../../evolve/taste';
 import { train } from '../../evolve/trainer';
 import type { Rating, TasteModel } from '../../evolve/trainer';
-import { loadSealWasm } from '../../kernels/seal';
+import { loadKernels } from '../../kernels';
 import { resolve } from '../../compose';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
@@ -56,7 +56,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-await loadSealWasm();
+await loadKernels();
 
 let comp: Composition = structuredClone(PRESETS[0].comp),
   svg = '',

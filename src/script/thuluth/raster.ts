@@ -2,6 +2,7 @@
 // occupancy, counters). It reproduces what the lab relied on: each fill() is the antialiased non-zero union of its
 // polygons (4 sub-scanlines per pixel, exact coverage along each), composited source-over into an 8-bit alpha channel, so thresholds such as
 // "alpha > 100" mean what they meant in the lab. Expect small differences at edges, not in shape.
+import { fillAlpha } from '../../kernels/raster';
 import type { Poly } from './types';
 
 /** Sub-scanlines per pixel; coverage along each is measured exactly. */
@@ -34,6 +35,8 @@ export class Alpha {
       py0 = Math.max(0, Math.floor(y0)),
       py1 = Math.min(H - 1, Math.ceil(y1));
     if (px0 > px1 || py0 > py1) return;
+    // the WebAssembly kernel when it can (the same bytes), else the same scan here
+    if (fillAlpha(this.a, W, polys, px0, px1, py0, py1)) return;
     const bw = px1 - px0 + 1,
       cov = new Float32Array(bw * (py1 - py0 + 1));
     // edges, with direction for the non-zero rule

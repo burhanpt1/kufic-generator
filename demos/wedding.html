@@ -19,6 +19,8 @@ figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{fon
 <p>The lab's wedding cartouche rebuilt with the whole engine: the names in thuluth (their pinned layout, the great returning ya, the conjunction small and turquoise, marks solved with plumes in the gaps, turquoise counters) on fine Iznik tiles; round them Ar-Rum 30:21 in square Kufic, read once from the star at the bottom; eight-fold Iznik tiles to the edge of an A3 sheet. <code>npm run wedding</code> writes the print files.</p>
 <div class="row" id="out"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { weddingSheet } from '../src/showpiece/wedding.ts';
 const out = document.getElementById('out');
 for (const v of ['cobalt', 'lapis']) {
