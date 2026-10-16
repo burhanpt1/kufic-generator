@@ -20,6 +20,9 @@ figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{fon
 <h2>Final and isolated kaf, rebuilt</h2>
 <p>The lab's final kaf was a leaning shaft over a short foot, so بارك read as بارد or بارل. It now has an upright under a shoulder stroke, a long base that lifts at its end, and the small kaf sign inside.</p>
 <div class="row" id="kaf"></div>
+<h2>Lam, isolated ba, medial kaf, initial heh, final seen (17 October)</h2>
+<p>Found by the rasm confusion matrix (the lab's checker, and the port's own in src/script/thuluth/checker.ts, which caught the seen): the learned initial and medial lam were a quarter of their height and read as teeth; the learned isolated ba dropped below the line like a ra; the medial kaf had no shoulder, so لكما read as للما; the initial heh matched the fa's head; and the final and isolated seen had no bowl at all.</p>
+<div class="row" id="fixes"></div>
 <h2>Vowels under deep tails</h2>
 <p>A kasra under a final mim or nun used to be dropped when the tail filled the band below. It now sits under the letter's body beside the tail, and a crowded dagger alif searches further before giving up (never further than its own letter).</p>
 <div class="row" id="marks"></div>
@@ -35,6 +38,9 @@ const text = 'بارك بارد ملك كتب';
 fig('kaf', thuluth({ ...ROUNDEL_PEN, labLetters: true }).renderLine(text, { U: 10 }), 'The lab: <bdi>بارك</bdi> reads as <bdi>بارل</bdi>');
 fig('kaf', thuluth(ROUNDEL_PEN).renderLine(text, { U: 10 }), 'Now');
 fig('kaf', thuluth(TILE_PEN).renderLine('بارك الله لك', { U: 10 }), 'Now, at the tile pen: <bdi>بارك الله لك</bdi>');
+const fixText = 'لكما علم باب هم الناس شمس';
+fig('fixes', thuluth({ ...ROUNDEL_PEN, labLetters: true }).renderLine(fixText, { U: 10 }), 'The lab');
+fig('fixes', thuluth(ROUNDEL_PEN).renderLine(fixText, { U: 10 }), 'Now: <bdi>' + fixText + '</bdi>');
 function vocal(th, t) { const pv = parseVowels(t), b = th.buildStrokes(pv.bare), m = lineMarks(th, b, pv.marks, 16, -6); return [th.drawSVG([...b.strokes, ...m.strokes], b.dots, { U: 10 }), m.missing]; }
 for (const t of ['بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 'وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُمْ']) {
   const [svg, missing] = vocal(thuluth(ROUNDEL_PEN), t);

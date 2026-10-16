@@ -13,6 +13,7 @@ import {
   thuluth,
   toPixels,
 } from '../src/script/thuluth';
+import { confusionMatrix } from '../src/script/thuluth/checker';
 import { buildRoundel, findCounters } from '../src/script/thuluth/roundel';
 
 const PENS = { roundel: ROUNDEL_PEN, tile: TILE_PEN };
@@ -133,6 +134,8 @@ const PAIRS: [string, string, [string, Form], [string, Form]][] = [
   ['بارك', 'بارل', ['ك', 'iso'], ['ل', 'iso']],
   ['ملك', 'ملل', ['ك', 'fin'], ['ل', 'fin']],
   ['ورد', 'وود', ['ر', 'iso'], ['و', 'iso']],
+  ['باب', 'بار', ['ب', 'iso'], ['ر', 'iso']],
+  ['لكما', 'للما', ['ك', 'med'], ['ل', 'med']],
 ];
 describe('confusable letters stay apart', () => {
   for (const [pn, pen] of Object.entries(PENS))
@@ -196,6 +199,58 @@ describe('the lab letters stay available', () => {
       now = thuluth(ROUNDEL_PEN);
     expect(lab.glyphFor('ك', 'iso')!.s).toHaveLength(2);
     expect(now.glyphFor('ك', 'iso')!.s).toHaveLength(4);
-    expect(lab.renderLine('محمد رسول الله')).toBe(now.renderLine('محمد رسول الله'));
+    expect(lab.renderLine('زينب وقصي')).toBe(now.renderLine('زينب وقصي'));
+  });
+});
+
+describe('letter forms the lab got wrong (session of 17 October)', () => {
+  const height = (th: Thuluth, c: string, form: Form) => Math.max(...th.glyphFor(c, form)!.s.flatMap(sd => sd.pts.map(q => q[1]))); // prettier-ignore
+  const depth = (th: Thuluth, c: string, form: Form) => Math.min(...th.glyphFor(c, form)!.s.flatMap(sd => sd.pts.map(q => q[1]))); // prettier-ignore
+  for (const [pn, pen] of Object.entries(PENS)) {
+    it(`initial and medial lam stand at least 80% of the alif's height (${pn} pen)`, () => {
+      const th = thuluth(pen),
+        alif = height(th, 'ا', 'iso');
+      for (const form of ['ini', 'med'] as Form[])
+        expect(height(th, 'ل', form), form).toBeGreaterThanOrEqual(0.8 * alif);
+      // the lab's learned lam was a quarter of that
+      expect(height(thuluth({ ...pen, labLetters: true }), 'ل', 'ini')).toBeLessThan(0.5 * alif);
+    });
+    it(`isolated ba sits on the line, never dropping like a ra (${pn} pen)`, () => {
+      for (const c of 'بتث') expect(depth(thuluth(pen), c, 'iso'), c).toBeGreaterThanOrEqual(-0.6);
+    });
+    it(`final and isolated seen have their bowl (${pn} pen)`, () => {
+      const th = thuluth(pen);
+      for (const form of ['fin', 'iso'] as Form[]) {
+        expect(th.glyphFor('س', form), form).not.toBe(th.glyphFor('س', 'ini'));
+        expect(depth(th, 'س', form), form).toBeLessThan(-1.5);
+      }
+      expect(th.buildStrokes('شمس').dots).toHaveLength(3);
+    });
+  }
+});
+
+describe('the rasm confusion matrix', () => {
+  // pairs below the threshold today, all among the dense loop heads (heh, fa and qaf, mim), each held at its present
+  // distance: they may get further apart, never closer. Heh is the weakest letter until a master example is found.
+  const THRESHOLD = 0.3;
+  const KNOWN: Record<string, Record<string, number>> = {
+    roundel: { 'ف/ه ini': 0.179, 'ق/ه ini': 0.179, 'م/ه med': 0.248, 'ف/ه med': 0.266, 'ق/ه med': 0.266, 'ف/م med': 0.28, 'ق/م med': 0.28 }, // prettier-ignore
+    tile: { 'ف/ه ini': 0.224, 'ق/ه ini': 0.224, 'ف/م med': 0.243, 'ق/م med': 0.243, 'ف/ه med': 0.29, 'ق/ه med': 0.29 }, // prettier-ignore
+  };
+  for (const [pn, pen] of Object.entries(PENS))
+    it(`no other letter shapes come within ${THRESHOLD} of each other (${pn} pen)`, () => {
+      const known = KNOWN[pn];
+      for (const c of confusionMatrix(thuluth(pen))) {
+        if (c.d >= THRESHOLD) break;
+        const key = `${c.a}/${c.b} ${c.form}`;
+        expect(known[key], `${key} at ${c.d.toFixed(3)}`).toBeDefined();
+        expect(c.d, key).toBeGreaterThanOrEqual(known[key] - 0.005);
+      }
+    });
+  it('catches what it was written to catch: the lab letters fail it', () => {
+    const m = confusionMatrix(thuluth({ ...ROUNDEL_PEN, labLetters: true })),
+      d = (a: string, b: string, form: string) => m.find(c => c.form === form && c.a === a && c.b === b)!.d;
+    expect(d('ب', 'ل', 'ini')).toBeLessThan(0.3); // the short learned lam reads as a tooth
+    expect(d('ف', 'ه', 'ini')).toBeLessThan(confusionMatrix(thuluth(ROUNDEL_PEN)).find(c => c.form === 'ini' && c.a === 'ف' && c.b === 'ه')!.d); // prettier-ignore
   });
 });
