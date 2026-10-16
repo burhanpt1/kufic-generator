@@ -25,12 +25,13 @@ const SPEC = [
 ];
 
 describe('thuluth line engine', () => {
+  // the lab's own letters: the later fixes (fixes.ts) are meant to differ from it
   it('reproduces every lab line reference exactly, at the roundel pen and the tile pen', () => {
     for (const [pen, style] of [
       ['roundel', ROUNDEL_PEN],
       ['tile', TILE_PEN],
     ] as const) {
-      const th = thuluth(style);
+      const th = thuluth({ ...style, labLetters: true });
       SPEC.forEach((t, i) => {
         const id = `line-${String(i).padStart(2, '0')}-${pen}`;
         expect(th.renderLine(t, { U: 10, pad: 2 }), id).toBe(readFileSync(join(dir, `${id}.svg`), 'utf8'));

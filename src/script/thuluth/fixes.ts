@@ -1,6 +1,7 @@
 // Letters redrawn after the lab, where its forms fail a legibility rule (tests/thuluth-legibility.test.ts). They sit
 // over the generated table (letters.data.ts), which stays as the lab left it.
-import type { Family, Form, LetterForm } from './types';
+import { LETTERS } from './letters.data';
+import type { Family, Form, LetterForm, SkelPt } from './types';
 
 /** Final and isolated kaf, in the thuluth construction: an upright from the shoulder stroke at the top down to a long
  *  flat base that turns up at its end, with the small kaf sign inside. The lab's form was a leaning shaft over a
@@ -19,6 +20,87 @@ const KAF_END: LetterForm = {
   ],
 }; // prettier-ignore
 
+/** The lab's hand-drawn lam stem (engine3.js LAM_STEM): the alif's height and lean, nib turned to 38°, curving into
+ *  the join at the foot. The learned initial lam rose only a quarter of that (it read as a tooth) and the learned
+ *  medial one rose and retraced its way down (lab session of 17 October). */
+const LAM_STEM = (dx: number, exitX: number) =>
+  ({
+    ang: 38,
+    lean: true,
+    pts: [[0.65 + dx, 10.0, 0.2], [0.25 + dx, 9.7, 0.8], [0.0 + dx, 9.05, 1], [0.0 + dx, 5.5, 1], [-0.05 + dx, 1.6, 0.95], [-0.2 + dx, 0.45, 0.9], [-0.75 + dx, 0.05, 1], [exitX, 0.0, 1]], // prettier-ignore
+  }) as LetterForm['s'][number];
+const LAM_INI: LetterForm = { src: 'hand', exit: -1.8, s: [LAM_STEM(0, -1.8)] };
+const LAM_MED: LetterForm = {
+  src: 'hand',
+  exit: -2.6,
+  s: [
+    {
+      pts: [
+        [0, 0],
+        [-1.0, 0],
+      ],
+    },
+    LAM_STEM(-1.0, -2.6),
+  ],
+};
+
+/** Isolated ba, ta, tha: the lab's hand-drawn long flat boat on the baseline. The learned form, a final misfiled in
+ *  the dataset, dropped below the line like a ra. */
+const TOOTH_ISO: LetterForm = {
+  src: 'hand',
+  exit: null,
+  dotX: -2.2,
+  s: [{ pts: [[0.3, 1.0, 0.3], [0.1, 0.35, 0.8], [-0.4, -0.15], [-1.6, -0.3], [-3.3, -0.2], [-4.2, 0.1], [-4.6, 0.65, 0.45], [-4.7, 1.3, 0.12]] }], // prettier-ignore
+};
+
+/** Medial kaf: the (learned) initial kaf, its hook, long shoulder slanting down to the left and diagonal back to the
+ *  base, after a joining stroke, everything 0.6 to the left. The hand-drawn one was a near-upright over a short base,
+ *  so لكما read as للما. */
+const KAF_MED: LetterForm = {
+  src: 'hand',
+  exit: -5.36,
+  s: [
+    {
+      pts: [
+        [0, 0, 1],
+        [-0.6, 0, 1],
+      ],
+    },
+    { pts: [[-1.51, 4.99, 0.55], [-0.6, 6.91, 1], [-0.66, 7.18, 1], [-1.19, 7.33, 1], [-3.09, 6.37, 1], [-5.68, 4.5, 1], [-5.81, 4.25, 1], [-5.67, 3.78, 1], [-3.7, 1.94, 1], [-3.3, 1.02, 1], [-3.43, 0.46, 1], [-3.84, 0.02, 1], [-4.82, -0.18, 1], [-5.36, 0.0, 1]] }, // prettier-ignore
+  ],
+};
+
+/** Initial heh with two eyes (as in ھ), clearly unlike the fa's single round head: the hand-drawn one differed from
+ *  initial fa by its dot alone. The medial heh stays: a figure-of-eight came out too close to medial mim. */
+const HEH_INI: LetterForm = {
+  src: 'hand',
+  exit: -2.4,
+  s: [
+    { pts: [[-0.2, 0.5, 0.5], [0.15, 1.4, 1], [-0.2, 2.3, 1], [-0.95, 2.55, 1], [-1.55, 2.05, 1], [-1.35, 1.25, 1], [-0.6, 0.95, 1], [0.0, 1.05, 0.9]] }, // prettier-ignore
+    { pts: [[-0.05, 1.0, 1], [-0.45, 0.35, 1], [-1.15, 0.05, 1], [-1.75, 0.3, 1], [-1.55, 0.75, 1], [-0.95, 0.55, 1], [-1.35, 0.05, 1], [-2.4, 0.0, 1]] }, // prettier-ignore
+  ],
+};
+
+/** Final and isolated seen, which neither the lab nor its data had (the initial teeth stood in, with no tail, so
+ *  الناس read as الناسـ): the seen's teeth, then the final nun's bowl from where they leave the baseline, as the
+ *  letter is built. The dots of shin stay over the teeth. */
+const sinEnd = (teeth: LetterForm): LetterForm => {
+  const bowl = LETTERS.nun.fin!,
+    dx = teeth.exit!;
+  return {
+    src: 'hand',
+    exit: null,
+    dotX: teeth.dotX,
+    s: [...teeth.s, ...bowl.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x + dx, y, w, c] as SkelPt) }))],
+  };
+};
+const SIN_FIN = sinEnd(LETTERS.sin.med!),
+  SIN_ISO = sinEnd(LETTERS.sin.ini!);
+
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
-  kaf: { fin: KAF_END, iso: KAF_END },
+  kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
+  lam: { ini: LAM_INI, med: LAM_MED },
+  tooth: { iso: TOOTH_ISO },
+  ha: { ini: HEH_INI },
+  sin: { fin: SIN_FIN, iso: SIN_ISO },
 };
