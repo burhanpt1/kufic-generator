@@ -222,24 +222,33 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           iy = Math.round(Y(gy));
         cells.push([gx, gy, ix >= 0 && iy >= 0 && ix < Wd && iy < Hd ? dist[iy * Wd + ix] / K : 0]);
       }
+  // each item's clearance to every cell is kept, and only a moved item's row is measured again (an annealing step
+  // moves one item): the same distances and the same exact minimum, at a fraction of the work
+  const nC = cells.length,
+    rowX = new Float64Array(items.length).fill(NaN),
+    rowY = new Float64Array(items.length),
+    rowR = new Float64Array(items.length),
+    rows = new Float64Array(items.length * nC);
   const gapCost = () => {
     let e2 = 0;
-    const n = items.length,
-      ix = new Float64Array(n),
-      iy = new Float64Array(n),
-      ir = new Float64Array(n);
-    items.forEach((it, k) => {
-      const [w, h] = boxOf(it);
-      ix[k] = it.x;
-      iy[k] = it.y;
-      ir[k] = Math.hypot(w, h) / 2;
-    });
-    for (const [gx, gy, d0] of cells) {
-      let d = d0;
-      for (let k = 0; k < n; k++) d = Math.min(d, Math.max(0, Math.hypot(gx - ix[k], gy - iy[k]) - ir[k]));
+    const n = items.length;
+    for (let k = 0; k < n; k++) {
+      const it = items[k],
+        [w, h] = boxOf(it),
+        r = Math.hypot(w, h) / 2;
+      if (it.x === rowX[k] && it.y === rowY[k] && r === rowR[k]) continue;
+      rowX[k] = it.x;
+      rowY[k] = it.y;
+      rowR[k] = r;
+      for (let c = 0; c < nC; c++)
+        rows[c * n + k] = Math.max(0, Math.hypot(cells[c][0] - it.x, cells[c][1] - it.y) - r);
+    }
+    for (let c = 0; c < nC; c++) {
+      let d = cells[c][2];
+      for (let k = 0, o = c * n; k < n; k++) d = Math.min(d, rows[o + k]);
       if (d > 1.6) e2 += (d - 1.6) ** 2;
     }
-    return e2 / Math.max(1, cells.length);
+    return e2 / Math.max(1, nC);
   };
   const itemCost = (it: Item) => {
     const [w, h] = boxOf(it);

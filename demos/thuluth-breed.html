@@ -21,6 +21,8 @@ button{font:inherit;padding:4px 12px}
 <p><button id="again">New generation</button></p>
 <div class="g" id="g"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { freshGeneration } from '../src/evolve/breed.ts';
 import { Rng } from '../src/evolve/rng.ts';
 import { traitsOf } from '../src/evolve/genes.ts';

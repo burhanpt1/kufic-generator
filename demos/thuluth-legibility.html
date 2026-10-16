@@ -26,6 +26,8 @@ figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{fon
 <h2>Confusable pairs</h2>
 <div class="row" id="pairs"></div>
 <script type="module">
+import { loadKernels } from '../src/kernels/index.ts';
+await loadKernels();
 import { ROUNDEL_PEN, TILE_PEN, thuluth, parseVowels, lineMarks } from '../src/script/thuluth/index.ts';
 const url = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 const fig = (el, svg, cap) => { const f = document.createElement('figure'); f.innerHTML = `<img alt="" src="${url(svg)}"><figcaption>${cap}</figcaption>`; document.getElementById(el).append(f); };

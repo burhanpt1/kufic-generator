@@ -1,4 +1,5 @@
 // Split segment lists into rings / sides, and find the smallest composition size that fits.
+import { partitionBounds } from '../kernels/partition';
 import type { Seg, Segs } from '../types';
 
 export interface Partition {
@@ -46,8 +47,20 @@ export function partition(segs: Segs, caps: number[]): Partition | null {
   const G = caps.length,
     n = segs.length;
   if (n < G) return null;
-  const width = widthFn(segs),
-    INF = 1e18,
+  const width = widthFn(segs);
+  // the WebAssembly kernel when it can run it (same result), else the same dynamic program here
+  const b = partitionBounds(segs, caps);
+  if (b !== undefined) {
+    if (!b) return null;
+    const groups: Seg[][] = [];
+    let slack = 0;
+    for (let g = G; g > 0; g--) {
+      groups.unshift(segs.slice(b[g - 1], b[g]));
+      slack += (caps[g - 1] - width(b[g - 1], b[g])) / caps[g - 1];
+    }
+    return { groups, score: slack / G };
+  }
+  const INF = 1e18,
     PEN = 0.3;
   const f = Array.from({ length: G + 1 }, () => new Float64Array(n + 1).fill(INF)),
     from = Array.from({ length: G + 1 }, () => new Int32Array(n + 1));
