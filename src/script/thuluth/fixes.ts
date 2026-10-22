@@ -70,14 +70,17 @@ const KAF_MED: LetterForm = {
   ],
 };
 
-/** Initial heh with two eyes (as in ھ), clearly unlike the fa's single round head: the hand-drawn one differed from
- *  initial fa by its dot alone. The medial heh stays: a figure-of-eight came out too close to medial mim. */
+/** Initial heh, the split heh of the thuluth masters (traced from tasmeemme.com's construction): from the head, down
+ *  the left wall and back up the inner diagonal, closing the upper eye; then from the head a small flag, round the
+ *  outer crescent and back along the line into the join, leaving a slanted sliver of a lower eye. Written with the
+ *  nib at 40°, so the walls and the crescent are heavy and the diagonal light; the pen turns back to the line's angle
+ *  where the next letter begins. The long join keeps the eyes clear of a following stem. */
 const HEH_INI: LetterForm = {
   src: 'hand',
-  exit: -2.4,
+  exit: -3.62,
   s: [
-    { pts: [[-0.2, 0.5, 0.5], [0.15, 1.4, 1], [-0.2, 2.3, 1], [-0.95, 2.55, 1], [-1.55, 2.05, 1], [-1.35, 1.25, 1], [-0.6, 0.95, 1], [0.0, 1.05, 0.9]] }, // prettier-ignore
-    { pts: [[-0.05, 1.0, 1], [-0.45, 0.35, 1], [-1.15, 0.05, 1], [-1.75, 0.3, 1], [-1.55, 0.75, 1], [-0.95, 0.55, 1], [-1.35, 0.05, 1], [-2.4, 0.0, 1]] }, // prettier-ignore
+    { ang: 40, pts: [[-1.94, 2.32, 0.46], [-2.09, 1.91, 0.59], [-2.33, 1.41, 0.66], [-2.41, 0.96, 0.66], [-2.33, 0.53, 0.66], [-1.89, 0.36, 0.66], [-1.33, 0.48, 0.59], [-1.03, 0.91, 0.53], [-1.02, 1.4, 0.53], [-1.26, 1.77, 0.53], [-1.57, 2.05, 0.46]] }, // prettier-ignore
+    { ang: 40, pts: [[-1.96, 2.44, 0.33], [-1.18, 2.04, 0.4, 1], [-0.64, 1.73, 0.59], [-0.26, 1.29, 0.66], [-0.07, 0.73, 0.66], [-0.15, 0.22, 0.66], [-0.46, -0.02, 0.66], [-1.12, -0.01, 0.66], [-1.98, 0, 0.66], [-2.8, 0, 0.66], [-3.62, 0, 0.66]] }, // prettier-ignore
   ],
 };
 

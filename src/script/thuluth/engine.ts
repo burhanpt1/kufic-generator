@@ -276,9 +276,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             q[3],
           ]);
         let target: Raw;
-        if (si === 0 && connects && open && near(pts[0], [p.ox, oy])) {
+        if (si === 0 && connects && open && near(pts[0], [p.ox, oy]) && (sd.ang ?? ang) === open.ang) {
           open.pts.push(...pts.slice(1));
           target = open;
+        } else if (si === 0 && connects && open && near(pts[0], [p.ox, oy])) {
+          // a letter written at its own pen angle (the heh's) hands over here: the pen turns where this letter begins
+          const last = open.pts[open.pts.length - 1];
+          target = { ang: sd.ang ?? ang, pts: [[last[0], last[1], last[2]], ...pts.slice(1)] };
+          raws.push(target);
         } else {
           target = { ang: sd.ang ?? ang, pts };
           raws.push(target);
