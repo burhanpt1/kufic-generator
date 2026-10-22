@@ -17,7 +17,8 @@ export interface BowlOptions {
   /** How far the bowl leads out left of the join before dropping, and the tail's extra turn. */
   lead?: number;
   tailAng?: number;
-  /** Where the letter's dots sit along the bowl (share of its left half). */
+  /** Where the letter's dots sit along the bowl (share of its left half; negative goes right), or by default the
+   *  first of a few places, from the middle out, that keeps clear of the other letters' dots. */
   dotAt?: number;
   /** Search the oval's proportion too. */
   autoOval?: boolean;
@@ -55,6 +56,7 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
     X1 = -1e9,
     Y0 = 1e9,
     Y1 = -1e9;
+  const other: [number, number][] = [];
   r.shapes.forEach((_, i) =>
     letters(r, i).forEach(p => {
       if (i === gi && p === B) return;
@@ -63,6 +65,7 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
         st.pts.forEach(q => {
           const x = r.st[i].x + p.ox + q[0] * s2,
             y = r.st[i].y + (p.oy || 0) + q[1] * s2;
+          other.push([x, y]);
           X0 = Math.min(X0, x);
           X1 = Math.max(X1, x);
           Y0 = Math.min(Y0, y);
@@ -77,11 +80,26 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
   const lead = o.lead ?? 2.0,
     cx = (X0 + X1) / 2,
     bottom = Math.min(Y0, J.y) - clear;
-  const cy = Math.min(J.y - 1.2, Math.max(bottom + 2, (Y0 + Y1) / 2 - (Y1 - Y0) * 0.1)),
-    b = cy - bottom;
-  const aL = Math.max(cx - (J.x - lead), cx - X0 + side),
+  const cy = Math.min(J.y - 1.2, Math.max(bottom + 2, (Y0 + Y1) / 2 - (Y1 - Y0) * 0.1));
+  let b = cy - bottom,
+    aL = Math.max(cx - (J.x - lead), cx - X0 + side),
     aR = X1 - cx + side;
+  const size0 = aL + aR + b;
+  // every letter below the centre line stays inside the bowl by a pen's width and a gap: a descending tail (a ra's)
+  // low at the side, where the bowl rises, widens that side, and anything too deep lowers the bottom
+  const gap = th.style.nib + 1.0;
+  for (let pass = 0; pass < 3; pass++)
+    other.forEach(([x, y]) => {
+      const dy = cy - y;
+      if (dy <= 0) return;
+      if (dy > b - gap) b = dy + gap + 0.01;
+      const need = gap + Math.abs(x - cx) / Math.sqrt(1 - (dy / (b - gap)) ** 2);
+      if (x < cx) aL = Math.max(aL, need);
+      else aR = Math.max(aR, need);
+    });
   const E = (t: number): [number, number] => [cx + (Math.cos(t) < 0 ? aL : aR) * Math.cos(t), cy + b * Math.sin(t)];
+  // how far the letters pushed the bowl out, for choosing between arrangements
+  r.bowlGrow = (aL + aR + b) / size0 - 1;
   const ts = Math.PI,
     te = Math.PI * 2 - 0.12 + (o.tailAng || 0),
     pts: SkelPt[] = [[J.x, J.y, 1]];
@@ -120,10 +138,23 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
   };
   const dg = S.b.dotGroups.find(d => d.li === B.li);
   if (dg) {
-    const tx = cx - aL * (o.dotAt ?? 0.42),
-      cth = Math.acos(Math.max(-1, Math.min(1, (tx - cx) / aL))),
-      ty = cy - b * Math.sin(cth) + 1.7; // just inside the curve at that point
-    Object.assign(dg, { x: tx - G.x, y: ty - G.y, x0: tx - G.x - 1, x1: tx - G.x + 1, top: ty - G.y + 1.6, bot: ty - G.y + 0.9 }); // prettier-ignore
+    const at = (t: number): [number, number] => {
+      const a = t >= 0 ? aL : aR,
+        tx = cx - a * t,
+        cth = Math.acos(Math.max(-1, Math.min(1, (tx - cx) / a)));
+      return [tx, cy - b * Math.sin(cth) + 1.7]; // just inside the curve at that point
+    };
+    // the other letters' dots, so the bowl's own do not join them (a nun's beside a ya's pair reads as a third)
+    const dots = r.shapes.flatMap((S2, i) => (i === gi ? [] : S2.b.dotGroups.map(d => [d.x + r.st[i].x, d.y + r.st[i].y]))); // prettier-ignore
+    const room = ([x, y]: [number, number]) => Math.min(1e9, ...dots.map(([a, c]) => Math.hypot(x - a, y - c)));
+    const cands = [0, 0.15, -0.15, 0.3, -0.3, 0.42, -0.42].map(at),
+      [tx, ty] =
+        o.dotAt != null
+          ? at(o.dotAt)
+          : (cands.find(q => room(q) >= th.style.nib * 3) ?? cands.reduce((m, q) => (room(q) > room(m) ? q : m)));
+    // the letter it belongs to lies beneath dots above it (a nun's) and above dots below it (a ya's)
+    const [top, bot] = dg.side > 0 ? [ty - 1.2, ty - 2] : [ty + 1.6, ty + 0.9];
+    Object.assign(dg, { x: tx - G.x, y: ty - G.y, x0: tx - G.x - 1, x1: tx - G.x + 1, top: top - G.y, bot: bot - G.y }); // prettier-ignore
   }
   // the frame around the new ink
   const ink: [number, number][] = [];

@@ -37,7 +37,7 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   },
   great: { ya: true, yaWide: 2.6, yaDeep: 1.3 },
   tweaks: [{ at: 'و', scale: 0.62, tint: '#2AA6A0', under: { group: 1, gap: 0.7 } }],
-  bowl: { clear: 5.6, autoOval: true },
+  bowl: { clear: 5.6, autoOval: true, dotAt: 0.42 },
   markReach: 2.2,
   ornaments: true,
   density: 0.6,

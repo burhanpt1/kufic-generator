@@ -67,6 +67,9 @@ export type PlacedItem =
       s: number;
       framed: boolean;
       colours: Required<RoundelColours>;
+      /** Tiles under the letters, and the rim's form. */
+      fieldTiles?: IznikSpec & { wash?: number };
+      rimStyle?: 'single' | 'double';
     } & RoundelDrawing);
 
 /** A roundel's drawing in its own units (pen units, y down, centred on the oval), ready to scale onto the canvas. */

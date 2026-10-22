@@ -25,6 +25,8 @@ export interface GroupTweak {
   tint?: string;
   /** Centred under the last letter of another group (by index), with a gap. */
   under?: { group: number; gap?: number; dx?: number };
+  /** Moved by (dx, dy) pen units, after it is placed. */
+  move?: [number, number];
 }
 /** Everything that makes a roundel, as data (the lab's layouts/*.json recipes). */
 export interface RoundelSpec {
@@ -43,10 +45,7 @@ export interface BuiltRoundel {
   f: Finished;
 }
 
-/** Compose, adjust and finish a roundel. Null when the text has no letters. */
-export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
-  const r = composeRoundel(th, spec.text, spec.compose)[0];
-  if (!r) return null;
+function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
   for (const t of spec.tweaks || []) {
     const gi = r.groups.findIndex(g => g.s === t.at);
     if (gi < 0) continue;
@@ -54,8 +53,27 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
     if (t.tint) r.groups[gi].tint = t.tint;
     if (t.under && t.under.group !== gi && r.groups[t.under.group])
       placeUnder(r, gi, t.under.group, t.under.gap ?? 1, t.under.dx ?? 0);
+    if (t.move) r.st[gi] = { x: r.st[gi].x + t.move[0], y: r.st[gi].y + t.move[1] };
   }
   if (spec.bowl) shapeBowl(th, r, spec.bowl);
+  return r;
+}
+
+/** The arrangements a great bowl is weighed over, best first by the composer's own measure. */
+const BOWL_CHOICES = 6;
+
+/** Compose, adjust and finish a roundel. Null when the text has no letters. With a great bowl, the composer's best
+ *  arrangements are each finished with their bowl, and the first whose bowl clears the letters as drawn (within a
+ *  little widening) is kept, else the one that needed the least: the composer places the letters before the bowl is
+ *  redrawn, so it cannot see a tail that the new bowl will run into. */
+export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+  const all = composeRoundel(th, spec.text, spec.compose);
+  if (!all.length) return null;
+  let r: Roundel;
+  if (spec.bowl && all.length > 1) {
+    const done = all.slice(0, BOWL_CHOICES).map(c => adjust(th, structuredClone(c), spec));
+    r = done.find(c => (c.bowlGrow ?? 0) <= 0.08) ?? done.reduce((m, c) => ((c.bowlGrow ?? 0) < (m.bowlGrow ?? 0) ? c : m)); // prettier-ignore
+  } else r = adjust(th, all[0], spec);
   const f = spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {});
   return { r, f };
 }

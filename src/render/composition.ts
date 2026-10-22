@@ -296,17 +296,52 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
                 defs += `<linearGradient id="${rd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.rim}"/><stop offset="0.5" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.rim}"/></linearGradient>`;
                 return `url(#${rd})`;
               })();
-        out =
-          `<g transform="translate(${f2(px)} ${f2(py)}) scale(${f2(it.s * U)})">` +
-          (it.framed
+        const at = `<g transform="translate(${f2(px)} ${f2(py)}) scale(${f2(it.s * U)})">`,
+          frame = it.framed
             ? e(Rout + it.rim * (OV - 1) + wide, Rout, rim, 0.12) +
-              e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08)
-            : '') +
-          e(it.Rf + wide, it.Rf, `url(#${fd})`, it.framed ? 0.1 : 0) +
-          (c.counters && it.counters ? `<path fill="${c.counters}" d="${it.counters}"/>` : '') +
-          `<path fill="url(#${gd})" d="${it.ink}"/>` +
-          it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('') +
-          '</g>';
+              (it.rimStyle === 'single' ? '' : e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08))
+            : '',
+          letters =
+            (c.counters && it.counters ? `<path fill="${c.counters}" d="${it.counters}"/>` : '') +
+            `<path fill="url(#${gd})" d="${it.ink}"/>` +
+            it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('');
+        if (it.fieldTiles) {
+          // tiles under the letters, clipped to the field and washed with its colour; the letters haloed in it
+          const ft = it.fieldTiles,
+            cid = id('rt'),
+            rx = (it.Rf + wide) * it.s * U,
+            ry = it.Rf * it.s * U,
+            edge = ft.scale * U,
+            all = it.ink + it.tints.map(t => t.d).join('');
+          defs += `<clipPath id="${cid}"><ellipse cx="${f2(px)}" cy="${f2(py)}" rx="${f2(rx)}" ry="${f2(ry)}"/></clipPath>`;
+          out =
+            at +
+            frame +
+            '</g>' +
+            `<g clip-path="url(#${cid})"><rect x="${f2(px - rx)}" y="${f2(py - ry)}" width="${f2(rx * 2)}" height="${f2(ry * 2)}" fill="${o.paper}"/>` + // prettier-ignore
+            iznikField(Math.max(W, H), {
+              fold: ft.fold,
+              edge,
+              cx: px,
+              cy: py,
+              keep: (x, y) => Math.abs(x - px) < rx + edge * 2 && Math.abs(y - py) < ry + edge * 2,
+              reach: Math.hypot(rx, ry) + edge * 2,
+              seams: !!ft.seams,
+              tile: edge * 3,
+              ground: o.paper,
+              cobalt: o.ink,
+              turq: o.ink2,
+              red: o.mark,
+            }) + // prettier-ignore
+            `<ellipse cx="${f2(px)}" cy="${f2(py)}" rx="${f2(rx)}" ry="${f2(ry)}" fill="${c.field}" fill-opacity="${f2(ft.wash ?? 0.5)}"/></g>` + // prettier-ignore
+            at +
+            e(it.Rf + wide, it.Rf, 'none', it.framed ? 0.1 : 0) +
+            `<path fill="${c.field}" stroke="${c.field}" stroke-width="1.1" stroke-linejoin="round" d="${all}"/>` +
+            letters +
+            '</g>';
+          break;
+        }
+        out = at + frame + e(it.Rf + wide, it.Rf, `url(#${fd})`, it.framed ? 0.1 : 0) + letters + '</g>';
         break;
       }
       case 'abjad':

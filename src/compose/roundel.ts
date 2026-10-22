@@ -122,7 +122,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
   const s = fit.s * 0.97;
   if (f.ground)
     ctx.items.push({ type: 'tilework', style: sid, area: [inner.pts], centre: fit.c, radius: Math.max(...inner.pts.map(q => Math.hypot(q[0] - fit.c[0], q[1] - fit.c[1]))), iznik: f.ground }); // prettier-ignore
-  ctx.items.push({ type: 'roundel', style: sid, centre: fit.c, s, framed, colours, ...art });
+  ctx.items.push({ type: 'roundel', style: sid, centre: fit.c, s, framed, colours, fieldTiles: f.fieldTiles, rimStyle: f.rim, ...art }); // prettier-ignore
   ctx.fill = {
     type: 'roundel',
     scale: s,

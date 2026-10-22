@@ -56,6 +56,8 @@ export interface Roundel {
   groups: RGroup[];
   lv: number[];
   wp: { x: number; y: number }[];
+  /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
+  bowlGrow?: number;
 }
 
 export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {

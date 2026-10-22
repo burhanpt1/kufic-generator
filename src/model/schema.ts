@@ -167,6 +167,11 @@ export type FillerNode =
       colours?: RoundelColours;
       /** Iznik tiles over the space round the cartouche (it sits on them, as on a tile panel). */
       ground?: IznikSpec;
+      /** Iznik tiles under the letters, inside the field, washed with the field colour (0–1, default 0.5) so the
+       *  letters read; the letters then get a halo in the field colour. */
+      fieldTiles?: IznikSpec & { wash?: number };
+      /** The rim: a band with a fine inner line (double, the default) or the band alone (single). */
+      rim?: 'single' | 'double';
     };
 
 /** How a roundel is made (the thuluth lab's layout recipes): composer options, a pinned layout, hand adjustments. */
@@ -196,9 +201,12 @@ export interface RoundelRecipe {
     scale?: number;
     tint?: string;
     under?: { group: number; gap?: number; dx?: number };
+    /** Moved by (dx, dy) pen units after it is placed. */
+    move?: [number, number];
   }[];
-  /** Redraw a great final bowl along the frame. */
-  bowl?: { clear?: number; side?: number; tailUp?: number; lead?: number; autoOval?: boolean };
+  /** Redraw a great final bowl along the frame; dotAt places its dots along it (share of the left half, negative to
+   *  the right; by default the middle, or the nearest place clear of other dots). */
+  bowl?: { clear?: number; side?: number; tailUp?: number; lead?: number; autoOval?: boolean; dotAt?: number };
   /** Marks: how far a vowel may sit from its letter; ornaments in the gaps and their density. */
   markReach?: number;
   ornaments?: boolean;
@@ -310,10 +318,20 @@ const roundelRecipe = z
           scale: z.number().min(0.2).max(2).optional(),
           tint: colour.optional(),
           under: z.object({ group: z.number().int().min(0), gap: num.optional(), dx: num.optional() }).optional(),
+          move: z.tuple([z.number().min(-40).max(40), z.number().min(-40).max(40)]).optional(),
         }),
       )
       .max(20),
-    bowl: z.object({ clear: num, side: num, tailUp: num, lead: num, autoOval: z.boolean() }).partial(),
+    bowl: z
+      .object({
+        clear: num,
+        side: num,
+        tailUp: num,
+        lead: num,
+        autoOval: z.boolean(),
+        dotAt: z.number().min(-1).max(1),
+      })
+      .partial(),
     markReach: z.number().min(0.5).max(6),
     ornaments: z.boolean(),
     density: z.number().min(0).max(1),
@@ -478,6 +496,8 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       recipe: roundelRecipe.optional(),
       frame: z.boolean().optional(),
       ground: iznik.optional(),
+      fieldTiles: iznik.extend({ wash: z.number().min(0).max(1).optional() }).optional(),
+      rim: z.enum(['single', 'double']).optional(),
       colours: z
         .object({ field: colour, letters: colour, sheen: colour, rim: colour, line: colour, counters: colour })
         .partial()
