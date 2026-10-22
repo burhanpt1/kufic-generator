@@ -41,6 +41,9 @@ export interface RoundelOptions extends StackOptions {
    *  allowed. */
   kern?: boolean;
   kernTouch?: number;
+  /** Nest the piece of a word after a tailed letter (ra, zay) into the curve of its tail: slid right over the tail
+   *  and dropped into it, as far as it goes without touching. */
+  nest?: boolean;
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
@@ -151,15 +154,44 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         kern.set(key, k);
         return k;
       };
+    // a piece after a ra or zay nests in its tail: of the places where it does not touch (with its margin), the one
+    // furthest over the tail, a drop costing as much as half its length in slide
+    const nests = new Map<string, [number, number]>(),
+      nestOf = (i: number, j: number): [number, number] => {
+        const key = i + ':' + lv[i] + '|' + j + ':' + lv[j];
+        if (nests.has(key)) return nests.get(key)!;
+        const A = shapes[i][lv[i]],
+          B = shapes[j][lv[j]];
+        let best: [number, number] = [0, 0],
+          bs = -1e9;
+        for (let dy = 0; dy >= -3.01; dy -= 0.25)
+          for (let sx = 0; sx <= 8.01; sx += 0.25) {
+            const bx = -B.x1 + A.x0 - GAP + sx;
+            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
+            const sc = sx + dy * 0.5;
+            if (sc > bs) {
+              bs = sc;
+              best = [sx, dy];
+            }
+          }
+        nests.set(key, best);
+        return best;
+      };
+    const tailed = (i: number) => /[رز]$/.test(groups[i].s);
     const layoutWord = (w: number) => {
       let cur = wp[w].x,
         prev = -1;
       words[w].forEach(gi => {
         const S = shapes[gi][lv[gi]];
         if (groups[gi].newWord) cur -= 1.4 * (groups[gi].sc || 1);
-        let x = cur - S.x1;
-        if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, gi) - 0.15);
-        gpos[gi] = { x, y: wp[w].y };
+        let x = cur - S.x1,
+          y = wp[w].y;
+        if (o.nest && prev >= 0 && !groups[gi].newWord && tailed(prev)) {
+          const [sx, dy] = nestOf(prev, gi);
+          x += sx;
+          y = gpos[prev].y + dy;
+        } else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, gi) - 0.15);
+        gpos[gi] = { x, y };
         cur = x + S.x0 - GAP * (groups[gi].sc || 1);
         prev = gi;
       });

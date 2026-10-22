@@ -113,3 +113,22 @@ describe('a cartouche on tiles', () => {
     expect(ellipses(tiled)).toBe(ellipses(plain) - 1);
   }, 60000);
 });
+
+describe('nesting in a tail', () => {
+  it('tucks the piece after a ra into its tail, further over it than kerning alone', () => {
+    const opts = { elongate: true, cross: true, fillTarget: 0.5, noRise: true, kern: true, oval: 1.45, tries: 1, iters: 0 }; // prettier-ignore
+    const plain = composeRoundel(th, NAMES, opts)[0],
+      nested = composeRoundel(th, NAMES, { ...opts, nest: true })[0];
+    for (const [ra, next] of [
+      ['بر', 'ها'],
+      ['شمير', 'ة'],
+    ]) {
+      const i = plain.groups.findIndex(g => g.s === ra),
+        j = plain.groups.findIndex(g => g.s === next);
+      const over = (r: typeof plain) => groupBox(r, i).x0 - groupBox(r, j).x1;
+      // the next piece reaches back over the ra's tail, and sits no higher than its word's line
+      expect(over(nested)).toBeLessThan(over(plain) - 1);
+      expect(nested.st[j].y).toBeLessThanOrEqual(nested.st[i].y);
+    }
+  });
+});

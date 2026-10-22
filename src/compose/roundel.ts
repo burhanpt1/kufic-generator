@@ -43,6 +43,7 @@ export function drawRoundel(
       merge: recipe.merge,
       cradle: recipe.cradle,
       kern: recipe.kern,
+      nest: recipe.nest,
       noRise: recipe.noRise,
       ceiling: recipe.ceiling,
       topFirst: recipe.topFirst,

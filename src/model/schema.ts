@@ -183,6 +183,8 @@ export interface RoundelRecipe {
   merge?: boolean;
   cradle?: boolean;
   kern?: boolean;
+  /** The piece after a ra or zay nested in the curve of its tail. */
+  nest?: boolean;
   noRise?: boolean;
   ceiling?: boolean;
   topFirst?: boolean;
@@ -297,6 +299,7 @@ const roundelRecipe = z
     merge: z.boolean(),
     cradle: z.boolean(),
     kern: z.boolean(),
+    nest: z.boolean(),
     noRise: z.boolean(),
     ceiling: z.boolean(),
     topFirst: z.boolean(),
