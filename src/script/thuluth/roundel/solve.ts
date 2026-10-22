@@ -156,7 +156,8 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     };
     S.b.dotGroups.forEach(dg => {
       const n = dg.n,
-        arrs = DOT_ARR[n] || ['h'];
+        // three dots keep their triangle: one over two above a letter (shin), two over one below
+        arrs = n === 3 ? [dg.side > 0 ? 'up' : 'down'] : DOT_ARR[n] || ['h'];
       items.push({ kind: 'dots', key: i + ':' + dg.li, n, arrs, arr: arrs[0], side: dg.side, x: dg.x + ox, y: dg.y + oy, ax: dg.x + ox, ay: dg.y + oy, lx0: dg.x0 + ox, lx1: dg.x1 + ox, top: dg.top + oy, bot: dg.bot + oy, sc: dg.sc || 1 }); // prettier-ignore
     });
     const byLetter: Record<number, MarkName[]> = {};
