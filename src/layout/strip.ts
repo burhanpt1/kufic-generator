@@ -7,7 +7,8 @@ const ALT_SHARE = 0.6;
 
 // Justify a line of segments to width W. Extra cells go to word-final tails (3), letter bodies (2.5), word gaps (2),
 // joins before a final letter (2) and other joins (1). With rhythm on, the split is then nudged so tall stems fall evenly.
-// Returns null if the segments don't fit; W = null means natural width.
+// Returns null if the segments don't fit; W = null means natural width. close: blank cells wanted at the left end,
+// where a ring's line meets its own start (a word gap less the ring's one-cell seam), taken from the slack.
 export function strip(
   segs: Seg[],
   Hb: number,
@@ -15,6 +16,7 @@ export function strip(
   wg: number,
   W: number | null,
   wrap?: boolean,
+  close = 0,
 ): Strip | null {
   const gapAfter = (i: number) => (segs[i].endsWord ? wg : 1);
   let nat = 0;
@@ -23,6 +25,7 @@ export function strip(
   });
   if (W == null) W = nat;
   if (nat > W) return null;
+  nat += Math.max(0, Math.min(close, W - nat));
   // long alternates: when there is room, some final letters take their designed long forms instead of leaving all
   // the slack to stretching. Up to ALT_SHARE of the slack, spread along the line (farthest from those already used).
   if (W > nat && segs.some(s => s.glyphs.some(g => g.alt))) {

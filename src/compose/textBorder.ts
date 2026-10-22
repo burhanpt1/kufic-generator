@@ -107,6 +107,11 @@ function usableRuns(bg: BandGeom, c: number[], minSeg: number): { ord: number[];
   return use.length && skipped <= MAX_SKIP * total ? { ord: use, skip: skipped / total } : null;
 }
 
+/** Cells a closed ring's line of cell letters needs beyond its width where its end meets its start (no seam set): a
+ *  word gap, less the one cell the placement leaves there. Vector scripts close the ring with what room is left. */
+const closeGap = (bg: BandGeom, script: ScriptEngine, wordGap: number) =>
+  script.capabilities.grid && bg.kind !== 'runs' && !bg.seam ? Math.max(0, wordGap - 1) : 0;
+
 /** Slack (share of the band left to stretching) above which a fit reads as gappy: words pulled apart by long
  *  kashidas. A master fills a band before stretching it, so past this the search tries more repeats, larger letters
  *  and, last, breaking words at non-joining letters. */
@@ -123,7 +128,8 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
     const segs0 = script.segments(prepared, mode, o.wordGap) as Segs;
     if (!segs0.length) return null;
     const one = segs0.reduce((a, x) => a + x.minW, 0) + o.wordGap * segs0.length,
-      minSeg = Math.min(...segs0.map(x => x.minW));
+      minSeg = Math.min(...segs0.map(x => x.minW)),
+      close = closeGap(bg, script, o.wordGap);
     // every (scale, runs used) to try, with the least score any fit there can have: its partition's slack is never
     // negative, so the rest of the score is a floor. Tried cheapest floor first, a candidate whose floor can't beat
     // the best so far is skipped without partitioning; ties go to the earlier candidate in scale order, as when they
@@ -158,7 +164,7 @@ export function fitRing(bg: BandGeom, script: ScriptEngine, prepared: Prepared, 
       if (o.once && rep0 > 1) continue;
       for (let rep = rep0; rep <= repMax; rep++) {
         if (rep * one - o.wordGap > sum + 1) break;
-        const p = partition(repeat(segs0, rep), cOrd);
+        const p = partition(repeat(segs0, rep), close ? cOrd.map(x => x - close) : cOrd);
         if (!p) continue;
         const orphans = cOrd.length > 1 ? p.groups.filter(g => g.length === 1).length : 0,
           // summed in the same order as ever, so equal fits compare equal
@@ -210,8 +216,10 @@ export function fitsAtFullSize(
     if (!use) continue;
     const G = c.length,
       cOrd = use.ord.map(g => c[(G - g) % G]),
-      need = Math.max(1, Math.ceil(cOrd.length / segs.length));
-    if (greedyOK(repeat(segs, need), use.skip ? cOrd : c)) return true;
+      need = Math.max(1, Math.ceil(cOrd.length / segs.length)),
+      close = closeGap(bg, script, wordGap),
+      caps = (use.skip ? cOrd : c).map(x => x - close);
+    if (greedyOK(repeat(segs, need), caps)) return true;
   }
   return false;
 }

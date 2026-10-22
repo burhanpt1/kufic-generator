@@ -144,6 +144,35 @@ describe('resolver', () => {
     expect(r.rep).toBe(1);
   });
 
+  it('leaves a word gap where a ring of repeated text meets its own start', () => {
+    const wordGap = 5,
+      c = sample(
+        { kind: 'circle' },
+        { borders: [{ type: 'textBorder', text: 'b', separator: { kind: 'lines', width: 1.2 } }], fill: undefined },
+      );
+    c.texts = { b: { text: 'برهان وشميرة', repeat: 'fill', wordGap } };
+    const p = resolve(c),
+      strips = p.items.flatMap(i => (i.type === 'strip' && i.place.type === 'arc' ? [i] : []));
+    expect(p.meta.borders[0].rings[0].rep).toBeGreaterThan(1);
+    expect(strips.length).toBe(1);
+    const { strip: st, place } = strips[0];
+    if (st.kind !== 'cells' || place.type !== 'arc') throw new Error('expected a cell strip on an arc');
+    const col = (x: number) => Array.from({ length: st.Hb }, (_, y) => y * st.W + x),
+      ink = Array.from({ length: st.W }, (_, x) => col(x).some(i => st.data[i])),
+      tag = Array.from({ length: st.W }, (_, x) => Math.max(...col(x).map(i => st.tag[i])));
+    // blank columns round the ring from the last inked column to the first, the placement's own cell included
+    const first = ink.indexOf(true),
+      last = ink.lastIndexOf(true);
+    expect(first + (place.N - 1 - last)).toBeGreaterThanOrEqual(wordGap);
+    // and between repeats inside the strip
+    let px = first;
+    for (let x = first + 1; x <= last; x++)
+      if (ink[x]) {
+        if (tag[x] !== tag[px]) expect(x - px - 1).toBeGreaterThanOrEqual(wordGap);
+        px = x;
+      }
+  });
+
   it('applies the ة convention from the style', () => {
     const c = sample(
       { kind: 'circle' },
