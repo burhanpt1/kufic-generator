@@ -26,14 +26,11 @@ export interface BowlOptions {
 
 const letters = (r: Roundel, i: number) => r.shapes[i].b.placed.filter(isLetter);
 
-/** Redraw a great final bowl (a returning ya or a final nun) as a curve that follows the frame's lower rim at a fixed
- *  clearance below the other letters, wide and low as a master would draw it; put the letter's dots inside the bowl,
- *  and recompute the frame around the new ink. */
-export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel {
-  const ov = o.oval || r.disc?.oval || 1,
-    clear = o.clear ?? 2.6,
-    side = o.side ?? 1.0,
-    tailUp = o.tailUp ?? 2.2;
+/** The oval of a great final bowl (a returning ya or a final nun going deep): the lower half of an ellipse that clears
+ *  the other letters, as wide as the composition, before it is drawn. Null when there is no such letter. */
+export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
+  const clear = o.clear ?? 2.6,
+    side = o.side ?? 1.0;
   let gi = -1,
     P: PlacedLetter | null = null;
   r.shapes.forEach((S, i) => {
@@ -45,7 +42,7 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
       P = last;
     }
   });
-  if (gi < 0 || !P) return r;
+  if (gi < 0 || !P) return null;
   const B: PlacedLetter = P;
   const S = r.shapes[gi],
     G = r.st[gi],
@@ -97,6 +94,18 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
       if (x < cx) aL = Math.max(aL, need);
       else aR = Math.max(aR, need);
     });
+  return { gi, B, S, G, sc, J, cx, cy, b, aL, aR, size0, lead };
+}
+
+/** Redraw a great final bowl (a returning ya or a final nun) as a curve that follows the frame's lower rim at a fixed
+ *  clearance below the other letters, wide and low as a master would draw it; put the letter's dots inside the bowl,
+ *  and recompute the frame around the new ink. */
+export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel {
+  const ov = o.oval || r.disc?.oval || 1,
+    tailUp = o.tailUp ?? 2.2,
+    bo = bowlOval(th, r, o);
+  if (!bo) return r;
+  const { gi, B, S, G, sc, J, cx, cy, b, aL, aR, size0, lead } = bo;
   const E = (t: number): [number, number] => [cx + (Math.cos(t) < 0 ? aL : aR) * Math.cos(t), cy + b * Math.sin(t)];
   // how far the letters pushed the bowl out, for choosing between arrangements
   r.bowlGrow = (aL + aR + b) / size0 - 1;
@@ -247,6 +256,11 @@ export interface TailOptions {
   /** Clearance under what nests in the tail, and how far the tail runs past it. */
   gap?: number;
   reach?: number;
+  /** The tail's course: an inset of the great bowl's curve, running parallel to it (bowl, the default; level where
+   *  there is no bowl), or level. */
+  follow?: 'bowl' | 'level';
+  /** The bowl's options, so its curve can be foreseen before it is drawn. */
+  bowl?: BowlOptions;
 }
 
 /** Draw out the tail of a letter that has the rest of its word nested in it (a ra, a waw) as a long, level stroke
@@ -261,6 +275,26 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     const L = letters(r, j).pop();
     return !!L && 'نيى'.includes(L.c) && Math.min(...L.g.s.flatMap(st => st.pts.map(q => q[1]))) < -3.2;
   };
+  // the bowl's curve as it will be drawn, which the tails run parallel to, inset
+  const bo = o.follow === 'level' ? null : bowlOval(th, r, o.bowl),
+    inset = (d: number, x: number) => {
+      if (!bo) return NaN;
+      const a = (x < bo.cx ? bo.aL : bo.aR) - d,
+        t = (x - bo.cx) / a;
+      return Math.abs(t) < 1 ? bo.cy - (bo.b - d) * Math.sqrt(1 - t * t) : NaN;
+    };
+  // every letter, to keep a tail's course clear of what does not nest in it
+  const allInk = (skip: Set<number>) =>
+    r.groups.flatMap((_, j) =>
+      skip.has(j) || (bo && j === bo.gi)
+        ? []
+        : letters(r, j).flatMap(p =>
+            p.g.s.flatMap(
+              st =>
+              st.pts.map(q => [r.st[j].x + p.ox + q[0] * (r.groups[j].sc || 1), r.st[j].y + (p.oy || 0) + q[1] * (r.groups[j].sc || 1)] as [number, number]), // prettier-ignore
+            ),
+          ),
+    );
   // the last tails first, so a tail with another tail nested in it runs beneath that one as drawn out
   for (let i = r.groups.length - 1; i >= 0; i--) {
     const g = r.groups[i],
@@ -273,13 +307,17 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     // what nests: the rest of the word's letters, in composition coordinates
     let fx0 = 1e9,
       fy0 = 1e9;
+    const nested: [number, number][] = [];
     after.forEach(j => {
       const s2 = r.groups[j].sc || 1;
       letters(r, j).forEach(p =>
         p.g.s.forEach(st =>
           st.pts.forEach(q => {
-            fx0 = Math.min(fx0, r.st[j].x + p.ox + q[0] * s2);
-            fy0 = Math.min(fy0, r.st[j].y + (p.oy || 0) + q[1] * s2);
+            const x = r.st[j].x + p.ox + q[0] * s2,
+              y = r.st[j].y + (p.oy || 0) + q[1] * s2;
+            nested.push([x, y]);
+            fx0 = Math.min(fx0, x);
+            fy0 = Math.min(fy0, y);
           }),
         ),
       );
@@ -296,17 +334,48 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       Ly = Math.min((fy0 - gap - O.y) / sc, yk),
       xe = (fx0 - reach - O.x) / sc;
     if (xe > xk - 3) continue;
-    // it eases down to its level over a run as long as the drop, then runs level and turns up at its end
-    const run = Math.max(1.5, (yk - Ly) * 1.6),
+    // it eases down to its course over a run as long as the drop, follows it, and turns up at its end
+    const run = Math.max(1.5, (yk - Ly) * 1.6);
+    if (xe + 1.4 > xk - run) continue;
+    let course: SkelPt[] | null = null;
+    if (bo) {
+      // the highest inset of the bowl's curve that passes beneath what nests (by the gap) and clear of other letters
+      const x0 = O.x + (xk - run) * sc,
+        x1 = Math.max(xe, bo.cx - bo.aL * 0.97),
+        others = allInk(new Set([i, ...after]));
+      const xs: number[] = [];
+      for (let X = x0; X > x1 + 1.4 * sc; X -= 0.7 * sc) xs.push(X);
+      xs.push(x1 + 1.4 * sc);
+      for (let d = bo.b - 1; d >= 0 && !course; d -= 0.2) {
+        const ys = xs.map(X => inset(d, X));
+        if (ys.some(y => Number.isNaN(y))) continue;
+        const at = (x: number) => ys[Math.max(0, Math.min(ys.length - 1, Math.round((x0 - x) / (0.7 * sc))))];
+        const under = nested.every(([x, y]) => x < x1 || x > x0 || at(x) <= y - gap),
+          apart = others.every(([x, y]) => x < x1 || x > x0 || Math.abs(at(x) - y) > gap);
+        if (under && apart) course = xs.map((X, m) => [(X - O.x) / sc, (ys[m] - O.y) / sc, 1] as SkelPt);
+      }
+    }
+    if (!course && (o.follow === 'level' || !bo)) {
+      // level, if that too keeps clear of the letters that do not nest in it
+      const x0 = O.x + (xk - run) * sc,
+        y = O.y + Ly * sc;
+      if (allInk(new Set([i, ...after])).every(([x, y2]) => x < xe || x > x0 || Math.abs(y2 - y) > gap))
+        course = [
+          [xk - run, Ly, 1],
+          [xe + 1.4, Ly - 0.05, 1],
+        ];
+    }
+    // no clear course: the tail stays as written
+    if (!course) continue;
+    const [lx, ly] = course[course.length - 1],
+      [fx, fy] = course[0],
       tail: SkelPt[] = [
         ...pts.slice(0, k + 1),
-        [xk - run * 0.5, Ly + (yk - Ly) * 0.35, 1],
-        [xk - run, Ly, 1],
-        [xe + 1.4, Ly - 0.05, 1],
-        [xe + 0.3, Ly + 0.35, 0.6],
-        [xe - 0.1, Ly + 1.1, 0.2],
+        [(xk + fx) / 2, yk + (fy - yk) * 0.65, 1],
+        ...course,
+        [lx - 1.1, ly + 0.4, 0.6],
+        [lx - 1.5, ly + 1.15, 0.2],
       ];
-    if (xe + 1.4 > xk - run) continue;
     P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: tail } : st)) };
     // the drawn stroke: cut where the tail begins and continue along the new one
     const S = r.shapes[i],

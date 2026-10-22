@@ -57,7 +57,7 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
       placeUnder(r, gi, t.under.group, t.under.gap ?? 1, t.under.dx ?? 0);
     if (t.move) r.st[gi] = { x: r.st[gi].x + t.move[0], y: r.st[gi].y + t.move[1] };
   }
-  if (spec.tails) extendTails(th, r, spec.tails);
+  if (spec.tails) extendTails(th, r, { bowl: spec.bowl || undefined, ...spec.tails });
   if (spec.bowl) shapeBowl(th, r, spec.bowl);
   return r;
 }

@@ -141,24 +141,28 @@ describe('nesting in a tail', () => {
 });
 
 describe('drawn-out tails', () => {
-  it('runs a tail with the rest of its word nested in it level beneath all of it, but not under the bowl letter', () => {
-    const r = composeRoundel(th, NAMES, { elongate: true, cross: true, fillTarget: 0.5, noRise: true, kern: true, oval: 1.45, tries: 1, iters: 0, nest: true })[0]; // prettier-ignore
-    const before = structuredClone(r.shapes.map(S => S.b.strokes.map(st => st.s.length)));
-    extendTails(th, r);
-    const ink = (i: number) => r.shapes[i].b.strokes.flatMap(st => st.s.map(q => [q.x + r.st[i].x, q.y + r.st[i].y]));
+  const NAMESPEC = { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, kern: true, tries: 6, seed: 7, nest: true }; // prettier-ignore
+  const ink = (r: ReturnType<typeof composeRoundel>[0], i: number) =>
+    r.shapes[i].b.strokes.flatMap(st => st.s.map(q => [q.x + r.st[i].x, q.y + r.st[i].y]));
+  it('runs the waw under all of shamira, curving parallel to the bowl', () => {
+    const { r } = buildRoundel(th, spec({ compose: NAMESPEC, tails: { reach: 8 } }))!;
     const at = (s2: string) => r.groups.findIndex(g => g.s === s2);
-    // the waw runs under shamira (beyond its last piece, beneath its lowest ink), the ra of بر under ها
-    for (const [tail, nested] of [
-      ['و', ['شمير', 'ة']],
-      ['بر', ['ها']],
-    ] as const) {
-      const t = ink(at(tail)),
-        n = nested.flatMap(s2 => ink(at(s2)));
-      expect(Math.min(...t.map(q => q[0]))).toBeLessThan(Math.min(...n.map(q => q[0])));
-      expect(Math.min(...t.map(q => q[1]))).toBeLessThan(Math.min(...n.map(q => q[1])));
-    }
-    // the nun, which the bowl will redraw, is left alone
-    const ni = at('ن');
-    expect(r.shapes[ni].b.strokes.map(st => st.s.length)).toEqual(before[ni]);
+    const t = ink(r, at('و')),
+      n = ['شمير', 'ة'].flatMap(s2 => ink(r, at(s2)));
+    const tx0 = Math.min(...t.map(q => q[0])),
+      low = Math.min(...t.map(q => q[1]));
+    expect(tx0).toBeLessThan(Math.min(...n.map(q => q[0])));
+    expect(low).toBeLessThan(Math.min(...n.map(q => q[1])));
+    // a curve, not a level line: it rises from its lowest towards its far end, as the bowl does
+    const end = t.filter(q => q[0] < tx0 + 2);
+    expect(Math.min(...end.map(q => q[1])) - low).toBeGreaterThan(1.5);
+  }, 60000);
+  it('leaves a tail as written where no course keeps clear of the other letters', () => {
+    const r = composeRoundel(th, NAMES, NAMESPEC)[0],
+      i = r.groups.findIndex(g => g.s === 'بر'),
+      before = JSON.stringify(ink(r, i));
+    extendTails(th, r, { bowl: { clear: 5.6 } });
+    // ها sits right above shamira: no room for the ra's tail between them
+    expect(JSON.stringify(ink(r, i))).toBe(before);
   });
 });

@@ -186,7 +186,7 @@ export interface RoundelRecipe {
   /** The piece after a ra, zay, waw (or ya) nested in the curve of its tail. */
   nest?: boolean;
   /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms. */
-  tails?: { letters?: string; gap?: number; reach?: number };
+  tails?: { letters?: string; gap?: number; reach?: number; follow?: 'bowl' | 'level' };
   noRise?: boolean;
   ceiling?: boolean;
   topFirst?: boolean;
@@ -303,7 +303,12 @@ const roundelRecipe = z
     kern: z.boolean(),
     nest: z.boolean(),
     tails: z
-      .object({ letters: z.string().max(8), gap: z.number().min(0).max(6), reach: z.number().min(-6).max(10) })
+      .object({
+        letters: z.string().max(8),
+        gap: z.number().min(0).max(6),
+        reach: z.number().min(-6).max(10),
+        follow: z.enum(['bowl', 'level']),
+      })
       .partial(),
     noRise: z.boolean(),
     ceiling: z.boolean(),
