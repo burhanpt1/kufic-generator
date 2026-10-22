@@ -7,7 +7,7 @@ import type { FillerNode, RoundelColours, RoundelRecipe, Style } from '../model/
 import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
 import type { Thuluth } from '../script/thuluth/engine';
-import { buildRoundel, roundelArt, roundelOrderFault } from '../script/thuluth/roundel';
+import { buildRoundel, clashes, roundelArt, roundelOrderFault } from '../script/thuluth/roundel';
 import type { Poly } from '../script/thuluth/types';
 import { fitInside, registerFiller } from './fillers';
 import type { RoundelDrawing } from './placed';
@@ -87,6 +87,7 @@ export function drawRoundel(
       tails: b.r.tailsDrawn ?? 0,
       levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
       order: roundelOrderFault(b.r),
+      clash: clashes(th, b.r),
     };
   }
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
@@ -138,7 +139,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     scale: s,
     ok: art.missing === 0,
     note: art.missing ? `${art.missing} marks found no room` : undefined,
-    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order }, // prettier-ignore
+    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash }, // prettier-ignore
   };
 }
 

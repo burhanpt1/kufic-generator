@@ -90,8 +90,9 @@ export interface RoundelDrawing {
   overlap: number;
   tails: number;
   levels: number;
-  /** Stacked pieces out of reading order (0: none). */
+  /** Stacked pieces out of reading order (0: none); stroke points of different letters touching (0: none). */
   order: number;
+  clash: number;
 }
 
 /** Draw order, back to front. */

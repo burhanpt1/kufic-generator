@@ -252,6 +252,39 @@ export function fitFrame(th: Thuluth, r: Roundel, o: FrameOptions = {}): Finishe
   return f;
 }
 
+/** Clashes: sampled points of a group's strokes that come within a pen's width of another group's (two letters
+ *  that touch or nearly do), over every pair but the neighbouring pieces of one word, which are set close on
+ *  purpose. 0 when every letter keeps clear. */
+export function clashes(th: Thuluth, r: Roundel, near = th.style.nib * 1.3): number {
+  const cell = near,
+    grid = new Map<string, [number, number, number][]>(),
+    key = (x: number, y: number) => Math.floor(x / cell) + ',' + Math.floor(y / cell);
+  const pts = r.shapes.map((S, i) => S.b.strokes.flatMap(st => st.s.filter((_, k) => k % 2 === 0).map(q => [q.x + r.st[i].x, q.y + r.st[i].y] as [number, number]))); // prettier-ignore
+  pts.forEach((ps, i) =>
+    ps.forEach(([x, y]) => {
+      const k = key(x, y);
+      if (!grid.has(k)) grid.set(k, []);
+      grid.get(k)!.push([x, y, i]);
+    }),
+  );
+  const apart = (i: number, j: number) => i !== j && !(r.groups[i].word === r.groups[j].word && Math.abs(i - j) === 1);
+  let n = 0;
+  pts.forEach((ps, i) =>
+    ps.forEach(([x, y]) => {
+      const cx = Math.floor(x / cell),
+        cy = Math.floor(y / cell);
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dy = -1; dy <= 1; dy++)
+          for (const [qx, qy, j] of grid.get(cx + dx + ',' + (cy + dy)) || [])
+            if (apart(i, j) && Math.hypot(qx - x, qy - y) < near) {
+              n++;
+              return;
+            }
+    }),
+  );
+  return n;
+}
+
 /** How crowded the marks are: overlap between the boxes of dots and vowels. */
 export function crowding(f: Finished): number {
   const its = f.solved?.items || [];
@@ -292,7 +325,26 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     return !!L && 'نيى'.includes(L.c) && Math.min(...L.g.s.flatMap(st => st.pts.map(q => q[1]))) < -3.2;
   };
   // the bowl's curve as it will be drawn, which the tails run parallel to, inset
-  const bo = o.follow === 'level' ? null : bowlOval(th, r, o.bowl),
+  // with no great bowl, the oval round all the ink stands in for it, so tails still curve with the composition
+  const inkOval = () => {
+    let X0 = 1e9,
+      X1 = -1e9,
+      Y0 = 1e9,
+      Y1 = -1e9;
+    r.shapes.forEach((S, j) =>
+      S.b.strokes.forEach(st =>
+        st.s.forEach(q => {
+          X0 = Math.min(X0, q.x + r.st[j].x);
+          X1 = Math.max(X1, q.x + r.st[j].x);
+          Y0 = Math.min(Y0, q.y + r.st[j].y);
+          Y1 = Math.max(Y1, q.y + r.st[j].y);
+        }),
+      ),
+    );
+    const half = (X1 - X0) / 2 + 2;
+    return { gi: -1, cx: (X0 + X1) / 2, cy: (Y0 + Y1) / 2, aL: half, aR: half, b: (Y1 - Y0) / 2 + 3 };
+  };
+  const bo = o.follow === 'level' ? null : (bowlOval(th, r, o.bowl) ?? inkOval()),
     inset = (d: number, x: number) => {
       if (!bo) return NaN;
       const a = (x < bo.cx ? bo.aL : bo.aR) - d,
@@ -418,6 +470,20 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
         [lx - 1.1, ly + 0.4, 0.6],
         [lx - 1.5, ly + 1.15, 0.2],
       ];
+    // the tail as it will be drawn keeps a pen's width from every other letter as drawn (but the piece nested right
+    // after it, and the great bowl, which is redrawn later); otherwise it stays as written
+    const drawn = sampleStroke(
+        tail.map(([x, y, w]) => [O.x + x * sc, O.y + y * sc, w] as SkelPt),
+        th.style.tension,
+      ),
+      near = th.style.nib * 1.3,
+      kept = r.shapes.flatMap((S2, j) =>
+        j === i || j === i + 1 || (bo && j === bo.gi)
+          ? []
+          : S2.b.strokes.flatMap(st2 => st2.s.map(q => [q.x + r.st[j].x, q.y + r.st[j].y] as [number, number])),
+      );
+    if (drawn.some(q => kept.some(([x, y]) => Math.abs(x - q.x) < near && Math.hypot(x - q.x, y - q.y) < near)))
+      continue;
     P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: tail } : st)) };
     // the drawn stroke: the letter redrawn from where it begins, as one curve with no corners of its own
     const S = r.shapes[i],

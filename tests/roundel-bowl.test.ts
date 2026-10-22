@@ -251,3 +251,22 @@ describe('height: rising stems and stacked joins', () => {
     expect(r.shapes[r.groups.findIndex(g => g.s === 'شمير')].stacked).toBe(true);
   });
 });
+
+describe('clashes', () => {
+  it('counts letters of different pieces touching, and the finished cartouche has none', async () => {
+    const { clashes } = await import('../src/script/thuluth/roundel');
+    const opts = { elongate: true, cross: true, fillTarget: 0.55, noRise: true, kern: true, oval: 1.3, tries: 1, iters: 0, nest: true }; // prettier-ignore
+    const r = composeRoundel(th, NAMES, opts)[0];
+    // pile shamira onto burhan: they touch
+    const j = r.groups.findIndex(g => g.s === 'شمير'),
+      i = r.groups.findIndex(g => g.s === 'بر');
+    const piled = structuredClone(r);
+    piled.st[j] = { ...r.st[i] };
+    expect(clashes(th, piled)).toBeGreaterThan(0);
+    const b = buildRoundel(
+      th,
+      spec({ compose: { ...opts, tries: 6, seed: 7, stack: true }, tails: { reach: 6 }, rise: {} }),
+    )!;
+    expect(clashes(th, b.r)).toBe(0);
+  }, 60000);
+});
