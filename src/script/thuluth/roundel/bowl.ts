@@ -334,8 +334,10 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       Ly = Math.min((fy0 - gap - O.y) / sc, yk),
       xe = (fx0 - reach - O.x) / sc;
     if (xe > xk - 3) continue;
-    // it eases down to its course over a run as long as the drop, follows it, and turns up at its end
-    const run = Math.max(1.5, (yk - Ly) * 1.6);
+    // the tail leaves the letter where its own tail starts to fall, and from there is one curve: down onto its course,
+    // along it, and up at its end
+    const k0 = Math.max(1, pts.findIndex(q => q[1] < 0) - 1),
+      run = pts[k0][0] - xk + 1.2;
     if (xe + 1.4 > xk - run) continue;
     let course: SkelPt[] | null = null;
     if (bo) {
@@ -367,29 +369,55 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     }
     // no clear course: the tail stays as written
     if (!course) continue;
+    // onto the course along a cubic that leaves the letter in the direction its tail was going and arrives along the
+    // course, joining it a little further on than the drop is deep
+    const [ax, ay] = pts[k0],
+      [bx, by] = pts[k0 + 1] ?? pts[k0],
+      drop = Math.max(1, ay - course[0][1]),
+      j = Math.max(
+        1,
+        course.findIndex(q => q[0] < ax - drop * 1.3),
+      );
+    if (j >= course.length - 1) continue;
+    const [jx, jy] = course[j],
+      [tx, ty] = [jx - course[j - 1][0], jy - course[j - 1][1]],
+      dl = Math.hypot(bx - ax, by - ay) || 1,
+      tl = Math.hypot(tx, ty) || 1,
+      h = Math.hypot(jx - ax, jy - ay) * 0.4,
+      c1 = [ax + ((bx - ax) / dl) * h, ay + ((by - ay) / dl) * h],
+      c2 = [jx - (tx / tl) * h, jy - (ty / tl) * h];
+    const ease: SkelPt[] = [0.2, 0.4, 0.6, 0.8].map(t => {
+      const u = 1 - t;
+      return [
+        u * u * u * ax + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * jx,
+        u * u * u * ay + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * jy,
+        1,
+      ];
+    });
     const [lx, ly] = course[course.length - 1],
-      [fx, fy] = course[0],
       tail: SkelPt[] = [
-        ...pts.slice(0, k + 1),
-        [(xk + fx) / 2, yk + (fy - yk) * 0.65, 1],
-        ...course,
+        ...pts.slice(0, k0 + 1).map(([x, y, w]) => [x, y, w ?? 1] as SkelPt),
+        ...ease,
+        ...course.slice(j),
         [lx - 1.1, ly + 0.4, 0.6],
         [lx - 1.5, ly + 1.15, 0.2],
       ];
     P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: tail } : st)) };
-    // the drawn stroke: cut where the tail begins and continue along the new one
+    // the drawn stroke: the letter redrawn from where it begins, as one curve with no corners of its own
     const S = r.shapes[i],
-      cx = P.ox + xk * sc,
-      cy = (P.oy || 0) + yk * sc;
+      [sx, sy] = pts[0],
+      cx = P.ox + sx * sc,
+      cy = (P.oy || 0) + sy * sc;
+    // where the letter begins: the first sample there (a loop like the waw's head comes back past its own start)
     let best = { d: 1e9, si: 0, qi: 0 };
     S.b.strokes.forEach((st, a) =>
       st.s.forEach((q, b) => {
         const d = Math.hypot(q.x - cx, q.y - cy);
-        if (d < best.d) best = { d, si: a, qi: b };
+        if (d < best.d - 0.15) best = { d, si: a, qi: b };
       }),
     );
     const st = S.b.strokes[best.si];
-    st.s = st.s.slice(0, best.qi + 1).concat(sampleStroke(tail.slice(k + 1).map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
+    st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
   }
   return r;
 }
