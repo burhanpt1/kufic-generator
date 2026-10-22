@@ -45,6 +45,7 @@ export function drawRoundel(
       kern: recipe.kern,
       nest: recipe.nest,
       stack: recipe.stack,
+      stackAt: recipe.stackAt,
       noRise: recipe.noRise,
       ceiling: recipe.ceiling,
       topFirst: recipe.topFirst,
@@ -58,6 +59,7 @@ export function drawRoundel(
     },
     tweaks: recipe.tweaks,
     tails: recipe.tails,
+    rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
     frame: { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle }, // prettier-ignore
   });

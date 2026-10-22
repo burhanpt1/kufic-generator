@@ -187,6 +187,10 @@ export interface RoundelRecipe {
   nest?: boolean;
   /** The search may stack a piece of a word above the one before it, so words rise in layers. */
   stack?: boolean;
+  /** Groups written only with a stacked join where they have one (e.g. 'شمير': the shin above the mim). */
+  stackAt?: string[];
+  /** Tall stems rise into the empty space above them, up to the oval. */
+  rise?: { margin?: number; most?: number; oval?: number };
   /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms. */
   tails?: { letters?: string; gap?: number; reach?: number; follow?: 'bowl' | 'level' };
   noRise?: boolean;
@@ -313,6 +317,10 @@ const roundelRecipe = z
     kern: z.boolean(),
     nest: z.boolean(),
     stack: z.boolean(),
+    stackAt: z.array(z.string().min(1).max(40)).max(20),
+    rise: z
+      .object({ margin: z.number().min(0).max(10), most: z.number().min(1).max(4), oval: z.number().min(1).max(3) })
+      .partial(),
     tails: z
       .object({
         letters: z.string().max(8),

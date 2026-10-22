@@ -49,6 +49,9 @@ export interface RoundelOptions extends StackOptions {
   /** Stack: the search may lift a piece of a word above the piece before it, slid back over it, so a word rises in
    *  layers (each lift is a move it can make or undo). */
   stack?: boolean;
+  /** Groups (by their letters) written only with a stacked join where they have one (the shin above the mim of
+   *  شمير), so a word gains height about that letter. */
+  stackAt?: string[];
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
@@ -68,8 +71,9 @@ export interface Roundel {
   up: number[];
   /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
   bowlGrow?: number;
-  /** Tails drawn out under what nests in them. */
+  /** Tails drawn out under what nests in them; stems risen into the space above. */
   tailsDrawn?: number;
+  risen?: number;
 }
 
 /** Reading order of stacked pieces: a piece lifted above the one before it must stay in its own word's line, not land
@@ -142,7 +146,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
   });
-  const shapes = groups.map(g => groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K)); // prettier-ignore
+  const shapes = groups.map(g => {
+    const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
+      st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
+    return st.length ? st : vs;
+  });
   const words: number[][] = [];
   groups.forEach((g, i) => (words[g.word] ??= []).push(i));
   const W = words.length,

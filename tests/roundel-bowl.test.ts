@@ -233,3 +233,21 @@ describe('a free-standing great nun', () => {
     expect(alifX(go(false)) - nunHead(go(false))).toBeLessThan(alifX(go(true)) - nunHead(go(true)) - 5);
   }, 60000);
 });
+
+describe('height: rising stems and stacked joins', () => {
+  it('stretches a tall stem up into the room a wide bowl leaves, and leaves it when asked not to', async () => {
+    const { riseStems } = await import('../src/script/thuluth/roundel');
+    const r = composeRoundel(th, NAMES, { elongate: true, cross: true, fillTarget: 0.55, noRise: true, kern: true, oval: 1.3, tries: 1, iters: 0, nest: true })[0]; // prettier-ignore
+    shapeBowl(th, r, { clear: 5.6, oval: 1.3 });
+    const i = r.groups.findIndex(g => g.s === 'ها'),
+      tallest = () => Math.max(...r.shapes[i].b.strokes.flatMap(st => st.s.map(q => q.y)));
+    const before = tallest();
+    riseStems(th, r, { oval: 1.0 });
+    expect(r.risen).toBe(1);
+    expect(tallest()).toBeGreaterThan(before + 1);
+  });
+  it('writes a group only with a stacked join when asked (the shin above the mim)', () => {
+    const r = composeRoundel(th, NAMES, { elongate: true, cross: true, noRise: true, kern: true, oval: 1.3, tries: 2, stackAt: ['شمير'] })[0]; // prettier-ignore
+    expect(r.shapes[r.groups.findIndex(g => g.s === 'شمير')].stacked).toBe(true);
+  });
+});

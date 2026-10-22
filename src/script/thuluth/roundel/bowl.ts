@@ -439,6 +439,74 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
   return r;
 }
 
+export interface RiseOptions {
+  /** Clearance kept below the oval the stems rise into, and the most a stem may grow (times its height). */
+  margin?: number;
+  most?: number;
+  /** Width over height of the oval they rise into, built on the composition's width (default 1.3). */
+  oval?: number;
+}
+
+/** Let the tall stems (alif, lam) rise into the empty space above them: each is stretched upward, from a little above
+ *  its foot, until it nears an oval of the given proportion standing on the composition's width and bottom (a wide
+ *  bowl leaves room above the letters that the stems can take), or would meet ink above it. */
+export function riseStems(th: Thuluth, r: Roundel, o: RiseOptions = {}): Roundel {
+  const d = r.disc,
+    a = d.r * (d.oval || 1),
+    b = a / (o.oval ?? 1.3),
+    cy = d.cy - d.r + b,
+    margin = o.margin ?? th.style.nib * 2.2,
+    most = o.most ?? 1.8;
+  const top = (x: number) => {
+    const t = (x - d.cx) / a;
+    return Math.abs(t) < 1 ? cy + b * Math.sqrt(1 - t * t) - margin : -1e9;
+  };
+  r.groups.forEach((g, i) => {
+    const sc = g.sc || 1;
+    letters(r, i).forEach(p => {
+      if (!'اأإلك'.includes(p.c)) return;
+      const ys = p.g.s.flatMap(st => st.pts.map(q => q[1]));
+      const h = Math.max(...ys);
+      if (h < 6) return;
+      const xs = p.g.s.flatMap(st => st.pts.filter(q => q[1] > h * 0.6).map(q => q[0]));
+      const x0 = Math.min(...xs) - 0.6,
+        x1 = Math.max(...xs) + 0.6,
+        G = r.st[i],
+        foot = 1.5,
+        X = G.x + p.ox + ((x0 + x1) / 2) * sc,
+        Y0 = G.y + (p.oy || 0);
+      // ink of every other group in this column, above the stem
+      let ceil = top(X);
+      r.shapes.forEach((S2, j) => {
+        if (j === i) return;
+        S2.b.strokes.forEach(st =>
+          st.s.forEach(q => {
+            const qx = q.x + r.st[j].x,
+              qy = q.y + r.st[j].y;
+            if (qx > G.x + p.ox + x0 * sc - 1 && qx < G.x + p.ox + x1 * sc + 1 && qy > Y0 + h * sc)
+              ceil = Math.min(ceil, qy - th.style.nib * 1.6);
+          }),
+        );
+      });
+      const H = Math.min((ceil - Y0) / sc, h * most);
+      if (H <= h + 0.5) return;
+      const k = (H - foot) / (h - foot),
+        up = (y: number) => (y > foot ? foot + (y - foot) * k : y);
+      p.g = { ...p.g, s: p.g.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x, up(y), w, c] as SkelPt) })) };
+      const lx0 = p.ox + x0 * sc,
+        lx1 = p.ox + x1 * sc,
+        oy = p.oy || 0;
+      r.shapes[i].b.strokes.forEach(st => {
+        st.s = st.s.map(q =>
+          q.x > lx0 && q.x < lx1 && q.y - oy > foot * sc ? { ...q, y: oy + up((q.y - oy) / sc) * sc } : q,
+        );
+      });
+      r.risen = (r.risen ?? 0) + 1;
+    });
+  });
+  return r;
+}
+
 /** Scale one group of letters about its own origin (a smaller conjunction, say); its marks scale with it. */
 export function scaleGroup(th: Thuluth, r: Roundel, gi: number, s: number) {
   const S = r.shapes[gi],
