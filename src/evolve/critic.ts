@@ -102,6 +102,19 @@ registerCritic('lines', p => {
   return { legibility: clamp(f.scale / b.scale / 0.65) };
 });
 
+// roundels: the bowl clears the letters as composed, words do not run into each other, every mark found its place,
+// and (from the Burhan and Shamira cartouche) words rising in layers with tails drawn out under what nests in them
+registerCritic('roundel', p => {
+  const m = p.meta.fill?.type === 'roundel' ? p.meta.fill.metrics : undefined;
+  if (!m) return none;
+  return {
+    clearance: clamp(1 - m.grow / 0.3),
+    apart: clamp(1 - m.overlap / 40),
+    marked: m.missing ? 0.4 : 1,
+    layers: clamp((m.levels - 1) / 4 + Math.min(m.tails, 2) * 0.15),
+  };
+});
+
 // little empty space: blank area and the largest enclosed blank patch, measured on a small raster (lab)
 registerCritic('space', p => ({ space: emptySpace(p) }));
 
@@ -110,6 +123,7 @@ export const METRIC_LABELS: Record<string, string> = {
   rhythm: 'Even stem rhythm', kashida: 'Even stretching', density: 'Even ink density', rep: 'Little repetition',
   fill: 'Bands fill the canvas', centre: 'Centre about a quarter', legibility: 'Legible', compact: 'Compact',
   squareness: 'Square', symmetry: 'Symmetric', sharing: 'Shared strokes', space: 'Little empty space',
+  clearance: 'Bowl clears the letters', apart: 'Words keep apart', marked: 'Every mark placed', layers: 'Layered',
 }; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */

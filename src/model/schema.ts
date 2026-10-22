@@ -185,6 +185,8 @@ export interface RoundelRecipe {
   kern?: boolean;
   /** The piece after a ra, zay, waw (or ya) nested in the curve of its tail. */
   nest?: boolean;
+  /** The search may stack a piece of a word above the one before it, so words rise in layers. */
+  stack?: boolean;
   /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms. */
   tails?: { letters?: string; gap?: number; reach?: number; follow?: 'bowl' | 'level' };
   noRise?: boolean;
@@ -302,6 +304,7 @@ const roundelRecipe = z
     cradle: z.boolean(),
     kern: z.boolean(),
     nest: z.boolean(),
+    stack: z.boolean(),
     tails: z
       .object({
         letters: z.string().max(8),

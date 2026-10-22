@@ -417,6 +417,7 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       }),
     );
     const st = S.b.strokes[best.si];
+    r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
     st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
   }
   return r;

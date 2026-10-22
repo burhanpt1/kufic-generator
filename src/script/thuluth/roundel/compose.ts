@@ -44,6 +44,9 @@ export interface RoundelOptions extends StackOptions {
   /** Nest the piece of a word after a tailed letter (ra, zay, waw, ya) into the curve of its tail: slid right over it
    *  and dropped into it, as far as it goes without touching. */
   nest?: boolean;
+  /** Stack: the search may lift a piece of a word above the piece before it, slid back over it, so a word rises in
+   *  layers (each lift is a move it can make or undo). */
+  stack?: boolean;
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
@@ -61,6 +64,8 @@ export interface Roundel {
   wp: { x: number; y: number }[];
   /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
   bowlGrow?: number;
+  /** Tails drawn out under what nests in them. */
+  tailsDrawn?: number;
 }
 
 export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
@@ -137,7 +142,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     const lv = groups.map((_, i) => Math.floor(R() * shapes[i].length)),
       wp = words.map(() => ({ x: 0, y: 0 })),
-      gpos: { x: number; y: number }[] = new Array(n);
+      gpos: { x: number; y: number }[] = new Array(n),
+      // stacked pieces (lifted above the piece before them)
+      up = new Uint8Array(n);
     // inside a word, a break after a non-joining letter is kerned: the next piece slides right until it would touch
     const kern = new Map<string, number>(),
       kernOf = (i: number, j: number) => {
@@ -178,6 +185,29 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         return best;
       };
     const tailed = (i: number) => /[رزوي]$/.test(groups[i].s);
+    // a stacked piece: lifted above the one before by the least that clears it, slid back over it as far as it goes
+    const stacks = new Map<string, [number, number]>(),
+      stackOf = (i: number, j: number): [number, number] => {
+        const key = i + ':' + lv[i] + '|' + j + ':' + lv[j];
+        if (stacks.has(key)) return stacks.get(key)!;
+        const A = shapes[i][lv[i]],
+          B = shapes[j][lv[j]],
+          lift0 = Math.max(1.5, A.y1 - B.y0 - 6);
+        let best: [number, number] = [0, A.y1 - B.y0 + 0.8],
+          bs = -1e9;
+        for (let dy = lift0; dy <= A.y1 - B.y0 + 0.8; dy += 0.5)
+          for (let sx = 0; sx <= A.x1 - A.x0 + 0.01; sx += 0.5) {
+            const bx = -B.x1 + A.x0 - GAP + sx;
+            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
+            const sc = sx - dy * 0.35;
+            if (sc > bs) {
+              bs = sc;
+              best = [sx, dy];
+            }
+          }
+        stacks.set(key, best);
+        return best;
+      };
     const layoutWord = (w: number) => {
       let cur = wp[w].x,
         prev = -1;
@@ -186,7 +216,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         if (groups[gi].newWord) cur -= 1.4 * (groups[gi].sc || 1);
         let x = cur - S.x1,
           y = wp[w].y;
-        if (o.nest && prev >= 0 && !groups[gi].newWord && tailed(prev)) {
+        if (up[gi] && prev >= 0 && !groups[gi].newWord) {
+          const [sx, dy] = stackOf(prev, gi);
+          x += sx;
+          y = gpos[prev].y + dy;
+        } else if (o.nest && prev >= 0 && !groups[gi].newWord && tailed(prev)) {
           const [sx, dy] = nestOf(prev, gi);
           x += sx;
           y = gpos[prev].y + dy;
@@ -381,10 +415,24 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       for (let a = 0; a < W; a++) recompute(a);
       E = energy();
     }
+    // the pieces that can be stacked: not a word's first, not a companion's
+    const stackable = o.stack ? groups.map((_, i) => i).filter(i => i > 0 && groups[i - 1].word === groups[i].word && !groups[i].newWord) : []; // prettier-ignore
     for (let it = 0; it < (o.fixed ? 0 : iters); it++) {
       const mv = R();
       let undo: () => void;
-      if ((o.emph || o.elongate) && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
+      if (stackable.length && mv < 0.1) {
+        // lift a piece onto the one before it, or set it back down
+        const gi = stackable[Math.floor(R() * stackable.length)],
+          w = groups[gi].word;
+        up[gi] ^= 1;
+        layoutWord(w);
+        recompute(w);
+        undo = () => {
+          up[gi] ^= 1;
+          layoutWord(w);
+          recompute(w);
+        };
+      } else if ((o.emph || o.elongate) && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
         // lift a word onto a shelf (an elongated stroke or a long final sweep) or into a cradle
         const withShelf = groups.map((_, i) => i).filter(i => shapes[i][lv[i]].shelves.length);
         if (withShelf.length) {

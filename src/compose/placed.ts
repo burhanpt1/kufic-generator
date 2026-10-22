@@ -85,6 +85,11 @@ export interface RoundelDrawing {
   /** Marks placed / missing, and ornaments, for the meta. */
   marks: number;
   missing: number;
+  /** For the critic: how far the great bowl had to grow, the words' overlap, tails drawn out, distinct levels. */
+  grow: number;
+  overlap: number;
+  tails: number;
+  levels: number;
 }
 
 /** Draw order, back to front. */

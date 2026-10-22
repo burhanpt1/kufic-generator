@@ -166,3 +166,41 @@ describe('drawn-out tails', () => {
     expect(JSON.stringify(ink(r, i))).toBe(before);
   });
 });
+
+describe('stacking', () => {
+  it('lifts some piece of a word above the one before it when allowed, and never when not', () => {
+    const opts = { elongate: true, cross: true, fillTarget: 0.5, noRise: true, kern: true, oval: 1.45, tries: 4, seed: 5 }; // prettier-ignore
+    const lifted = (r: ReturnType<typeof composeRoundel>[0]) =>
+      r.groups.some((g, i) => i > 0 && r.groups[i - 1].word === g.word && r.st[i].y > r.st[i - 1].y + 1);
+    expect(composeRoundel(th, NAMES, opts).some(lifted)).toBe(false);
+    expect(composeRoundel(th, NAMES, { ...opts, stack: true }).some(lifted)).toBe(true);
+  });
+});
+
+describe('the roundel critic', () => {
+  it('scores how a roundel came out', async () => {
+    const { metrics } = await import('../src/evolve/critic');
+    const c = {
+      version: 1,
+      seed: 21,
+      canvas: { shape: 'landscape', margin: 3 },
+      style: structuredClone(DEFAULT_STYLE),
+      texts: { names: { text: NAMES, repeat: 'once', wordGap: 2 } },
+      root: {
+        type: 'frame',
+        child: {
+          type: 'region',
+          outline: { kind: 'circle' },
+          borders: [],
+          fill: { type: 'roundel', text: 'names', recipe: { tries: 2, oval: 1.45, nest: true, stack: true, bowl: { clear: 5.6 } } }, // prettier-ignore
+        },
+      },
+    } as Composition;
+    expect(isValidComposition(c)).toBe(true);
+    const m = metrics(resolve(c))!;
+    for (const k of ['clearance', 'apart', 'marked', 'layers', 'space']) {
+      expect(m[k]).toBeGreaterThanOrEqual(0);
+      expect(m[k]).toBeLessThanOrEqual(1);
+    }
+  }, 60000);
+});

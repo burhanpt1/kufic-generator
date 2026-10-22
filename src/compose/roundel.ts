@@ -44,6 +44,7 @@ export function drawRoundel(
       cradle: recipe.cradle,
       kern: recipe.kern,
       nest: recipe.nest,
+      stack: recipe.stack,
       noRise: recipe.noRise,
       ceiling: recipe.ceiling,
       topFirst: recipe.topFirst,
@@ -79,6 +80,10 @@ export function drawRoundel(
       counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
       marks: b.f.solved?.count ?? 0,
       missing: b.f.missing,
+      grow: b.r.bowlGrow ?? 0,
+      overlap: b.r.overlap,
+      tails: b.r.tailsDrawn ?? 0,
+      levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
     };
   }
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
@@ -130,7 +135,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     scale: s,
     ok: art.missing === 0,
     note: art.missing ? `${art.missing} marks found no room` : undefined,
-    metrics: { marks: art.marks },
+    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels }, // prettier-ignore
   };
 }
 
