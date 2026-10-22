@@ -56,6 +56,7 @@ export function drawRoundel(
       fixed: fx,
     },
     tweaks: recipe.tweaks,
+    tails: recipe.tails,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
     frame: { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle }, // prettier-ignore
   });

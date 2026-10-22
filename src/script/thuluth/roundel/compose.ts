@@ -41,7 +41,7 @@ export interface RoundelOptions extends StackOptions {
    *  allowed. */
   kern?: boolean;
   kernTouch?: number;
-  /** Nest the piece of a word after a tailed letter (ra, zay) into the curve of its tail: slid right over the tail
+  /** Nest the piece of a word after a tailed letter (ra, zay, waw, ya) into the curve of its tail: slid right over it
    *  and dropped into it, as far as it goes without touching. */
   nest?: boolean;
   /** A short companion text set smaller among the words, and its scale. */
@@ -177,7 +177,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         nests.set(key, best);
         return best;
       };
-    const tailed = (i: number) => /[رز]$/.test(groups[i].s);
+    const tailed = (i: number) => /[رزوي]$/.test(groups[i].s);
     const layoutWord = (w: number) => {
       let cur = wp[w].x,
         prev = -1;

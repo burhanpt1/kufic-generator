@@ -11,7 +11,14 @@ import { renderPlaced } from '../src/render/composition';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
 import { isLetter } from '../src/script/thuluth/engine';
 import type { RoundelSpec } from '../src/script/thuluth/roundel';
-import { buildRoundel, composeRoundel, groupBox, scaleGroup, shapeBowl } from '../src/script/thuluth/roundel';
+import {
+  buildRoundel,
+  composeRoundel,
+  extendTails,
+  groupBox,
+  scaleGroup,
+  shapeBowl,
+} from '../src/script/thuluth/roundel';
 
 const NAMES = 'بُرْهَان وَشَمِيرَة';
 const th = thuluth({ ...ROUNDEL_PEN, great: { ya: true, yaWide: 2.6, yaDeep: 1.3 } });
@@ -130,5 +137,28 @@ describe('nesting in a tail', () => {
       expect(over(nested)).toBeLessThan(over(plain) - 1);
       expect(nested.st[j].y).toBeLessThanOrEqual(nested.st[i].y);
     }
+  });
+});
+
+describe('drawn-out tails', () => {
+  it('runs a tail with the rest of its word nested in it level beneath all of it, but not under the bowl letter', () => {
+    const r = composeRoundel(th, NAMES, { elongate: true, cross: true, fillTarget: 0.5, noRise: true, kern: true, oval: 1.45, tries: 1, iters: 0, nest: true })[0]; // prettier-ignore
+    const before = structuredClone(r.shapes.map(S => S.b.strokes.map(st => st.s.length)));
+    extendTails(th, r);
+    const ink = (i: number) => r.shapes[i].b.strokes.flatMap(st => st.s.map(q => [q.x + r.st[i].x, q.y + r.st[i].y]));
+    const at = (s2: string) => r.groups.findIndex(g => g.s === s2);
+    // the waw runs under shamira (beyond its last piece, beneath its lowest ink), the ra of بر under ها
+    for (const [tail, nested] of [
+      ['و', ['شمير', 'ة']],
+      ['بر', ['ها']],
+    ] as const) {
+      const t = ink(at(tail)),
+        n = nested.flatMap(s2 => ink(at(s2)));
+      expect(Math.min(...t.map(q => q[0]))).toBeLessThan(Math.min(...n.map(q => q[0])));
+      expect(Math.min(...t.map(q => q[1]))).toBeLessThan(Math.min(...n.map(q => q[1])));
+    }
+    // the nun, which the bowl will redraw, is left alone
+    const ni = at('ن');
+    expect(r.shapes[ni].b.strokes.map(st => st.s.length)).toEqual(before[ni]);
   });
 });

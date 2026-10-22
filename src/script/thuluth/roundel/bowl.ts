@@ -241,6 +241,90 @@ export function crowding(f: Finished): number {
   return c;
 }
 
+export interface TailOptions {
+  /** The letters whose tails are drawn out (default ra, zay, waw, ya). */
+  letters?: string;
+  /** Clearance under what nests in the tail, and how far the tail runs past it. */
+  gap?: number;
+  reach?: number;
+}
+
+/** Draw out the tail of a letter that has the rest of its word nested in it (a ra, a waw) as a long, level stroke
+ *  under all of it, turning up at its end: the nested pieces sit on it as on a tughra's arm laid flat, so the lines of
+ *  a composition read as layers (a word, its tail, the next word, its tail, the bowl). */
+export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Roundel {
+  const set = o.letters ?? 'رزوي',
+    gap = o.gap ?? th.style.nib + 0.6,
+    reach = o.reach ?? 0.6;
+  // a great final bowl (a nun or ya going deep) holds everything, so it is not among what a tail runs under
+  const deep = (j: number) => {
+    const L = letters(r, j).pop();
+    return !!L && 'نيى'.includes(L.c) && Math.min(...L.g.s.flatMap(st => st.pts.map(q => q[1]))) < -3.2;
+  };
+  // the last tails first, so a tail with another tail nested in it runs beneath that one as drawn out
+  for (let i = r.groups.length - 1; i >= 0; i--) {
+    const g = r.groups[i],
+      P = r.shapes[i].b.placed.filter(isLetter).pop();
+    if (!P || !set.includes(P.c)) continue;
+    const after = r.groups
+      .map((_, j) => j)
+      .filter(j => j > i && r.groups[j].word === g.word && !r.groups[j].newWord && !deep(j));
+    if (!after.length) continue;
+    // what nests: the rest of the word's letters, in composition coordinates
+    let fx0 = 1e9,
+      fy0 = 1e9;
+    after.forEach(j => {
+      const s2 = r.groups[j].sc || 1;
+      letters(r, j).forEach(p =>
+        p.g.s.forEach(st =>
+          st.pts.forEach(q => {
+            fx0 = Math.min(fx0, r.st[j].x + p.ox + q[0] * s2);
+            fy0 = Math.min(fy0, r.st[j].y + (p.oy || 0) + q[1] * s2);
+          }),
+        ),
+      );
+    });
+    const sc = r.groups[i].sc || 1,
+      O = { x: r.st[i].x + P.ox, y: r.st[i].y + (P.oy || 0) },
+      // the tail is the stroke that goes lowest
+      si = P.g.s.reduce((m, st, k) => (Math.min(...st.pts.map(q => q[1])) < Math.min(...P.g.s[m].pts.map(q => q[1])) ? k : m), 0), // prettier-ignore
+      pts = P.g.s[si].pts,
+      // from the bottom of the tail's own curve
+      k = pts.reduce((m, q, a) => (q[1] < pts[m][1] ? a : m), 0);
+    if (k < 1) continue;
+    const [xk, yk] = pts[k],
+      Ly = Math.min((fy0 - gap - O.y) / sc, yk),
+      xe = (fx0 - reach - O.x) / sc;
+    if (xe > xk - 3) continue;
+    // it eases down to its level over a run as long as the drop, then runs level and turns up at its end
+    const run = Math.max(1.5, (yk - Ly) * 1.6),
+      tail: SkelPt[] = [
+        ...pts.slice(0, k + 1),
+        [xk - run * 0.5, Ly + (yk - Ly) * 0.35, 1],
+        [xk - run, Ly, 1],
+        [xe + 1.4, Ly - 0.05, 1],
+        [xe + 0.3, Ly + 0.35, 0.6],
+        [xe - 0.1, Ly + 1.1, 0.2],
+      ];
+    if (xe + 1.4 > xk - run) continue;
+    P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: tail } : st)) };
+    // the drawn stroke: cut where the tail begins and continue along the new one
+    const S = r.shapes[i],
+      cx = P.ox + xk * sc,
+      cy = (P.oy || 0) + yk * sc;
+    let best = { d: 1e9, si: 0, qi: 0 };
+    S.b.strokes.forEach((st, a) =>
+      st.s.forEach((q, b) => {
+        const d = Math.hypot(q.x - cx, q.y - cy);
+        if (d < best.d) best = { d, si: a, qi: b };
+      }),
+    );
+    const st = S.b.strokes[best.si];
+    st.s = st.s.slice(0, best.qi + 1).concat(sampleStroke(tail.slice(k + 1).map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
+  }
+  return r;
+}
+
 /** Scale one group of letters about its own origin (a smaller conjunction, say); its marks scale with it. */
 export function scaleGroup(th: Thuluth, r: Roundel, gi: number, s: number) {
   const S = r.shapes[gi],

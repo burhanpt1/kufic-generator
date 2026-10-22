@@ -1,8 +1,8 @@
 // Roundels and cartouches in thuluth (lab roundel.js, bowl.js, counters.js, marks2.js): a phrase arranged to fill a
 // disc or an oval, finished by hand-like steps, its marks solved as one even distribution, drawn on a gilded field.
 import type { Thuluth } from '../engine';
-import type { BowlOptions, FrameOptions } from './bowl';
-import { fitFrame, placeUnder, scaleGroup, shapeBowl } from './bowl';
+import type { BowlOptions, FrameOptions, TailOptions } from './bowl';
+import { extendTails, fitFrame, placeUnder, scaleGroup, shapeBowl } from './bowl';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel } from './compose';
 import type { Finished } from './finish';
@@ -33,6 +33,8 @@ export interface RoundelSpec {
   text: string;
   compose?: RoundelOptions;
   tweaks?: GroupTweak[];
+  /** Draw out the tails that have the rest of their word nested in them (false or absent: leave them). */
+  tails?: TailOptions | false;
   /** Redraw a great final bowl to follow the frame (false: leave it). */
   bowl?: BowlOptions | false;
   /** Fit the frame to everything drawn (false: finish inside the composed disc). */
@@ -55,6 +57,7 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
       placeUnder(r, gi, t.under.group, t.under.gap ?? 1, t.under.dx ?? 0);
     if (t.move) r.st[gi] = { x: r.st[gi].x + t.move[0], y: r.st[gi].y + t.move[1] };
   }
+  if (spec.tails) extendTails(th, r, spec.tails);
   if (spec.bowl) shapeBowl(th, r, spec.bowl);
   return r;
 }
