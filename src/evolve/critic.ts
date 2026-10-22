@@ -112,6 +112,8 @@ registerCritic('roundel', p => {
     apart: clamp(1 - m.overlap / 40),
     marked: m.missing ? 0.4 : 1,
     layers: clamp((m.levels - 1) / 4 + Math.min(m.tails, 2) * 0.15),
+    // a stacked piece in an earlier word's line reads out of order: it costs the layers it bought, and more
+    order: clamp(1 - (m.order ?? 0) / 4),
   };
 });
 
@@ -124,6 +126,7 @@ export const METRIC_LABELS: Record<string, string> = {
   fill: 'Bands fill the canvas', centre: 'Centre about a quarter', legibility: 'Legible', compact: 'Compact',
   squareness: 'Square', symmetry: 'Symmetric', sharing: 'Shared strokes', space: 'Little empty space',
   clearance: 'Bowl clears the letters', apart: 'Words keep apart', marked: 'Every mark placed', layers: 'Layered',
+  order: 'Read in order',
 }; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */

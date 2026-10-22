@@ -204,3 +204,32 @@ describe('the roundel critic', () => {
     }
   }, 60000);
 });
+
+describe('reading order of stacked pieces', () => {
+  it('faults a stacked piece lifted into an earlier word, and not one that stays in its own line', async () => {
+    const { orderFault } = await import('../src/script/thuluth/roundel');
+    const groups = [
+      { s: 'بر', word: 0, allah: false },
+      { s: 'ة', word: 1, allah: false },
+    ];
+    const below = { x0: 0, x1: 3, y0: -6, y1: -3, base: -6 };
+    expect(orderFault(groups, [{ x0: 0, x1: 10, y0: 0, y1: 4, base: 0 }, below], [0, 1])).toBe(0);
+    expect(orderFault(groups, [{ x0: 0, x1: 10, y0: 0, y1: 4, base: 0 }, { ...below, y0: 1, y1: 4 }], [0, 1])).toBeGreaterThan(0); // prettier-ignore
+    // not stacked: no fault
+    expect(orderFault(groups, [{ x0: 0, x1: 10, y0: 0, y1: 4, base: 0 }, { ...below, y0: 1, y1: 4 }], [0, 0])).toBe(0); // prettier-ignore
+  });
+});
+
+describe('a free-standing great nun', () => {
+  it('starts at the head of its own bowl, away from the letter before it', () => {
+    const go = (free: boolean) =>
+      buildRoundel(th, spec({ bowl: { clear: 5.6, autoOval: true, free }, compose: { ...spec().compose, tries: 1 } }))!;
+    const nunHead = (b: ReturnType<typeof go>) => {
+      const i = b.r.groups.findIndex(g => g.s === 'ن');
+      return b.r.st[i].x;
+    };
+    const alifX = (b: ReturnType<typeof go>) => b.r.st[b.r.groups.findIndex(g => g.s === 'ها')].x;
+    // set beside the alif when joined by a lead-in; at the far side of the bowl when free
+    expect(alifX(go(false)) - nunHead(go(false))).toBeLessThan(alifX(go(true)) - nunHead(go(true)) - 5);
+  }, 60000);
+});

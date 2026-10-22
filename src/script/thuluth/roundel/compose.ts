@@ -19,6 +19,8 @@ export interface Disc {
 export interface Layout {
   lv: number[];
   wp: { x: number; y: number }[];
+  /** The stacked pieces (by index), if any. */
+  up?: number[];
 }
 export interface RoundelOptions extends StackOptions {
   tries?: number;
@@ -62,11 +64,45 @@ export interface Roundel {
   groups: RGroup[];
   lv: number[];
   wp: { x: number; y: number }[];
+  /** The stacked pieces (by index). */
+  up: number[];
   /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
   bowlGrow?: number;
   /** Tails drawn out under what nests in them. */
   tailsDrawn?: number;
 }
+
+/** Reading order of stacked pieces: a piece lifted above the one before it must stay in its own word's line, not land
+ *  in an earlier word's (a ta marbuta stacked up onto another word's stroke reads out of order). How far each such
+ *  piece rises above the line of an earlier piece it lies over, squared and summed; 0 when the order holds. */
+export function orderFault(
+  groups: readonly RGroup[],
+  boxes: readonly { x0: number; x1: number; y0: number; y1: number; base: number }[],
+  up: ArrayLike<number>,
+): number {
+  let f = 0;
+  for (let j = 0; j < groups.length; j++) {
+    if (!up[j]) continue;
+    const B = boxes[j],
+      mid = (B.y0 + B.y1) / 2;
+    for (let i = 0; i < groups.length; i++) {
+      if (groups[i].word >= groups[j].word) continue;
+      const A = boxes[i];
+      if (Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0) < 0.5) continue;
+      const v = mid - (A.base - 0.5);
+      if (v > 0) f += v * v;
+    }
+  }
+  return f;
+}
+
+/** The order fault of a composed roundel (for the critic). */
+export const roundelOrderFault = (r: Roundel) =>
+  orderFault(
+    r.groups,
+    r.shapes.map((S, i) => ({ x0: r.st[i].x + S.x0, x1: r.st[i].x + S.x1, y0: r.st[i].y + S.y0, y1: r.st[i].y + S.y1, base: r.st[i].y })), // prettier-ignore
+    Object.assign(new Uint8Array(r.groups.length), Object.fromEntries((r.up || []).map(i => [i, 1]))),
+  );
 
 export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
   const tries = o.tries ?? 18,
@@ -307,6 +343,17 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       pts.forEach(p => (r = Math.max(r, Math.hypot((p[0] - cx) / ovl, p[1] - cy))));
       return { cx, cy, r: r + 0.8, ink: sw, oval: ovl };
     };
+    const stackOrder = () =>
+      o.stack
+        ? orderFault(
+            groups,
+            groups.map((_, i) => {
+              const S = shapes[i][lv[i]];
+              return { x0: gpos[i].x + S.x0, x1: gpos[i].x + S.x1, y0: gpos[i].y + S.y0, y1: gpos[i].y + S.y1, base: gpos[i].y }; // prettier-ignore
+            }),
+            up,
+          )
+        : 0;
     const energy = () => {
       let o2 = 0;
       for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
@@ -401,7 +448,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         }
       }
       return (
-        0.6 * ceil + 3 * o2 + 25 * order + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / (o.oval || 1))) +
+        0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / (o.oval || 1))) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };
@@ -411,6 +458,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       // rebuild a recorded layout: the same variant of each piece, each word in the same place
       o.fixed.lv.forEach((v, i) => i < n && (lv[i] = Math.min(v, shapes[i].length - 1)));
       o.fixed.wp.forEach((p, w) => w < W && (wp[w] = { ...p }));
+      (o.fixed.up || []).forEach(i => i < n && (up[i] = 1));
       for (let w = 0; w < W; w++) layoutWord(w);
       for (let a = 0; a < W; a++) recompute(a);
       E = energy();
@@ -488,7 +536,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     let o2 = 0;
     for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
-    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })) }); // prettier-ignore
+    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]) }); // prettier-ignore
     if (o.fixed) break;
   }
   results.sort((a, b) => a.E - b.E);

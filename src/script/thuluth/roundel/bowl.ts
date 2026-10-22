@@ -22,6 +22,10 @@ export interface BowlOptions {
   dotAt?: number;
   /** Search the oval's proportion too. */
   autoOval?: boolean;
+  /** A bowl letter that joins nothing before it (an isolated nun) starts from its own head at the top of the bowl's
+   *  far side and drops straight into it, rather than leading out level from where it was written beside the letter
+   *  before (a level lead-in from beside an alif made the pair read as a lam). On unless false. */
+  free?: boolean;
 }
 
 const letters = (r: Roundel, i: number) => r.shapes[i].b.placed.filter(isLetter);
@@ -75,11 +79,12 @@ export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
   // left of the join and drops in a broad, open curve (a tight turn under the letter before closes into a small loop
   // that reads as a ta marbuta), then sweeps back beneath everything and rises on the right
   const lead = o.lead ?? 2.0,
+    free = o.free !== false && B.form === 'iso',
     cx = (X0 + X1) / 2,
     bottom = Math.min(Y0, J.y) - clear;
   const cy = Math.min(J.y - 1.2, Math.max(bottom + 2, (Y0 + Y1) / 2 - (Y1 - Y0) * 0.1));
   let b = cy - bottom,
-    aL = Math.max(cx - (J.x - lead), cx - X0 + side),
+    aL = free ? cx - X0 + side : Math.max(cx - (J.x - lead), cx - X0 + side),
     aR = X1 - cx + side;
   const size0 = aL + aR + b;
   // every letter below the centre line stays inside the bowl by a pen's width and a gap: a descending tail (a ra's)
@@ -94,7 +99,13 @@ export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
       if (x < cx) aL = Math.max(aL, need);
       else aR = Math.max(aR, need);
     });
-  return { gi, B, S, G, sc, J, cx, cy, b, aL, aR, size0, lead };
+  if (free) {
+    // the letter moves to the head of its bowl
+    const dx = cx - aL + 0.6 - J.x;
+    r.st[gi] = { x: r.st[gi].x + dx, y: r.st[gi].y };
+    J.x += dx;
+  }
+  return { gi, B, S, G: r.st[gi], sc, J, cx, cy, b, aL, aR, size0, lead, free };
 }
 
 /** Redraw a great final bowl (a returning ya or a final nun) as a curve that follows the frame's lower rim at a fixed
@@ -105,7 +116,7 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
     tailUp = o.tailUp ?? 2.2,
     bo = bowlOval(th, r, o);
   if (!bo) return r;
-  const { gi, B, S, G, sc, J, cx, cy, b, aL, aR, size0, lead } = bo;
+  const { gi, B, S, G, sc, J, cx, cy, b, aL, aR, size0, lead, free } = bo;
   const E = (t: number): [number, number] => [cx + (Math.cos(t) < 0 ? aL : aR) * Math.cos(t), cy + b * Math.sin(t)];
   // how far the letters pushed the bowl out, for choosing between arrangements
   r.bowlGrow = (aL + aR + b) / size0 - 1;
@@ -113,7 +124,8 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
     te = Math.PI * 2 - 0.12 + (o.tailAng || 0),
     pts: SkelPt[] = [[J.x, J.y, 1]];
   const s0 = E(ts);
-  pts.push([J.x - lead * 0.45, J.y - 0.15, 1], [s0[0] + lead * 0.12, (J.y + s0[1]) / 2 + 0.25, 1]);
+  if (free) pts.push([J.x - 0.35, J.y - 0.9, 1], [s0[0] + 0.1, (J.y + s0[1]) / 2 - 0.4, 1]);
+  else pts.push([J.x - lead * 0.45, J.y - 0.15, 1], [s0[0] + lead * 0.12, (J.y + s0[1]) / 2 + 0.25, 1]);
   for (let t = ts; t <= te; t += 0.18) {
     const [x, y] = E(t);
     pts.push([x, y, 1]);
@@ -132,7 +144,11 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
   );
   const at = best! as { d: number; si: number; qi: number },
     st = S.b.strokes[at.si];
-  st.s = st.s.slice(0, at.qi + 1).concat(sampleStroke(pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension)); // prettier-ignore
+  // a free bowl is the whole letter: its head, a short tooth turning in at the top, then the bowl, as one stroke
+  if (free) {
+    const head: SkelPt[] = [[J.x + 1.7, J.y + 0.2, 0.45], [J.x + 1.0, J.y + 0.95, 1], [J.x + 0.2, J.y + 0.45, 1]];
+    st.s = sampleStroke([...head, ...pts.slice(1)].map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension); // prettier-ignore
+  } else st.s = st.s.slice(0, at.qi + 1).concat(sampleStroke(pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension)); // prettier-ignore
   // the letter's vowels sit at its start; its dots inside the bowl, low and to the left
   B.g = {
     s: [

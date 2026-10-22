@@ -199,7 +199,7 @@ export interface RoundelRecipe {
   iters?: number;
   seed?: number;
   /** A recorded arrangement: each group's variant and each word's place. */
-  fixed?: { lv: number[]; wp: { x: number; y: number }[] };
+  fixed?: { lv: number[]; wp: { x: number; y: number }[]; up?: number[] };
   /** Great gestures: the returning ya (width, depth), the Husayn nun, the long-headed hah. */
   great?: { ya?: boolean; yaWide?: number; yaDeep?: number; nun?: boolean; hah?: boolean };
   tweaks?: {
@@ -212,7 +212,15 @@ export interface RoundelRecipe {
   }[];
   /** Redraw a great final bowl along the frame; dotAt places its dots along it (share of the left half, negative to
    *  the right; by default the middle, or the nearest place clear of other dots). */
-  bowl?: { clear?: number; side?: number; tailUp?: number; lead?: number; autoOval?: boolean; dotAt?: number };
+  bowl?: {
+    clear?: number;
+    side?: number;
+    tailUp?: number;
+    lead?: number;
+    autoOval?: boolean;
+    dotAt?: number;
+    free?: boolean;
+  };
   /** Marks: how far a vowel may sit from its letter; ornaments in the gaps and their density. */
   markReach?: number;
   ornaments?: boolean;
@@ -325,6 +333,7 @@ const roundelRecipe = z
     fixed: z.object({
       lv: z.array(z.number().int().min(0)).max(200),
       wp: z.array(z.object({ x: num, y: num })).max(100),
+      up: z.array(z.number().int().min(0)).max(200).optional(),
     }),
     great: z.object({ ya: z.boolean(), yaWide: num, yaDeep: num, nun: z.boolean(), hah: z.boolean() }).partial(),
     tweaks: z
@@ -346,6 +355,7 @@ const roundelRecipe = z
         lead: num,
         autoOval: z.boolean(),
         dotAt: z.number().min(-1).max(1),
+        free: z.boolean(),
       })
       .partial(),
     markReach: z.number().min(0.5).max(6),
