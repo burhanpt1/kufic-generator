@@ -65,7 +65,10 @@ export const kufi: ScriptEngine = {
   layout(segments, prepared, width, opts: LayoutOptions): CellStrip | null {
     const { Hb, base, ascenders } = prepared;
     RHY.on = opts.rhythm;
-    const st = strip(segments as Seg[], Hb, base, opts.wordGap, width, opts.wrap);
+    const sg = segments as Seg[],
+      // round a ring the end of the text meets its start, a word boundary
+      close = opts.wrap && sg[sg.length - 1]?.endsWord ? opts.wordGap - 1 : 0,
+      st = strip(sg, Hb, base, opts.wordGap, width, opts.wrap, close);
     if (!st) return null;
     if (opts.plait) plaitStrip(st, Hb, base, ascenders);
     const t = opts.terminals,
