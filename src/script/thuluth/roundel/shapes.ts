@@ -67,6 +67,10 @@ export interface StackOptions {
   levels?: number[];
   /** Stacks: how strongly to prefer them (0 = none); deep stacks too. */
   stackPull?: number;
+  /** Stack the joins masters stack (STACK_PRIOR): any join whose next letter is stacked at least stackMin (0.2) of
+   *  the time may be, pulled in proportion to that rate (against mim's); off, only joins before hah and mim. */
+  learnedStack?: boolean;
+  stackMin?: number;
   deep?: boolean;
   /** Final tails stretched (roundels). */
   tails?: boolean;
@@ -83,14 +87,29 @@ export const LEVELS = [0, 2, 4];
 const STACK_OFFSETS = [{ dx: 0.9, dy: -3.4 }, { dx: 2.1, dy: -3.4 }, { dx: 1.2, dy: -4.6 }, { dx: 2.4, dy: -4.6 }]; // prettier-ignore
 const DEEP_OFFSETS = [{ dx: 0.6, dy: -3.6 }, { dx: 1.6, dy: -4.8 }, { dx: 0.4, dy: -6.0 }, { dx: 1.8, dy: -6.2 }]; // prettier-ignore
 
-/** Joins where the next letter may be written underneath the one before it (before hah and mim). */
-export function stackable(s: string): number[] {
+/** How often masters stack a join, by the letter after it: 362 joins in 70 Calliar thuluth compositions
+ *  (prototypes/thuluth-lab/refresh/data/stack-prior-next-letter.json; ya and nun counted in their final forms). */
+export const STACK_PRIOR: Record<string, number> = {
+  ra: 0.559, dal: 0.5, hah: 0.438, mim: 0.402, nun: 0.306, waw: 0.268, ya: 0.216, sin: 0.125, ain: 0.125, sad: 0.083,
+  lam: 0.071, kaf: 0.062, fa: 0.031, ha: 0.026, alif: 0.024, tooth: 0.015,
+}; // prettier-ignore
+const stackFam = (f: { c: string; form: string }) =>
+  f.form === 'fin' && (f.c === 'ي' || f.c === 'ى') ? 'ya' : FAM[f.c] === 'nun' && f.form === 'fin' ? 'nun' : FAM[f.c];
+/** The pull of stacking join i of s: 1 by the rule, or the learned rate against mim's (at most 1.4). */
+export function stackWeight(s: string, i: number, o: StackOptions = {}): number {
+  return o.learnedStack ? Math.min(1.4, (STACK_PRIOR[stackFam(forms(s)[i])] ?? 0) / 0.4) : 1;
+}
+
+/** Joins where the next letter may be written underneath the one before it: before hah and mim, or, learned, before
+ *  any letter masters stack often enough. */
+export function stackable(s: string, o: StackOptions = {}): number[] {
   const fs = forms(s),
     out: number[] = [];
   for (let i = 1; i < fs.length; i++) {
     const f = fs[i],
       fam = FAM[f.c];
-    if ((f.form === 'med' || f.form === 'fin') && (fam === 'hah' || fam === 'mim') && fs[i - 1].form !== 'iso')
+    if (!(f.form === 'med' || f.form === 'fin') || fs[i - 1].form === 'iso') continue;
+    if (o.learnedStack ? (STACK_PRIOR[stackFam(f)] ?? 0) >= (o.stackMin ?? 0.2) : fam === 'hah' || fam === 'mim')
       out.push(i);
   }
   return out;
@@ -311,7 +330,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
   }
   const n = [...g.s].length,
     levels = g.sc ? [0, 2] : n > 1 ? (o.levels ?? LEVELS) : [0],
-    joins = g.sc ? [] : stackable(g.s);
+    joins = g.sc ? [] : stackable(g.s, o);
   const tails = o.tails && n >= 1 && !g.sc ? [{ sx: 1.4, sy: 1.3 }, { sx: 1.8, sy: 1.6 }] : []; // prettier-ignore
   tails.forEach(tl => {
     const v = groupShape(th, g, 0, { ...o, tail: tl }, K, null);
@@ -354,7 +373,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
               };
               const v3 = groupShape(th, g, L, o, K, stk, joins[c]);
               if (v3 && groupShapeOk(th, g, L, o, stk, joins[a])) {
-                v3.cost = 0.3 * L - 1.8 * (o.stackPull ?? 1.6);
+                v3.cost = 0.3 * L - 0.9 * (stackWeight(g.s, joins[a], o) + stackWeight(g.s, joins[c], o)) * (o.stackPull ?? 1.6); // prettier-ignore
                 v3.stacked = true;
                 out.push(v3);
               }
@@ -363,7 +382,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
       (o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS).forEach(off => {
         const v2 = groupShape(th, g, L, o, K, { [j]: { dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25 } }, j);
         if (v2) {
-          v2.cost = 0.3 * L - (o.stackPull ?? 1.6);
+          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * (o.stackPull ?? 1.6);
           v2.stacked = true;
           out.push(v2);
         }

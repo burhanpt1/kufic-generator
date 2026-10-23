@@ -11,7 +11,8 @@ The chat-built thuluth lab, exactly as handed over (see `HANDOVER.md`). It is th
 - `tools/`: the lab's Python tools (photo masks, letter fitting, Calliar extraction, reference rendering).
 - `reference/`: the final wedding piece and the known kaf issue, as the lab rendered them.
 
-**This is the historical reference, frozen as handed over on 15 October.** The port's own letter fixes supersede it:
+**This is the historical reference, frozen as handed over on 15 October.** The lab as of 22 October, with the owner's
+ratings and the port plan, is in `refresh/` (see its README). The port's own letter fixes supersede it:
 `src/script/thuluth/fixes.ts` redraws the forms that fail the legibility rules (`tests/thuluth-legibility.test.ts`):
 - the final and isolated kaf;
 - the initial and medial lam (the learned ones were short or retraced; the lab's own `LEARN_USE` still selects them);

@@ -40,7 +40,7 @@ const ref = document.getElementById('ref'), comp = document.getElementById('comp
 fig(ref, labSVG, 'The lab (reference)');
 const th = thuluth({ ...ROUNDEL_PEN, great });
 let t0 = performance.now();
-const b = buildRoundel(th, { text: rc.text, compose, tweaks, bowl: { oval: 1.45, clear: 5.6, autoOval: true }, frame: { markReach: 2.2, ornaments: true, density: 0.6 } });
+const b = buildRoundel(th, { text: rc.text, compose, tweaks, bowl: { oval: 1.45, clear: 5.6, autoOval: true }, frame: { markReach: 2.2, ornaments: true, density: 0.6, fathaRule: false, allSigns: false, ornPen: 0.42 } });
 fig(ref, renderRoundel(th, b.r, b.f, { U: 12, field: '#1f3f8f', gold: '#f4f6f7', goldDark: '#16306e', outline: '#16306e', bg: '#f4f6f7', discScale: 1, noOutline: true, counters: '#2aa6a0' }), `Rebuilt · ${(performance.now() - t0).toFixed(0)} ms`);
 const slot = (text, repeat = 'fill') => ({ text, repeat, wordGap: 2 });
 const cases = [

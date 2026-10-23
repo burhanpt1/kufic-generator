@@ -187,6 +187,11 @@ export interface RoundelRecipe {
   nest?: boolean;
   /** The search may stack a piece of a word above the one before it, so words rise in layers. */
   stack?: boolean;
+  /** Stack the joins masters stack (learned from 70 Calliar thuluth compositions: before ra, zay, dal, hah, mim, final
+   *  nun, waw, final ya), pulled by how often they do; off, only before hah and mim. */
+  learnedStack?: boolean;
+  /** Girift: how much a stem crossing a horizontal is sought (0.04 is safe, 0.12 collapses into one knot). */
+  girift?: number;
   /** Groups written only with a stacked join where they have one (e.g. 'شمير': the shin above the mim). */
   stackAt?: string[];
   /** Tall stems rise into the empty space above them, up to the oval. */
@@ -230,6 +235,28 @@ export interface RoundelRecipe {
   ornaments?: boolean;
   density?: number;
   ornStyle?: 'plume' | 'trefoil';
+  /** A reading path for the words, read from the top: a named path (line, diagonal, zigzag, bolt, cup, rows2, rows3,
+   *  stag2, stag3, calliar1–4, calliar6) or polylines in field coordinates (−1…1, y up), one per stroke. */
+  path?: string | [number, number][][];
+  /** Fitted lanes (best for many words): level by default (deg 180), their number and spacing fitted to the text. */
+  lanes?: { deg?: number; n?: number; bandFrac?: number };
+  /** On a path: its length as a share of the text's width, and how far a word may stray from its target. */
+  pathFill?: number;
+  pathTol?: number;
+  /** On a path, the reading rules (across, then downward); on by default. */
+  readRule?: boolean;
+  /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best. */
+  choose?: number;
+  /** Mirrored (müsennâ): the text set against a vertical axis and mirrored, the halves combined into one design (a
+   *  narrow stroke on the axis shared unless shareStrokes is false). Best when a tall stroke can be shared (علي, with
+   *  great.ya); never for a text holding الله. */
+  mirror?: boolean | { shareStrokes?: boolean };
+  /** The rules for the marks from the Arabic sources (on by default): each fatha as long as its space allows (short,
+   *  medium, or long with the main pen), and with ornaments a clarifying letter under each of ح س ص ط ع ك م. false
+   *  restores the short fatha, no long fatha, and only the small ح and س. */
+  fathaRule?: boolean;
+  longFatha?: boolean;
+  allSigns?: boolean;
 }
 export interface RoundelColours {
   field?: string;
@@ -318,6 +345,8 @@ const roundelRecipe = z
     nest: z.boolean(),
     stack: z.boolean(),
     stackAt: z.array(z.string().min(1).max(40)).max(20),
+    learnedStack: z.boolean(),
+    girift: z.number().min(0).max(0.3),
     rise: z
       .object({ margin: z.number().min(0).max(10), most: z.number().min(1).max(4), oval: z.number().min(1).max(3) })
       .partial(),
@@ -370,6 +399,33 @@ const roundelRecipe = z
     ornaments: z.boolean(),
     density: z.number().min(0).max(1),
     ornStyle: z.enum(['plume', 'trefoil']),
+    path: z.union([
+      z.string().max(20),
+      z
+        .array(
+          z
+            .array(z.tuple([z.number().min(-2).max(2), z.number().min(-2).max(2)]))
+            .min(2)
+            .max(40),
+        )
+        .min(1)
+        .max(8),
+    ]),
+    lanes: z
+      .object({
+        deg: z.number().min(0).max(360),
+        n: z.number().int().min(1).max(6),
+        bandFrac: z.number().min(0.2).max(2),
+      })
+      .partial(),
+    pathFill: z.number().min(0.2).max(1.5),
+    pathTol: z.number().min(0).max(10),
+    readRule: z.boolean(),
+    choose: z.number().int().min(1).max(12),
+    mirror: z.union([z.boolean(), z.object({ shareStrokes: z.boolean() }).partial()]),
+    fathaRule: z.boolean(),
+    longFatha: z.boolean(),
+    allSigns: z.boolean(),
   })
   .partial();
 const abjadOpts = z.object({
