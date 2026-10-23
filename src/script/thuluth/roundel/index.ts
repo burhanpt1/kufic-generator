@@ -12,6 +12,7 @@ export * from './bowl';
 export * from './compose';
 export * from './counters';
 export * from './finish';
+export * from './paths';
 export * from './render';
 export * from './shapes';
 export * from './solve';

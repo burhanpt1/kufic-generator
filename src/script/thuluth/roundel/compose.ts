@@ -4,6 +4,8 @@
 // arrangement exactly, so letters can be refined without the layout reshuffling.
 import type { Thuluth } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
+import type { ReadingPath } from './paths';
+import { fitLanes, pathTargets, PATHS } from './paths';
 import type { GroupShape, RGroup, StackOptions } from './shapes';
 import { groupVariants } from './shapes';
 
@@ -55,6 +57,24 @@ export interface RoundelOptions extends StackOptions {
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
+  /** A reading path (paths.ts): the words keep near their targets along it, in reading order. A name from PATHS, or
+   *  the path itself. */
+  path?: string | ReadingPath;
+  /** Fitted lanes: parallel lanes across the field at `deg` (180, level, by default), their number and spacing
+   *  chosen to suit the text. Ignored with `path`. */
+  lanes?: { deg?: number; n?: number; bandFrac?: number };
+  /** The path's length as a share of the text's width (0.7); how far a word may stray from its target before it
+   *  pays (1.4), and how much (0.6). */
+  pathFill?: number;
+  pathTol?: number;
+  pathW?: number;
+  /** On a path, the reading rules (on by default): a later word at about the same height as an earlier one lies to
+   *  its left (readW), and no later word's baseline climbs more than orderSlack above the one before (orderFirm).
+   *  Heights are read from baselines, not boxes: tall stems make boxes overlap. */
+  readRule?: boolean;
+  readW?: number;
+  orderFirm?: number;
+  orderSlack?: number;
   fixed?: Layout;
 }
 export interface Roundel {
@@ -71,6 +91,8 @@ export interface Roundel {
   up: number[];
   /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
   bowlGrow?: number;
+  /** The lanes fitted, if lanes were asked for. */
+  lanes?: { n: number; gap: number };
   /** Tails drawn out under what nests in them; stems risen into the space above. */
   tailsDrawn?: number;
   risen?: number;
@@ -296,6 +318,30 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       });
       return { x0, x1, y0, y1 };
     };
+    // on a reading path, words start at their targets (essential for the search to converge)
+    let PP: ReadingPath | null = typeof o.path === 'string' ? (PATHS[o.path] ?? null) : (o.path ?? null),
+      fitted: { n: number; gap: number } | undefined;
+    const pFill = o.pathFill ?? 0.7;
+    if (!PP && o.lanes && W > 1) {
+      const bx0 = words.map((_, w) => wbox(w)),
+        L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill); // prettier-ignore
+      PP = L.path;
+      fitted = { n: L.n, gap: L.gap };
+    }
+    if (PP && W > 1) {
+      const bx0 = words.map((_, w) => wbox(w)),
+        T0 = pathTargets(
+          PP,
+          bx0.map(q => q.x1 - q.x0),
+          pFill,
+        );
+      words.forEach((_, w) => {
+        const q = bx0[w];
+        wp[w].x += T0[w][0] - (q.x0 + q.x1) / 2;
+        wp[w].y += T0[w][1] - (q.y0 + q.y1) / 2;
+        layoutWord(w);
+      });
+    } else PP = null;
     const ov = Array.from({ length: W }, () => new Float64Array(W));
     const wordOverlap = (a: number, b: number) => {
       let c = 0;
@@ -367,10 +413,42 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
       let order = 0;
       const bx = words.map((_, w) => wbox(w));
-      for (let w = 0; w + 1 < W; w++) {
-        const v = bx[w + 1].x1 - (bx[w].x1 - 1.5);
-        if (v > 0) order += v * v;
-      }
+      if (PP) {
+        // each word near its target along the path (the whole text may shift)
+        const T = pathTargets(
+            PP,
+            bx.map(q => q.x1 - q.x0),
+            pFill,
+          ),
+          A = bx.map(q => [(q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2]),
+          mx = A.reduce((s2, p, i) => s2 + p[0] - T[i][0], 0) / W,
+          my = A.reduce((s2, p, i) => s2 + p[1] - T[i][1], 0) / W,
+          tol = o.pathTol ?? 1.4;
+        A.forEach((p, i) => {
+          const d = Math.hypot(p[0] - T[i][0] - mx, p[1] - T[i][1] - my);
+          if (d > tol) order += (o.pathW ?? 0.6) * (d - tol) ** 2;
+        });
+        if (o.readRule !== false) {
+          // the eye reads across: a later word at about the same height as an earlier one must lie to its left
+          const rowH = (bx.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W) * 0.45;
+          for (let a = 0; a < W; a++)
+            for (let b = a + 1; b < W; b++) {
+              const dy = Math.abs(wp[b].y - wp[a].y);
+              if (dy > rowH) continue;
+              const v = bx[b].x1 - (bx[a].x0 + 1.0);
+              if (v > 0) order += (o.readW ?? 1.5) * v * v * (1 - dy / rowH);
+            }
+          // and it reads downward: no later word climbs back above the one before
+          for (let a = 0; a + 1 < W; a++) {
+            const back = wp[a + 1].y - wp[a].y - (o.orderSlack ?? 1.0);
+            if (back > 0) order += (o.orderFirm ?? 3) * back * back;
+          }
+        }
+      } else
+        for (let w = 0; w + 1 < W; w++) {
+          const v = bx[w + 1].x1 - (bx[w].x1 - 1.5);
+          if (v > 0) order += v * v;
+        }
       if (o.topFirst)
         for (let w = 0; w + 1 < W; w++) {
           const ox2 = Math.min(bx[w].x1, bx[w + 1].x1) - Math.max(bx[w].x0, bx[w + 1].x0),
@@ -488,7 +566,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           layoutWord(w);
           recompute(w);
         };
-      } else if ((o.emph || o.elongate) && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
+      } else if ((o.emph || o.elongate) && !PP && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
+        // (not on a reading path: the lift teleports whole words across the field)
         // lift a word onto a shelf (an elongated stroke or a long final sweep) or into a cradle
         const withShelf = groups.map((_, i) => i).filter(i => shapes[i][lv[i]].shelves.length);
         if (withShelf.length) {
@@ -544,7 +623,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     let o2 = 0;
     for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
-    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]) }); // prettier-ignore
+    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]), lanes: fitted }); // prettier-ignore
     if (o.fixed) break;
   }
   results.sort((a, b) => a.E - b.E);

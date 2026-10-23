@@ -230,6 +230,16 @@ export interface RoundelRecipe {
   ornaments?: boolean;
   density?: number;
   ornStyle?: 'plume' | 'trefoil';
+  /** A reading path for the words, read from the top: a named path (line, diagonal, zigzag, bolt, cup, rows2, rows3,
+   *  stag2, stag3, calliar1–4, calliar6) or polylines in field coordinates (−1…1, y up), one per stroke. */
+  path?: string | [number, number][][];
+  /** Fitted lanes (best for many words): level by default (deg 180), their number and spacing fitted to the text. */
+  lanes?: { deg?: number; n?: number; bandFrac?: number };
+  /** On a path: its length as a share of the text's width, and how far a word may stray from its target. */
+  pathFill?: number;
+  pathTol?: number;
+  /** On a path, the reading rules (across, then downward); on by default. */
+  readRule?: boolean;
   /** The rules for the marks from the Arabic sources (on by default): each fatha as long as its space allows (short,
    *  medium, or long with the main pen), and with ornaments a clarifying letter under each of ح س ص ط ع ك م. false
    *  restores the short fatha, no long fatha, and only the small ح and س. */
@@ -376,6 +386,28 @@ const roundelRecipe = z
     ornaments: z.boolean(),
     density: z.number().min(0).max(1),
     ornStyle: z.enum(['plume', 'trefoil']),
+    path: z.union([
+      z.string().max(20),
+      z
+        .array(
+          z
+            .array(z.tuple([z.number().min(-2).max(2), z.number().min(-2).max(2)]))
+            .min(2)
+            .max(40),
+        )
+        .min(1)
+        .max(8),
+    ]),
+    lanes: z
+      .object({
+        deg: z.number().min(0).max(360),
+        n: z.number().int().min(1).max(6),
+        bandFrac: z.number().min(0.2).max(2),
+      })
+      .partial(),
+    pathFill: z.number().min(0.2).max(1.5),
+    pathTol: z.number().min(0).max(10),
+    readRule: z.boolean(),
     fathaRule: z.boolean(),
     longFatha: z.boolean(),
     allSigns: z.boolean(),
