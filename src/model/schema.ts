@@ -230,6 +230,12 @@ export interface RoundelRecipe {
   ornaments?: boolean;
   density?: number;
   ornStyle?: 'plume' | 'trefoil';
+  /** The rules for the marks from the Arabic sources (on by default): each fatha as long as its space allows (short,
+   *  medium, or long with the main pen), and with ornaments a clarifying letter under each of ح س ص ط ع ك م. false
+   *  restores the short fatha, no long fatha, and only the small ح and س. */
+  fathaRule?: boolean;
+  longFatha?: boolean;
+  allSigns?: boolean;
 }
 export interface RoundelColours {
   field?: string;
@@ -370,6 +376,9 @@ const roundelRecipe = z
     ornaments: z.boolean(),
     density: z.number().min(0).max(1),
     ornStyle: z.enum(['plume', 'trefoil']),
+    fathaRule: z.boolean(),
+    longFatha: z.boolean(),
+    allSigns: z.boolean(),
   })
   .partial();
 const abjadOpts = z.object({

@@ -25,7 +25,8 @@ const SPEC: RoundelSpec = {
   compose: { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, emph: 'ب', kern: true, tries: 1, fixed }, // prettier-ignore
   tweaks: [{ at: 'و', scale: 0.62, tint: '#2aa6a0', under: { group: 1, gap: 0.7 } }],
   bowl: { oval: 1.45, clear: 5.6, autoOval: true },
-  frame: { markReach: 2.2, ornaments: true, density: 0.6 },
+  // the marks as the lab drew them when it rendered the reference, before the rules from the Arabic sources
+  frame: { markReach: 2.2, ornaments: true, density: 0.6, fathaRule: false, allSigns: false, ornPen: 0.42 },
 };
 const PAINT = { U: 12, field: '#1f3f8f', gold: '#f4f6f7', goldDark: '#16306e', outline: '#16306e', bg: '#f4f6f7', discScale: 1.0, noOutline: true, counters: '#2aa6a0' }; // prettier-ignore
 

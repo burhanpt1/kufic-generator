@@ -19,7 +19,8 @@ export const MARK_SHAPES: Record<MarkName, SkelPt[][]> = {
   fathatan: [[[0.75, 0.75, 0.3], [0.2, 0.45, 1], [-0.75, -0.05, 0.4]], [[0.75, -0.05, 0.3], [0.2, -0.35, 1], [-0.75, -0.85, 0.4]]],
   kasratan: [[[0.75, 0.75, 0.3], [0.2, 0.45, 1], [-0.75, -0.05, 0.4]], [[0.75, -0.05, 0.3], [0.2, -0.35, 1], [-0.75, -0.85, 0.4]]],
   dammatan: [[[0.15, 0.25, 0.6], [-0.15, 0.75], [-0.6, 0.5], [-0.45, 0.05], [0.05, 0.05], [0.0, -0.45, 0.8], [-0.55, -0.85, 0.2], [-0.2, -0.6, 0.3], [0.5, -0.2, 0.2]]],
-  alifk: [[[0.2, 0.9, 0.3], [0.05, 0.4, 1], [-0.1, -0.8, 0.5]]],
+  // the dagger alif: a short, firm stroke that stands on the shadda (lab marks2.js), not a thin wisp above it
+  alifk: [[[0.16, 1.0, 0.55], [0.06, 0.3, 1], [-0.04, -0.55, 1], [-0.08, -0.95, 0.7]]],
   hamza: [[[0.45, 0.55, 0.4], [-0.15, 0.7], [-0.45, 0.25], [0.05, -0.05], [0.55, 0.05, 0.8], [-0.5, -0.55, 0.3]]],
   hamzaB: [[[0.45, 0.55, 0.4], [-0.15, 0.7], [-0.45, 0.25], [0.05, -0.05], [0.55, 0.05, 0.8], [-0.5, -0.55, 0.3]]],
   madda: [[[0.9, 0.0, 0.4], [0.45, 0.4], [-0.1, 0.0], [-0.55, 0.35], [-0.9, 0.15, 0.4]]],
@@ -27,20 +28,39 @@ export const MARK_SHAPES: Record<MarkName, SkelPt[][]> = {
 /** Mark boxes (width, height) in mark units. */
 export const MARK_SIZE: Record<MarkName, [number, number]> = {
   hamza: [1.2, 1.3], hamzaB: [1.2, 1.3], madda: [1.9, 0.6], shadda: [2.1, 1.0], damma: [1.1, 1.8], dammatan: [1.4, 1.9],
-  sukun: [1.0, 1.0], alifk: [0.6, 1.9], fathatan: [1.6, 1.7], kasratan: [1.6, 1.7], fatha: [1.6, 0.9], kasra: [1.6, 0.9],
+  sukun: [1.0, 1.0], alifk: [0.7, 2.6], fathatan: [1.6, 1.7], kasratan: [1.6, 1.7], fatha: [1.6, 0.9], kasra: [1.6, 0.9],
 }; // prettier-ignore
 
-/** Strokes for one mark at (x, y). */
-export const markStrokes = (m: MarkName, x: number, y: number, scale: number, nib: number, tension: number): Stroke[] =>
-  (MARK_SHAPES[m] || []).map(sh => ({
-    ang: 70,
-    nib,
+/** The three pens of the marks (the Egyptian Cultural Development Fund's notes on tashkil): vowels and signs about a
+ *  third of the main pen, the dagger alif half of it, written at the stems' angle (at the marks' 70° a near-upright
+ *  stroke comes out at its thinnest) and a little smaller than the other marks. */
+export const MARK_PEN = 0.34,
+  SIGN_PEN = 0.3,
+  ALIF_PEN = 0.5,
+  ALIF_ANG = 38,
+  ALIF_SCALE = 0.8;
+
+/** Strokes for one mark at (x, y); `nib` is the vowels' pen (the dagger alif takes its own, in proportion). */
+export const markStrokes = (
+  m: MarkName,
+  x: number,
+  y: number,
+  scale: number,
+  nib: number,
+  tension: number,
+): Stroke[] => {
+  const alif = m === 'alifk',
+    sc = alif ? scale * ALIF_SCALE : scale;
+  return (MARK_SHAPES[m] || []).map(sh => ({
+    ang: alif ? ALIF_ANG : 70,
+    nib: alif ? (nib * ALIF_PEN) / MARK_PEN : nib,
     mark: true,
     s: sampleStroke(
-      sh.map(([a, b, w, c]) => [x + a * scale, y + b * scale, w ?? 1, c] as SkelPt),
+      sh.map(([a, b, w, c]) => [x + a * sc, y + b * sc, w ?? 1, c] as SkelPt),
       tension,
     ),
   }));
+};
 
 /** Place the vowels of a built line in free space within [yBot, yTop] (lab lineMarks). Marks that find no room are
  *  counted in `missing`. */
@@ -123,7 +143,7 @@ export function lineMarks(
         missing++;
         return;
       }
-      out.push(...markStrokes(m, spot[0], spot[1], markScale, nib * 0.34, th.style.tension));
+      out.push(...markStrokes(m, spot[0], spot[1], markScale, nib * MARK_PEN, th.style.tension));
     }),
   );
   return { strokes: out, missing };

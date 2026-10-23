@@ -61,7 +61,7 @@ export function drawRoundel(
     tails: recipe.tails,
     rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
-    frame: { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle }, // prettier-ignore
+    frame: { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns }, // prettier-ignore
   });
   let out: RoundelDrawing | null = null;
   if (b) {
