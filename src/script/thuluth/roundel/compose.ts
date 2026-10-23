@@ -3,6 +3,7 @@
 // shelves (an elongation, a long final) and into cradles (a great bowl). A recorded layout (`fixed`) rebuilds a chosen
 // arrangement exactly, so letters can be refined without the layout reshuffling.
 import type { Thuluth } from '../engine';
+import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
 import type { ReadingPath } from './paths';
 import { fitLanes, pathTargets, PATHS } from './paths';
@@ -100,6 +101,24 @@ export interface Roundel {
   /** Tails drawn out under what nests in them; stems risen into the space above. */
   tailsDrawn?: number;
   risen?: number;
+}
+
+/** Where a group's reading starts: the right edge of its first letter, and that letter's baseline, in the group's own
+ *  coordinates. Reading order is judged from these, not from boxes: a tall stem or a long tail makes a word's box
+ *  reach far from where the eye starts reading it. */
+const HEADS = new WeakMap<GroupShape, { x: number; y: number }>();
+export function headOf(S: GroupShape): { x: number; y: number } {
+  let h = HEADS.get(S);
+  if (!h) {
+    const p = S.b.placed.find(isLetter);
+    if (!p || !isLetter(p)) h = { x: S.x1, y: 0 };
+    else {
+      const sc = p.sc ?? 1;
+      h = { x: p.ox + Math.max(...p.g.s.flatMap(st => st.pts.map(q => q[0] * sc))), y: p.oy || 0 };
+    }
+    HEADS.set(S, h);
+  }
+  return h;
 }
 
 /** Reading order of stacked pieces: a piece lifted above the one before it must stay in its own word's line, not land
@@ -419,7 +438,13 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       let o2 = 0;
       for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
       let order = 0;
-      const bx = words.map((_, w) => wbox(w));
+      const bx = words.map((_, w) => wbox(w)),
+        // where each word's reading starts (its first letter)
+        hd = words.map(ws => {
+          const g0 = ws[0],
+            h = headOf(shapes[g0][lv[g0]]);
+          return { x: gpos[g0].x + h.x, y: gpos[g0].y + h.y };
+        });
       if (PP) {
         // each word near its target along the path (the whole text may shift)
         const T = pathTargets(
@@ -442,7 +467,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             for (let b = a + 1; b < W; b++) {
               const dy = Math.abs(wp[b].y - wp[a].y);
               if (dy > rowH) continue;
-              const v = bx[b].x1 - (bx[a].x0 + 1.0);
+              const v = hd[b].x - (bx[a].x0 + 1.0);
               if (v > 0) order += (o.readW ?? 1.5) * v * v * (1 - dy / rowH);
             }
           // and it reads downward: no later word climbs back above the one before
@@ -453,7 +478,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         }
       } else
         for (let w = 0; w + 1 < W; w++) {
-          const v = bx[w + 1].x1 - (bx[w].x1 - 1.5);
+          // each word starts to the left of where the one before started
+          const v = hd[w + 1].x - (hd[w].x - 1.5);
           if (v > 0) order += v * v;
         }
       if (o.topFirst)
@@ -461,7 +487,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           const ox2 = Math.min(bx[w].x1, bx[w + 1].x1) - Math.max(bx[w].x0, bx[w + 1].x0),
             wm = Math.min(bx[w].x1 - bx[w].x0, bx[w + 1].x1 - bx[w + 1].x0);
           if (ox2 > 0.35 * wm) {
-            const dv = (bx[w + 1].y0 + bx[w + 1].y1) / 2 - (bx[w].y0 + bx[w].y1) / 2;
+            // by their first letters' baselines
+            const dv = hd[w + 1].y - hd[w].y;
             if (dv > -1) order += 0.6 * (dv + 1) ** 2;
           }
         }

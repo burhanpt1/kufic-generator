@@ -2,7 +2,7 @@
 // reading order, read across and then downward.
 import { describe, expect, it } from 'vitest';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { composeRoundel, downward, lanes, pathTargets, PATHS } from '../src/script/thuluth/roundel';
+import { composeRoundel, downward, headOf, lanes, pathTargets, PATHS } from '../src/script/thuluth/roundel';
 
 describe('reading paths', () => {
   it('give each word a target along the path in proportion to its width', () => {
@@ -43,13 +43,12 @@ describe('roundels on fitted lanes', () => {
   it('and across: a later word on the same level lies to the left', () => {
     const words: number[][] = [];
     r.groups.forEach((g, i) => (words[g.word] ??= []).push(i));
-    const box = words.map(gs => ({
-      x0: Math.min(...gs.map(i => r.st[i].x + r.shapes[i].x0)),
-      x1: Math.max(...gs.map(i => r.st[i].x + r.shapes[i].x1)),
-    }));
+    // judged by where each word starts (its first letter) against where the earlier one ends
+    const end = words.map(gs => Math.min(...gs.map(i => r.st[i].x + r.shapes[i].x0))),
+      start = words.map(gs => r.st[gs[0]].x + headOf(r.shapes[gs[0]]).x);
     for (let a = 0; a < words.length; a++)
       for (let b = a + 1; b < words.length; b++)
-        if (Math.abs(r.wp[b].y - r.wp[a].y) < 2) expect(box[b].x1, `${a} ${b}`).toBeLessThan(box[a].x0 + 2.5);
+        if (Math.abs(r.wp[b].y - r.wp[a].y) < 2) expect(start[b], `${a} ${b}`).toBeLessThan(end[a] + 2.5);
   });
 });
 
