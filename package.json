@@ -19,7 +19,8 @@
     "build:wasm": "node scripts/build-wasm.mjs",
     "mosque": "MOSQUE=1 vitest run tests/mosque.test.ts",
     "showpiece": "SHOWPIECE=1 vitest run tests/showpiece.test.ts",
-    "wedding": "WEDDING=1 vitest run tests/wedding.test.ts"
+    "wedding": "WEDDING=1 vitest run tests/wedding.test.ts",
+    "ali-asghar": "ALI_ASGHAR=1 vitest run tests/ali-asghar.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

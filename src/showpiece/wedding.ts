@@ -131,8 +131,13 @@ const f1 = (n: number) => +n.toFixed(1);
 /** The composition on an A3 landscape sheet: the tiles continue to the page edge (the same tiling about the same
  *  centre, so they meet the composition's corners seamlessly), inside a double rule in the ink colour. */
 export function weddingSheet(variant: WeddingVariant = 'cobalt'): WeddingSheet {
-  const look = LOOKS[variant],
-    p = resolve(weddingComposition(variant)),
+  return cartoucheSheet(weddingComposition(variant), LOOKS[variant].palette, 'wd');
+}
+
+/** Any framed cartouche with Iznik spandrels on an A3 landscape sheet, as the wedding's (ids prefixed `prefix`). */
+export function cartoucheSheet(comp: Composition, palette: Palette, prefix: string): WeddingSheet {
+  const look = { palette },
+    p = resolve(comp),
     cw = p.canvas.w * U,
     ch = p.canvas.h * U;
   const h = ch * 1.04,
@@ -172,9 +177,9 @@ export function weddingSheet(variant: WeddingVariant = 'cobalt'): WeddingSheet {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f1(w)} ${f1(h)}" width="420mm" height="297mm">` +
     `<rect width="100%" height="100%" fill="${look.palette.paper}"/>` +
-    `<g clip-path="url(#wd-page)"><clipPath id="wd-page"><rect x="${f1(m)}" y="${f1(m)}" width="${f1(w - 2 * m)}" height="${f1(h - 2 * m)}"/></clipPath>${field}</g>` + // prettier-ignore
+    `<g clip-path="url(#${prefix}-page)"><clipPath id="${prefix}-page"><rect x="${f1(m)}" y="${f1(m)}" width="${f1(w - 2 * m)}" height="${f1(h - 2 * m)}"/></clipPath>${field}</g>` + // prettier-ignore
     `<path d="${halo}" fill="${look.palette.paper}"/>` +
-    `<g transform="translate(${f1(ox)} ${f1(oy)})">${body(renderPlaced({ ...p, items: p.items.filter(i => i !== tiles) }, { idPrefix: 'wd' }))}</g>` +
+    `<g transform="translate(${f1(ox)} ${f1(oy)})">${body(renderPlaced({ ...p, items: p.items.filter(i => i !== tiles) }, { idPrefix: prefix }))}</g>` +
     rule(m, h * 0.006) +
     rule(m * 1.9, h * 0.0018) +
     `</svg>`;
