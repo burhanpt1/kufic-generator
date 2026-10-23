@@ -31,6 +31,10 @@ export interface RoundelOptions extends StackOptions {
   /** Stems may pass through horizontals cheaply; stems may merge with stems. */
   cross?: boolean;
   merge?: boolean;
+  /** Girift, interpenetration: a stem crossing a horizontal earns this much per pixel instead of costing, and overlap
+   *  touching a curve or an eye costs 1.6 (0.04 is safe; 0.12 collapses a text into one knot, which the owner ranked
+   *  4th and 5th for the basmala). */
+  girift?: number;
   /** Fill to aim for, and the field's proportion. */
   fillTarget?: number;
   oval?: number;
@@ -187,8 +191,10 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       ye = Math.min(A.H, dy + B.H);
     if (xs >= xe || ys >= ye) return 0;
     let c = 0;
-    const cw = o.cross ? 0.12 : 1,
+    const gir = !!o.girift && !bare,
+      cw = gir ? -o.girift! : o.cross ? 0.12 : 1,
       mw = o.merge ? 0.25 : 1,
+      curve = gir ? 1.6 : 1,
       src = bare ? A.mask : A.dil;
     for (let y = ys; y < ye; y++) {
       const ra = y * A.W,
@@ -196,8 +202,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       for (let x = xs; x < xe; x++) {
         const ta = src[ra + x],
           tb = B.mask[rb + x];
-        // a stem may pass through a horizontal
-        if (ta && tb) c += (ta === 1 && tb === 2) || (ta === 2 && tb === 1) ? cw : ta === 1 && tb === 1 ? mw : 1;
+        // a stem may pass through a horizontal (in girift it is sought, and never at a curve or eye)
+        if (ta && tb)
+          c += (ta === 1 && tb === 2) || (ta === 2 && tb === 1) ? cw : ta === 1 && tb === 1 ? mw : ta === 3 || tb === 3 ? curve : 1; // prettier-ignore
       }
     }
     return c;

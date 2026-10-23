@@ -52,3 +52,15 @@ describe('roundels on fitted lanes', () => {
         if (Math.abs(r.wp[b].y - r.wp[a].y) < 2) expect(box[b].x1, `${a} ${b}`).toBeLessThan(box[a].x0 + 2.5);
   });
 });
+
+describe('girift', () => {
+  it('seeks stems through horizontals, so words interpenetrate more', () => {
+    const th = thuluth(ROUNDEL_PEN),
+      run = (girift?: number) => composeRoundel(th, 'بسم الله الرحمن الرحيم', { elongate: true, cross: true, merge: true, fillTarget: 0.5, tries: 2, iters: 4500, seed: 11, girift })[0]; // prettier-ignore
+    const plain = run(),
+      knot = run(0.12);
+    // crossings earn their keep (overlap below nothing), and the text draws in tighter
+    expect(knot.overlap).toBeLessThan(0);
+    expect(knot.disc.r).toBeLessThan(plain.disc.r);
+  });
+});
