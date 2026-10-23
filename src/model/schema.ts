@@ -190,6 +190,10 @@ export interface RoundelRecipe {
   /** Stack the joins masters stack (learned from 70 Calliar thuluth compositions: before ra, zay, dal, hah, mim, final
    *  nun, waw, final ya), pulled by how often they do; off, only before hah and mim. */
   learnedStack?: boolean;
+  /** Towers: three stacked joins in one letter group, on long connected runs (محمد, الحمد, العالمين). */
+  towers?: boolean;
+  /** How strongly towers are pulled for, against single stacks (1; the lab saw them win only when pulled hard). */
+  towerPull?: number;
   /** Girift: how much a stem crossing a horizontal is sought (0.04 is safe, 0.12 collapses into one knot). */
   girift?: number;
   /** Groups written only with a stacked join where they have one (e.g. 'شمير': the shin above the mim). */
@@ -353,6 +357,8 @@ const roundelRecipe = z
     stackAt: z.array(z.string().min(1).max(40)).max(20),
     learnedStack: z.boolean(),
     girift: z.number().min(0).max(0.3),
+    towers: z.boolean(),
+    towerPull: z.number().min(0).max(5),
     rise: z
       .object({ margin: z.number().min(0).max(10), most: z.number().min(1).max(4), oval: z.number().min(1).max(3) })
       .partial(),

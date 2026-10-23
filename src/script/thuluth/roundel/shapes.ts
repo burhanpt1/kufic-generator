@@ -55,6 +55,8 @@ export interface GroupShape {
   cost: number;
   emph?: boolean;
   stacked?: boolean;
+  /** Stacked joins in a tower (3). */
+  tower?: number;
   elong?: number;
 }
 
@@ -71,6 +73,11 @@ export interface StackOptions {
    *  the time may be, pulled in proportion to that rate (against mim's); off, only joins before hah and mim. */
   learnedStack?: boolean;
   stackMin?: number;
+  /** Nesting: the final bowls of NEST_BOWLS letters become cradles for a short word. */
+  nest?: boolean;
+  /** Towers: three stacked joins in one group, pulled at towerPull (1) times the stacks' own pull. */
+  towers?: boolean;
+  towerPull?: number;
   deep?: boolean;
   /** Final tails stretched (roundels). */
   tails?: boolean;
@@ -83,8 +90,13 @@ export interface StackOptions {
   tail?: { sx: number; sy: number } | null;
 }
 
+/** Letters whose final bowl can hold a short word. */
+export const NEST_BOWLS = new Set(['ر', 'ز', 'و', 'ن', 'ي', 'ى', 'ق', 'س', 'ش', 'ص', 'ض']);
 /** Letters with a tall stem. */
 const STEM_LETTERS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
+
+/** At most this many tower variants per group and stretch level (the first found, in join and offset order). */
+const MAX_TOWERS = 12;
 
 export const LEVELS = [0, 2, 4];
 const STACK_OFFSETS = [{ dx: 0.9, dy: -3.4 }, { dx: 2.1, dy: -3.4 }, { dx: 1.2, dy: -4.6 }, { dx: 2.4, dy: -4.6 }]; // prettier-ignore
@@ -98,6 +110,25 @@ export const STACK_PRIOR: Record<string, number> = {
 }; // prettier-ignore
 const stackFam = (f: { c: string; form: string }) =>
   f.form === 'fin' && (f.c === 'ي' || f.c === 'ى') ? 'ya' : FAM[f.c] === 'nun' && f.form === 'fin' ? 'nun' : FAM[f.c];
+/** How far masters drop a stacked letter below the one before, by the pair (as a share of the alif's height; the median
+ *  over the pair's joins, for pairs stacked at least twice in the 70 Calliar compositions:
+ *  prototypes/thuluth-lab/refresh/data/stack-prior-pairs.json). */
+export const STACK_DEPTH: Record<string, number> = {
+  'lam|ra': 0.463, 'mim|hah': 0.688, 'kaf|ra': 0.364, 'kaf|ya': 0.551, 'ya|mim': 0.23, 'tooth|mim': 0.343,
+  'ya|nun': 0.304, 'lam|mim': 0.322, 'fa|ra': 0.308, 'lam|ya': 0.246, 'sin|mim': 0.197, 'lam|waw': 0.52, 'hah|mim': 0.167,
+}; // prettier-ignore
+const pairFam = (f: { c: string; form: string }) => ('يى'.includes(f.c) ? 'ya' : stackFam(f));
+/** The learned depth of stacking join i of s, in pen units (null where the pair was not seen stacked): at least the
+ *  stacking threshold (0.22 of the alif), as the medians include joins written level. */
+export function stackDepth(th: Thuluth, s: string, i: number): number | null {
+  const fs = forms(s),
+    d = STACK_DEPTH[pairFam(fs[i - 1]) + '|' + pairFam(fs[i])];
+  if (d == null) return null;
+  const alif = th.glyphFor('ا', 'iso'),
+    H = alif ? Math.max(...alif.s.flatMap(st => st.pts.map(q => q[1]))) : 10 * th.style.body;
+  return Math.max(0.25, d) * H;
+}
+
 /** The pull of stacking join i of s: 1 by the rule, or the learned rate against mim's (at most 1.4). */
 export function stackWeight(s: string, i: number, o: StackOptions = {}): number {
   return o.learnedStack ? Math.min(1.4, (STACK_PRIOR[stackFam(forms(s)[i])] ?? 0) / 0.4) : 1;
@@ -176,8 +207,8 @@ export function groupShape(
         .flatMap(p => (isLetter(p) ? p.g.s.flatMap(sd => sampleStroke(sd.pts.map(q => [q[0] + p.ox, q[1] + (p.oy || 0), 1, q[3]] as SkelPt), st.tension, 6)) : [])); // prettier-ignore
     const A = pts(false),
       B2 = pts(true),
-      cn = b.placed.find(p => 'conn' in p) as { from: [number, number]; to: [number, number] } | undefined,
-      ends = cn ? [cn.from, cn.to] : [];
+      // every stacked join's ends (the lab exempted only the first, so a second or third stack always collided)
+      ends = b.placed.flatMap(p => ('conn' in p ? [p.from, p.to] : []));
     const farFromJoin = (q: { x: number; y: number }) => ends.every(([ex, ey]) => Math.hypot(q.x - ex, q.y - ey) > 1.4);
     for (const a of A) {
       if (!farFromJoin(a)) continue;
@@ -283,10 +314,14 @@ export function groupShape(
   const letters = b.placed.filter(isLetter),
     last = letters[letters.length - 1];
   if (last) {
-    // a great final bowl is a cradle: another word can sit inside its curve
+    // a great final bowl is a cradle: another word can sit inside its curve. With nesting, so is any bowl that can hold
+    // a short word (Derman's kâse of ra, nun and waw, the çanak of ya, and the nun-like bowls of qaf, sin and sad)
     const ps = last.g.s.flatMap(sd => sd.pts.map(q => [q[0] + last.ox, q[1] + (last.oy || 0)])),
       ys = ps.map(q => q[1]);
-    if (Math.min(...ys) - (last.oy || 0) < -3.2) {
+    if (
+      Math.min(...ys) - (last.oy || 0) <
+      (o.nest && NEST_BOWLS.has(last.c) && last.form !== 'med' && last.form !== 'ini' ? -1.8 : -3.2)
+    ) {
       const xs = ps.map(q => q[0]);
       shelves.push({ x0: Math.min(...xs) + 1.2, x1: Math.max(...xs) - 1.2, y: Math.min(...ys) + 1.1, cradle: true });
     }
@@ -389,16 +424,45 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
                 out.push(v3);
               }
             }
-    joins.forEach(j =>
-      (o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS).forEach(off => {
-        const v2 = groupShape(th, g, L, o, K, { [j]: { dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25 } }, j);
+    joins.forEach(j => {
+      const scaled = (o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS).map(off => ({ dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25, learned: false })), // prettier-ignore
+        depth = o.learnedStack ? stackDepth(th, g.s, j) : null;
+      // learned: the depth masters use for this pair, at the two usual reaches, a little preferred
+      if (depth) [0.9, 2.1].forEach(dx => scaled.push({ dx: (dx * BODY) / 1.25, dy: -depth, learned: true }));
+      scaled.forEach(off => {
+        const v2 = groupShape(th, g, L, o, K, { [j]: { dx: off.dx, dy: off.dy } }, j);
         if (v2) {
-          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * (o.stackPull ?? 1.6);
+          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * (o.stackPull ?? 1.6) - (off.learned ? 0.4 : 0);
           v2.stacked = true;
           out.push(v2);
         }
-      }),
-    );
+      });
+    });
+    // towers: three stacked joins in one group, on long connected runs (محمد, الحمد, العالمين)
+    if (o.towers && joins.length >= 3) {
+      let towers = 0;
+      const J = joins.slice(0, 6),
+        // every offset: in this letter set the last of three stacks only clears at a deep one
+        TO = [...STACK_OFFSETS, ...DEEP_OFFSETS],
+        off = (q: { dx: number; dy: number }) => ({ dx: (q.dx * BODY) / 1.25, dy: (q.dy * BODY) / 1.25 });
+      for (let a = 0; a < J.length; a++)
+        for (let c = a + 1; c < J.length; c++)
+          for (let e = c + 1; e < J.length; e++)
+            for (const oa of TO)
+              for (const oc of TO)
+                for (const oe of TO) {
+                  if (towers >= MAX_TOWERS) continue;
+                  const stk = { [J[a]]: off(oa), [J[c]]: off(oc), [J[e]]: off(oe) };
+                  if (!groupShapeOk(th, g, L, o, stk, J[a]) || !groupShapeOk(th, g, L, o, stk, J[c])) continue;
+                  const v4 = groupShape(th, g, L, o, K, stk, J[e]);
+                  if (!v4) continue;
+                  v4.cost = 0.3 * L - (o.towerPull ?? 1.0) * (stackWeight(g.s, J[a], o) + stackWeight(g.s, J[c], o) + stackWeight(g.s, J[e], o)) * (o.stackPull ?? 1.6); // prettier-ignore
+                  v4.stacked = true;
+                  v4.tower = 3;
+                  towers++;
+                  out.push(v4);
+                }
+    }
   });
   return out;
 }
@@ -417,8 +481,7 @@ function groupShapeCollides(th: Thuluth, g: RGroup, level: number, o: StackOptio
       .flatMap(p => (isLetter(p) ? p.g.s.flatMap(sd => sampleStroke(sd.pts.map(q => [q[0] + p.ox, q[1] + (p.oy || 0), 1, q[3]] as SkelPt), th.style.tension, 6)) : [])); // prettier-ignore
   const A = pts(false),
     B2 = pts(true),
-    cn = b.placed.find(p => 'conn' in p) as { from: [number, number]; to: [number, number] } | undefined,
-    ends = cn ? [cn.from, cn.to] : [];
+    ends = b.placed.flatMap(p => ('conn' in p ? [p.from, p.to] : []));
   const far = (q: { x: number; y: number }) => ends.every(([ex, ey]) => Math.hypot(q.x - ex, q.y - ey) > 1.4);
   for (const a of A) {
     if (!far(a)) continue;

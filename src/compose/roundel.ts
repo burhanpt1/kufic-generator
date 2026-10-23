@@ -59,6 +59,8 @@ export function drawRoundel(
     stackAt: recipe.stackAt,
     learnedStack: recipe.learnedStack,
     girift: recipe.girift,
+    towers: recipe.towers,
+    towerPull: recipe.towerPull,
     noRise: recipe.noRise,
     ceiling: recipe.ceiling,
     topFirst: recipe.topFirst,
