@@ -242,6 +242,10 @@ export interface RoundelRecipe {
   readRule?: boolean;
   /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best. */
   choose?: number;
+  /** Mirrored (müsennâ): the text set against a vertical axis and mirrored, the halves combined into one design (a
+   *  narrow stroke on the axis shared unless shareStrokes is false). Best when a tall stroke can be shared (علي, with
+   *  great.ya); never for a text holding الله. */
+  mirror?: boolean | { shareStrokes?: boolean };
   /** The rules for the marks from the Arabic sources (on by default): each fatha as long as its space allows (short,
    *  medium, or long with the main pen), and with ornaments a clarifying letter under each of ح س ص ط ع ك م. false
    *  restores the short fatha, no long fatha, and only the small ح and س. */
@@ -411,6 +415,7 @@ const roundelRecipe = z
     pathTol: z.number().min(0).max(10),
     readRule: z.boolean(),
     choose: z.number().int().min(1).max(12),
+    mirror: z.union([z.boolean(), z.object({ shareStrokes: z.boolean() }).partial()]),
     fathaRule: z.boolean(),
     longFatha: z.boolean(),
     allSigns: z.boolean(),

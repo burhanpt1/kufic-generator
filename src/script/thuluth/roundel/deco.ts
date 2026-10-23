@@ -322,8 +322,12 @@ export function featuresIn(
   };
 }
 
+/** The least spread a feature is standardised by: candidates that hardly differ (one composition at several axes, say)
+ *  must not have their small differences blown up to whole spreads. About a third of what the rated set showed. */
+const SPREAD_FLOOR: DecoFeatures = { texture: 0.1, knots: 0.05, looseTop: 0.2, unity: 0.1, span: 0.08, fill: 0.03, noise: 0.5 }; // prettier-ignore
+
 /** Scores by the fitted taste for a set of candidates: each feature standardised across the set (the fit was on
- *  standardised features), weighted and summed. Higher is better; compare only within one set. */
+ *  standardised features; spreads have a floor), weighted and summed. Higher is better; compare only within one set. */
 export function tasteScores(fs: readonly DecoFeatures[]): number[] {
   const keys = Object.keys(TASTE_FIT) as (keyof DecoFeatures)[],
     stat = Object.fromEntries(
@@ -331,7 +335,7 @@ export function tasteScores(fs: readonly DecoFeatures[]): number[] {
         const v = fs.map(f => f[k]),
           m = v.reduce((a, b) => a + b, 0) / Math.max(1, v.length),
           s = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, v.length));
-        return [k, [m, s > 1e-9 ? s : 1]];
+        return [k, [m, Math.max(s, SPREAD_FLOOR[k])]];
       }),
     ) as Record<keyof DecoFeatures, [number, number]>;
   return fs.map(f => keys.reduce((a, k) => a + (TASTE_FIT[k] * (f[k] - stat[k][0])) / stat[k][1], 0));

@@ -15,6 +15,7 @@ export * from './compose';
 export * from './deco';
 export * from './counters';
 export * from './finish';
+export * from './musenna';
 export * from './paths';
 export * from './render';
 export * from './shapes';
