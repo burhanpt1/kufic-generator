@@ -245,8 +245,12 @@ export interface RoundelRecipe {
   pathTol?: number;
   /** On a path, the reading rules (across, then downward); on by default. */
   readRule?: boolean;
-  /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best. */
+  /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best; later seeds
+   *  also sample the options left open, unless vary is false. */
   choose?: number;
+  vary?: boolean;
+  /** How many of the composer's best layouts are finished and judged as drawn (3; 6 with a great bowl). */
+  judge?: number;
   /** Mirrored (müsennâ): the text set against a vertical axis and mirrored, the halves combined into one design (a
    *  narrow stroke on the axis shared unless shareStrokes is false). Best when a tall stroke can be shared (علي, with
    *  great.ya); never for a text holding الله. */
@@ -335,6 +339,8 @@ const terminals = z.object({
 });
 const palette = z.object({ ink: colour, ink2: colour, paper: colour, mark: colour });
 const num = z.number().finite();
+/** Every option a roundel recipe takes (each has its own test: tests/roundel-recipe.test.ts). */
+export const ROUNDEL_RECIPE_KEYS = (): string[] => Object.keys(roundelRecipe.shape);
 const roundelRecipe = z
   .object({
     elongate: z.boolean(),
@@ -422,6 +428,8 @@ const roundelRecipe = z
     pathTol: z.number().min(0).max(10),
     readRule: z.boolean(),
     choose: z.number().int().min(1).max(12),
+    vary: z.boolean(),
+    judge: z.number().int().min(1).max(12),
     mirror: z.union([z.boolean(), z.object({ shareStrokes: z.boolean() }).partial()]),
     fathaRule: z.boolean(),
     longFatha: z.boolean(),

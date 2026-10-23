@@ -83,6 +83,9 @@ export interface StackOptions {
   tail?: { sx: number; sy: number } | null;
 }
 
+/** Letters with a tall stem. */
+const STEM_LETTERS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
+
 export const LEVELS = [0, 2, 4];
 const STACK_OFFSETS = [{ dx: 0.9, dy: -3.4 }, { dx: 2.1, dy: -3.4 }, { dx: 1.2, dy: -4.6 }, { dx: 2.4, dy: -4.6 }]; // prettier-ignore
 const DEEP_OFFSETS = [{ dx: 0.6, dy: -3.6 }, { dx: 1.6, dy: -4.8 }, { dx: 0.4, dy: -6.0 }, { dx: 1.8, dy: -6.2 }]; // prettier-ignore
@@ -201,7 +204,15 @@ export function groupShape(
   const X = (x: number) => (x - x0) * K + 1,
     Y = (y: number) => (y1 - y) * K + 1,
     px = (q: Poly): Poly => q.map(([x, y]) => [Math.round(X(x) * 10) / 10, Math.round(Y(y) * 10) / 10]);
-  // three layers: tall stems (upright 38° strokes), horizontals (within 22° of level), the rest; each quad its own fill
+  // three layers: tall stems, horizontals (within 22° of level), the rest; each quad its own fill. A stem is an upright
+  // stretch of a tall letter (alif, lam, kaf, ta, za), known from the stroke's owners, whatever its pen angle (the
+  // learned alif is written at the line's angle, not the stems' 38°), or any upright stroke at 38°
+  const tall = new Set(
+    b.placed
+      .filter(isLetter)
+      .filter(p => STEM_LETTERS.has(p.c))
+      .map(p => p.li),
+  );
   const layers = [new Alpha(W, H), new Alpha(W, H), new Alpha(W, H)];
   b.strokes.forEach(s => {
     const qs = nibPolys(s.s, s.nib || nib, s.ang, st.floor),
@@ -213,7 +224,7 @@ export function groupShape(
         a = Math.abs(Math.atan2(p2.y - p.y, p2.x - p.x)),
         horiz = a < 0.38 || a > Math.PI - 0.38,
         upright = Math.abs(a - Math.PI / 2) < 0.45;
-      layers[s.ang === 38 && upright ? 0 : horiz ? 1 : 2].fill([px(q)]);
+      layers[upright && (s.ang === 38 || tall.has(s.own?.[qi] ?? -1)) ? 0 : horiz ? 1 : 2].fill([px(q)]);
     });
   });
   b.dots.forEach(([x, y, s2]) => layers[2].fill(dotPolys(x, y, nib * (s2 || 1), st.ang, st.floor).map(px)));

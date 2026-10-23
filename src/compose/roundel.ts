@@ -85,6 +85,8 @@ export function drawRoundel(
     compose,
     tweaks: recipe.tweaks,
     choose: recipe.choose,
+    vary: recipe.vary,
+    judge: recipe.judge,
     tails: recipe.tails,
     rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
