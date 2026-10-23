@@ -2,9 +2,9 @@
 // disc or an oval, finished by hand-like steps, its marks solved as one even distribution, drawn on a gilded field.
 import type { Thuluth } from '../engine';
 import type { BowlOptions, FrameOptions, RiseOptions, TailOptions } from './bowl';
-import { extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
+import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
 import type { Roundel, RoundelOptions } from './compose';
-import { composeRoundel } from './compose';
+import { composeRoundel, roundelOrderFault } from './compose';
 import type { DecoFeatures } from './deco';
 import { roundelFeatures, tasteScores } from './deco';
 import type { Finished } from './finish';
@@ -49,6 +49,8 @@ export interface RoundelSpec {
   frame?: FrameOptions | false;
   /** A short companion text set small in the space left (only without `frame`). */
   companion?: string;
+  /** How many of the composer's best arrangements are finished and judged as drawn (3; 6 with a great bowl). */
+  judge?: number;
   /** Compose with this many seeds (from compose.seed) and keep the one the fitted taste (deco.ts) likes best: in
    *  almost every test in the lab one seed worked and another didn't. */
   choose?: number;
@@ -80,10 +82,11 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
 /** The arrangements a great bowl is weighed over, best first by the composer's own measure. */
 const BOWL_CHOICES = 6;
 
-/** Compose, adjust and finish a roundel. Null when the text has no letters. With a great bowl, the composer's best
- *  arrangements are each finished with their bowl, and the first whose bowl clears the letters as drawn (within a
- *  little widening) is kept, else the one that needed the least: the composer places the letters before the bowl is
- *  redrawn, so it cannot see a tail that the new bowl will run into. */
+/** Compose, adjust and finish a roundel. Null when the text has no letters. The composer's best arrangements are
+ *  each finished and judged as drawn (the fitted taste, less marks without room, clashes and reading-order faults);
+ *  with a great bowl, only those whose bowl clears the letters (within a little widening) compete, else the one that
+ *  needed the least: the composer places the letters before the bowl is redrawn, so it cannot see a tail that the new
+ *  bowl will run into. */
 export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
   if ((spec.choose ?? 1) > 1 && !spec.compose?.fixed) {
     const seed0 = spec.compose?.seed ?? 7,
@@ -103,11 +106,29 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
 function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
   const all = composeRoundel(th, spec.text, spec.compose);
   if (!all.length) return null;
-  let r: Roundel;
-  if (spec.bowl && all.length > 1) {
-    const done = all.slice(0, BOWL_CHOICES).map(c => adjust(th, structuredClone(c), spec));
-    r = done.find(c => (c.bowlGrow ?? 0) <= 0.08) ?? done.reduce((m, c) => ((c.bowlGrow ?? 0) < (m.bowlGrow ?? 0) ? c : m)); // prettier-ignore
-  } else r = adjust(th, all[0], spec);
-  const f = spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {});
-  return { r, f };
+  const finish = (r: Roundel) =>
+    spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {});
+  const k = Math.min(all.length, spec.judge ?? (spec.bowl ? BOWL_CHOICES : 3));
+  if (k <= 1) {
+    const r = adjust(th, all[0], spec);
+    return { r, f: finish(r) };
+  }
+  // the composer's best few, each finished (bowl, tails, stems, marks, frame) and judged as drawn: a layout's merit
+  // shows only once its bowl is redrawn and its marks are placed
+  const done = all.slice(0, k).map(c => {
+    const r = adjust(th, structuredClone(c), spec);
+    return { r, f: finish(r) };
+  });
+  const taste = tasteScores(done.map(d => roundelFeatures(th, d.r, d.f))),
+    judged = done.map((d, i) => ({
+      ...d,
+      // a bowl that had to widen much to clear the letters ran into them as composed
+      bowlOk: (d.r.bowlGrow ?? 0) <= 0.08,
+      score: taste[i] - 3 * d.f.missing - clashes(th, d.r) / 6 - roundelOrderFault(d.r),
+    }));
+  const pool = judged.some(d => d.bowlOk)
+    ? judged.filter(d => d.bowlOk)
+    : [judged.reduce((m, d) => ((d.r.bowlGrow ?? 0) < (m.r.bowlGrow ?? 0) ? d : m))];
+  const best = pool.reduce((m, d) => (d.score > m.score ? d : m));
+  return { r: best.r, f: best.f };
 }
