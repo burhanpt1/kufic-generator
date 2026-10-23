@@ -16,7 +16,9 @@ import {
   refusesMirror,
   roundelArt,
   roundelChecks,
+  genreOf,
   roundelFeatures,
+  tasteScore,
   roundelOrderFault,
 } from '../script/thuluth/roundel';
 import type { Poly } from '../script/thuluth/types';
@@ -117,7 +119,7 @@ export function drawRoundel(
       levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
       order: roundelOrderFault(b.r),
       clash: clashes(th, b.r),
-      deco: (({ texture, knots, unity, span, fill, noise }) => ({ texture, knots, unity, span, fill, noise }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
+      deco: (f => ({ texture: f.texture, knots: f.knots, unity: f.unity, span: f.span, fill: f.fill, noise: f.noise, taste: tasteScore(f, genreOf(text)) }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
       checks: roundelChecks(th, b.r, b.f),
     };
   }
@@ -143,7 +145,8 @@ function drawMusenna(
   if (!c) return null;
   const art = musennaArt(th, c, { shareStrokes: m.shareStrokes }),
     Rf = art.rad * 1.036,
-    { texture, knots, unity, span, fill, noise } = c.features;
+    { texture, knots, unity, span, fill, noise } = c.features,
+    taste = tasteScore(c.features, 'mirror');
   return {
     oval: 1,
     Rf,
@@ -159,7 +162,7 @@ function drawMusenna(
     levels: new Set(c.r.st.map(p => Math.round(p.y / 2))).size,
     order: roundelOrderFault(c.r),
     clash: clashes(th, c.r),
-    deco: { texture, knots, unity, span, fill, noise },
+    deco: { texture, knots, unity, span, fill, noise, taste },
     checks: roundelChecks(th, c.r, c.f),
   };
 }

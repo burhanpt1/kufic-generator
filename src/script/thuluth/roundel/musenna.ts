@@ -108,7 +108,10 @@ export function musenna(th: Thuluth, text: string, o: MusennaOptions = {}): Muse
         raw.push({ seed, oval, overlap: ov, r, f, units, axis, cy, rad, features, axisInk });
       }
     }
-  const s = tasteScores(raw.map(c => c.features));
+  const s = tasteScores(
+    raw.map(c => c.features),
+    'mirror',
+  );
   return raw
     .map((c, i) => {
       // the halves are one design (the owner's principle, which the fitted taste never saw: the combined علي ranked

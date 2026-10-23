@@ -116,9 +116,10 @@ registerCritic('roundel', p => {
     order: clamp(1 - (m.order ?? 0) / 4),
     // letters of different pieces touching (a tail running into another letter's head)
     clear: clamp(1 - (m.clash ?? 0) / 12),
-    // the decorative critic (roundel/deco.ts), its features mapped onto 0–1; the taste weights follow the fit to the
-    // owner's ratings: unity most, then quiet and texture, against heavy knots and heavy fill
-    ...(m.texture != null && {
+    // the decorative critic (roundel/deco.ts): the taste fitted to the owner's votes in the roundel's genre (0 is the
+    // rated set's average); its features are shown, not weighted, since the fit already weighs them
+    ...(m.taste != null && {
+      taste: clamp(0.5 + m.taste / 4),
       texture: clamp(m.texture),
       calm: clamp(1 - m.knots / 0.2),
       unity: clamp(m.unity),
@@ -144,7 +145,7 @@ export const METRIC_LABELS: Record<string, string> = {
   fill: 'Bands fill the canvas', centre: 'Centre about a quarter', legibility: 'Legible', compact: 'Compact',
   squareness: 'Square', symmetry: 'Symmetric', sharing: 'Shared strokes', space: 'Little empty space',
   clearance: 'Bowl clears the letters', apart: 'Words keep apart', marked: 'Every mark placed', layers: 'Layered',
-  order: 'Read in order', clear: 'Letters do not touch', texture: 'Even texture', calm: 'No heavy knots',
+  order: 'Read in order', clear: 'Letters do not touch', taste: 'The owner’s taste (fitted)', texture: 'Even texture', calm: 'No heavy knots',
   unity: 'One body', span: 'Spans the field', light: 'Light, not heavy', quiet: 'Quiet (no near-touches)',
   spaced: 'Words hold together', ownMarks: 'Marks by their letters', single: 'No ink drawn twice',
 }; // prettier-ignore

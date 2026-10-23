@@ -6,7 +6,7 @@ import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shap
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel, roundelOrderFault } from './compose';
 import type { DecoFeatures } from './deco';
-import { roundelFeatures, tasteScores } from './deco';
+import { genreOf, roundelFeatures, tasteScores } from './deco';
 import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
@@ -130,7 +130,10 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
       built.push({ seed, varied, b, features });
     }
     if (!built.length) return null;
-    const scores = tasteScores(built.map(c => c.features)),
+    const scores = tasteScores(
+        built.map(c => c.features),
+        genreOf(spec.text),
+      ),
       picked = scores.indexOf(Math.max(...scores));
     return { ...built[picked].b, taste: built.map((c, i) => ({ seed: c.seed, varied: c.varied, features: c.features, score: scores[i] })), picked }; // prettier-ignore
   }
@@ -153,7 +156,10 @@ function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
     const r = adjust(th, structuredClone(c), spec);
     return { r, f: finish(r) };
   });
-  const taste = tasteScores(done.map(d => roundelFeatures(th, d.r, d.f))),
+  const taste = tasteScores(
+      done.map(d => roundelFeatures(th, d.r, d.f)),
+      genreOf(spec.text),
+    ),
     judged = done.map((d, i) => ({
       ...d,
       // a bowl that had to widen much to clear the letters ran into them as composed

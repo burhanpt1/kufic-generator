@@ -14,9 +14,8 @@ export const DEFAULT_WEIGHTS: Record<string, number> = {
   rhythm: 0.26, kashida: 0.2, density: 0.2, rep: 0.08, centre: 0.1, fill: 0.16,
   legibility: 0.2, compact: 0.08, squareness: 0.06, symmetry: 0.03, sharing: 0.08, space: 0.3,
   clearance: 0.25, apart: 0.25, marked: 0.15, layers: 0.12, order: 0.3, clear: 0.35,
-  // fitted to the owner's ratings (roundel/deco.ts TASTE_FIT, about a fifth of each weight; fill's halved again, as its
-  // spread in the rated set is not known)
-  texture: 0.13, calm: 0.11, unity: 0.28, span: 0.07, light: 0.25, quiet: 0.19,
+  // the taste fitted to the owner's votes (roundel/fits.data.ts) carries the decorative features; they are shown alone
+  taste: 0.6,
 }; // prettier-ignore
 export const newTaste = (): Taste => ({ w: { ...DEFAULT_WEIGHTS }, pref: {}, picks: 0 });
 

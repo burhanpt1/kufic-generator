@@ -1,11 +1,12 @@
 // The sweep: many roundels per text, across reading-path families, seeds and sampled recipes, each with its critic
-// features, taste score (within its text) and checks, ready to look at and to rate (scripts: `npm run sweep`).
+// features, genre and fitted taste score, and checks, ready to look at and to rate (scripts: `npm run sweep`).
 import type { Thuluth } from '../engine';
 import type { RoundelOptions } from './compose';
 import type { RoundelChecks } from './checks';
 import { roundelChecks } from './checks';
 import type { DecoFeatures } from './deco';
-import { featuresIn, roundelFeatures, tasteScores } from './deco';
+import type { Genre } from './deco';
+import { featuresIn, genreOf, roundelFeatures, tasteScore } from './deco';
 import { buildRoundel, sampleRecipe } from './index';
 import { musenna, musennaArt, musennaSVG, refusesMirror } from './musenna';
 import { renderRoundel } from './render';
@@ -32,7 +33,8 @@ export interface SweepItem {
   recipe: RoundelOptions;
   features: DecoFeatures;
   checks: RoundelChecks | null;
-  /** The fitted taste, standardised within the text's candidates. */
+  /** The genre it is judged in, and the fitted taste there (0: the rated set's average). */
+  genre: Genre;
   score: number;
   svg: string;
 }
@@ -42,7 +44,7 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
     fams = o.families ?? ['free', 'lanes', 'path:stag3', 'path:calliar3'];
   let id = 0;
   texts.forEach((text, ti) => {
-    const mine: Omit<SweepItem, 'score'>[] = [],
+    const mine: Omit<SweepItem, 'score' | 'genre'>[] = [],
       words = text.trim().split(/\s+/).length;
     for (const family of fams) {
       if (family === 'mirror' && refusesMirror(text)) continue;
@@ -65,8 +67,10 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
         mine.push({ id: tag, text, family, seed, recipe, features: roundelFeatures(th, b.r, b.f), checks: roundelChecks(th, b.r, b.f), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }) }); // prettier-ignore
       }
     }
-    const s = tasteScores(mine.map(m => m.features));
-    mine.forEach((m, i) => out.push({ ...m, score: s[i] }));
+    mine.forEach(m => {
+      const genre = genreOf(text, m.family === 'mirror');
+      out.push({ ...m, genre, score: tasteScore(m.features, genre) });
+    });
   });
   return out;
 }

@@ -20,7 +20,8 @@
     "mosque": "MOSQUE=1 vitest run tests/mosque.test.ts",
     "showpiece": "SHOWPIECE=1 vitest run tests/showpiece.test.ts",
     "wedding": "WEDDING=1 vitest run tests/wedding.test.ts",
-    "sweep": "SWEEP=1 vitest run tests/sweep.test.ts"
+    "sweep": "SWEEP=1 vitest run tests/sweep.test.ts",
+    "refit": "REFIT=1 vitest run tests/refit.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

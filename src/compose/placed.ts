@@ -95,7 +95,7 @@ export interface RoundelDrawing {
   clash: number;
   /** The decorative critic's features (roundel/deco.ts): texture, knots, unity, span and fill of the letters, and
    *  noise (unresolved contact; lower is quieter). */
-  deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number };
+  deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number; taste: number };
   /** Reported checks (roundel/checks.ts): pen units of too-wide gaps inside words, vowels and dot groups nearer
    *  another word's or letter's ink than their own, length of ink drawn twice. */
   checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number };

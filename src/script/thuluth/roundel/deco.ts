@@ -2,13 +2,14 @@
 // and a field mask, so it judges engine output and a master's photograph alike. Its features follow M. Uğur Derman's
 // rules of istif (even texture, no heavy knots, looseness at the top rather than the bottom, one body), plus span and
 // fill, and the owner's "noise": unresolved contact, tiny notches where strokes nearly touch and pinholes between them.
-// TASTE_FIT holds the weights fitted to the owner's 148 pairwise ratings of 81 compositions (data/ratings/noise_fit.json:
-// 77% of held-out choices right).
+// The weights, per genre, are fitted to the owner's pairwise ratings (fits.data.ts; npm run refit), the features
+// measured on images of the rated compositions (tests/ratings) as on the engine's own roundels.
 import type { Thuluth } from '../engine';
 import { Alpha, toPixels } from '../raster';
 import type { Roundel } from './compose';
 import type { Finished, Unit } from './finish';
 import { roundelParts } from './finish';
+import { FITS } from './fits.data';
 
 export interface DecoMetrics {
   /** Texture evenness: 1 − the spread of ink density blurred over about an eighth of the field. */
@@ -237,16 +238,14 @@ export interface DecoFeatures {
   fill: number;
   noise: number;
 }
-/** Weights fitted to the owner's ratings (logistic regression on pairwise differences of standardised features). */
-export const TASTE_FIT: DecoFeatures = {
-  texture: 0.63,
-  knots: -0.53,
-  looseTop: 0.04,
-  unity: 1.41,
-  span: 0.34,
-  fill: -2.5,
-  noise: -0.93,
-};
+/** The genres judged apart (PLAN-2 §1): dense compositions of several words, single names, mirrored work. The
+ *  critic's texture rules describe dense istif; a single-name roundel built on one gesture, or a mirrored design, is
+ *  another genre, with its own fit. */
+export type Genre = 'dense' | 'single' | 'mirror';
+export const genreOf = (text: string, mirrored = false): Genre =>
+  mirrored ? 'mirror' : text.trim().split(/\s+/).length > 1 ? 'dense' : 'single';
+/** The order of the features in a fit. */
+export const FEATURES: (keyof DecoFeatures)[] = ['texture', 'knots', 'looseTop', 'unity', 'span', 'fill', 'noise'];
 
 /** Rasterise drawing units at about `px` pixels across a box, keeping only the letters and dots (`letters`) or all;
  *  `mirror` adds the mirror image about the vertical line x = mirror. */
@@ -277,8 +276,8 @@ export function rasterUnits(
   return { ink: A.mask(100), W, H, K };
 }
 
-/** The critic's features of a finished roundel: texture, knots, looseness, unity, span and fill of the letters and
- *  dots (letters first: the marks and ornaments count only towards the texture, a little), and the noise of all of it. */
+/** The critic's features of a finished roundel, measured on everything drawn inside its frame as the rated images
+ *  were. */
 export function roundelFeatures(th: Thuluth, r: Roundel, f: Finished, px = 480): DecoFeatures {
   const units = roundelParts(r, { solved: f.solved, marks: f.marks, companion: f.companion }),
     d = r.disc,
@@ -296,12 +295,12 @@ export function featuresIn(
   px = 480,
   mirror?: number,
 ): DecoFeatures {
-  // the field fills about nine tenths of the raster, as in the lab's renders
-  const h = Math.max(e.rx, e.ry) * 1.11,
+  // the field fills the raster, and everything drawn counts: the fits were made on images of finished roundels, field
+  // cropped to 480 pixels across (tests/ratings/masks)
+  const h = Math.max(e.rx, e.ry),
     box = { x0: e.cx - h, x1: e.cx + h, y0: e.cy - h, y1: e.cy + h },
-    L = rasterUnits(th, units, box, px, 'letters', mirror),
     all = rasterUnits(th, units, box, px, 'all', mirror),
-    { W, H, K } = L,
+    { W, H, K } = all,
     field = new Uint8Array(W * H);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
@@ -309,34 +308,25 @@ export function featuresIn(
         uy = box.y1 - (y + 0.5) / K;
       if (((ux - e.cx) / e.rx) ** 2 + ((uy - e.cy) / e.ry) ** 2 < 1) field[y * W + x] = 1;
     }
-  const mL = decoMetrics(L.ink, field, W, H),
-    mA = decoMetrics(all.ink, field, W, H);
+  const m = decoMetrics(all.ink, field, W, H);
   return {
-    texture: 0.7 * mL.uniformity + 0.3 * mA.uniformity,
-    knots: mL.knots,
-    looseTop: mL.looseTop,
-    unity: mL.unity,
-    span: mL.span,
-    fill: mL.fill,
+    texture: m.uniformity,
+    knots: m.knots,
+    looseTop: m.looseTop,
+    unity: m.unity,
+    span: m.span,
+    fill: m.fill,
     noise: noiseOf(all.ink, field, W, H),
   };
 }
 
-/** The least spread a feature is standardised by: candidates that hardly differ (one composition at several axes, say)
- *  must not have their small differences blown up to whole spreads. About a third of what the rated set showed. */
-const SPREAD_FLOOR: DecoFeatures = { texture: 0.1, knots: 0.05, looseTop: 0.2, unity: 0.1, span: 0.08, fill: 0.03, noise: 0.5 }; // prettier-ignore
-
-/** Scores by the fitted taste for a set of candidates: each feature standardised across the set (the fit was on
- *  standardised features; spreads have a floor), weighted and summed. Higher is better; compare only within one set. */
-export function tasteScores(fs: readonly DecoFeatures[]): number[] {
-  const keys = Object.keys(TASTE_FIT) as (keyof DecoFeatures)[],
-    stat = Object.fromEntries(
-      keys.map(k => {
-        const v = fs.map(f => f[k]),
-          m = v.reduce((a, b) => a + b, 0) / Math.max(1, v.length),
-          s = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, v.length));
-        return [k, [m, Math.max(s, SPREAD_FLOOR[k])]];
-      }),
-    ) as Record<keyof DecoFeatures, [number, number]>;
-  return fs.map(f => keys.reduce((a, k) => a + (TASTE_FIT[k] * (f[k] - stat[k][0])) / stat[k][1], 0));
+/** The fitted taste of one roundel in its genre: its features standardised by the rated set's own means and spreads,
+ *  weighted by the fit to the owner's votes (fits.data.ts, from npm run refit). Higher is better; 0 is the rated set's
+ *  average. */
+export function tasteScore(f: DecoFeatures, genre: Genre = 'dense'): number {
+  const fit = FITS[genre];
+  return fit.features.reduce((a, k, j) => a + (fit.w[j] * (f[k] - fit.mean[j])) / fit.sd[j], 0);
 }
+/** The fitted taste of each of a set of candidates, in one genre. */
+export const tasteScores = (fs: readonly DecoFeatures[], genre: Genre = 'dense'): number[] =>
+  fs.map(f => tasteScore(f, genre));

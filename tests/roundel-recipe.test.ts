@@ -57,7 +57,7 @@ const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelR
   readRule: { text: BASMALA, set: { readRule: false }, with: { lanes: {} } },
   choose: { text: BASMALA, set: { choose: 3 } },
   vary: { text: BASMALA, set: { vary: false }, with: { choose: 3 } },
-  judge: { text: BASMALA, set: { judge: 3 }, with: { tries: 3 } },
+  judge: { set: { judge: 4 }, with: { tries: 4 } },
   mirror: { text: 'علي', set: { mirror: true }, with: { great: { ya: true } } },
   fathaRule: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ', set: { fathaRule: false } },
   longFatha: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { longFatha: false }, with: { iters: 1500 } },
