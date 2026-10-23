@@ -187,6 +187,9 @@ export interface RoundelRecipe {
   nest?: boolean;
   /** The search may stack a piece of a word above the one before it, so words rise in layers. */
   stack?: boolean;
+  /** Stack the joins masters stack (learned from 70 Calliar thuluth compositions: before ra, zay, dal, hah, mim, final
+   *  nun, waw, final ya), pulled by how often they do; off, only before hah and mim. */
+  learnedStack?: boolean;
   /** Groups written only with a stacked join where they have one (e.g. 'شمير': the shin above the mim). */
   stackAt?: string[];
   /** Tall stems rise into the empty space above them, up to the oval. */
@@ -340,6 +343,7 @@ const roundelRecipe = z
     nest: z.boolean(),
     stack: z.boolean(),
     stackAt: z.array(z.string().min(1).max(40)).max(20),
+    learnedStack: z.boolean(),
     rise: z
       .object({ margin: z.number().min(0).max(10), most: z.number().min(1).max(4), oval: z.number().min(1).max(3) })
       .partial(),
