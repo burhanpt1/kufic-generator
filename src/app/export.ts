@@ -29,3 +29,7 @@ export function savePNG(doc: Document, name: string, svg: string) {
   };
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
+
+export function saveSTL(doc: Document, name: string, stl: Uint8Array) {
+  download(doc, name + '.stl', new Blob([stl as BlobPart], { type: 'model/stl' }));
+}
