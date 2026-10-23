@@ -52,14 +52,16 @@ export interface RoundelSpec {
   /** How many of the composer's best arrangements are finished and judged as drawn (3; 6 with a great bowl). */
   judge?: number;
   /** Compose with this many seeds (from compose.seed) and keep the one the fitted taste (deco.ts) likes best: in
-   *  almost every test in the lab one seed worked and another didn't. */
+   *  almost every test in the lab one seed worked and another didn't. Each seed after the first also samples the
+   *  options the recipe leaves open (vary: false keeps them), and near-duplicates are dropped. */
   choose?: number;
+  vary?: boolean;
 }
 export interface BuiltRoundel {
   r: Roundel;
   f: Finished;
   /** With `choose`: each seed's features and taste score, and the one kept. */
-  taste?: { seed: number; features: DecoFeatures; score: number }[];
+  taste?: { seed: number; varied: RoundelOptions; features: DecoFeatures; score: number }[];
   picked?: number;
 }
 
@@ -79,6 +81,29 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
   return r;
 }
 
+/** A seeded sample of the composer options a recipe leaves open: the field's proportion and fill, stacking (by rule or
+ *  learned), girift's gentle setting, and fitted lanes for texts of three words or more. */
+export function sampleRecipe(given: RoundelOptions, words: number, seed: number): RoundelOptions {
+  let sd = (seed * 48271) % 2147483647 || 1;
+  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647,
+    pick = <T>(xs: readonly T[]) => xs[Math.floor(R() * xs.length)],
+    out: RoundelOptions = {};
+  if (given.oval == null) out.oval = pick([1, 1, 1.15, 1.3]);
+  if (given.fillTarget == null) out.fillTarget = pick([0.36, 0.45, 0.5]);
+  if (given.stack == null) out.stack = R() < 0.5;
+  if (given.learnedStack == null) out.learnedStack = R() < 0.5;
+  if (given.girift == null) out.girift = pick([0, 0, 0.04]);
+  if (given.lanes == null && given.path == null && words >= 3 && R() < 0.5) out.lanes = {};
+  return out;
+}
+/** Two roundels whose critic features all but agree are the same choice. */
+const nearSame = (a: DecoFeatures, b: DecoFeatures) =>
+  Math.abs(a.texture - b.texture) < 0.01 &&
+  Math.abs(a.unity - b.unity) < 0.01 &&
+  Math.abs(a.span - b.span) < 0.01 &&
+  Math.abs(a.fill - b.fill) < 0.003 &&
+  Math.abs(a.noise - b.noise) < 0.05;
+
 /** The arrangements a great bowl is weighed over, best first by the composer's own measure. */
 const BOWL_CHOICES = 6;
 
@@ -90,15 +115,23 @@ const BOWL_CHOICES = 6;
 export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
   if ((spec.choose ?? 1) > 1 && !spec.compose?.fixed) {
     const seed0 = spec.compose?.seed ?? 7,
-      built = Array.from({ length: spec.choose! }, (_, k) => {
-        const seed = seed0 + k * 101;
-        return { seed, b: buildOne(th, { ...spec, compose: { ...spec.compose, seed } }) };
-      }).filter((c): c is { seed: number; b: BuiltRoundel } => !!c.b);
+      words = spec.text.trim().split(/\s+/).length,
+      built: { seed: number; varied: RoundelOptions; b: BuiltRoundel; features: DecoFeatures }[] = [];
+    for (let k = 0; k < spec.choose!; k++) {
+      const seed = seed0 + k * 101,
+        // the first seed takes the recipe as given; the others sample what it leaves open
+        varied = k && spec.vary !== false ? sampleRecipe(spec.compose ?? {}, words, seed) : {},
+        b = buildOne(th, { ...spec, compose: { ...spec.compose, ...varied, seed } });
+      if (!b) continue;
+      const features = roundelFeatures(th, b.r, b.f);
+      // a near-duplicate of one already built adds nothing to choose from
+      if (built.some(c => nearSame(c.features, features))) continue;
+      built.push({ seed, varied, b, features });
+    }
     if (!built.length) return null;
-    const features = built.map(c => roundelFeatures(th, c.b.r, c.b.f)),
-      scores = tasteScores(features),
+    const scores = tasteScores(built.map(c => c.features)),
       picked = scores.indexOf(Math.max(...scores));
-    return { ...built[picked].b, taste: built.map((c, i) => ({ seed: c.seed, features: features[i], score: scores[i] })), picked }; // prettier-ignore
+    return { ...built[picked].b, taste: built.map((c, i) => ({ seed: c.seed, varied: c.varied, features: c.features, score: scores[i] })), picked }; // prettier-ignore
   }
   return buildOne(th, spec);
 }

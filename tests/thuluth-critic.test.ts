@@ -5,7 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { bradleyTerry, fitPairwise, nextPair } from '../src/evolve/ratings';
 import type { Vote } from '../src/evolve/ratings';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { buildRoundel, decoMetrics, noiseOf, roundelFeatures, tasteScores } from '../src/script/thuluth/roundel';
+import {
+  buildRoundel,
+  decoMetrics,
+  noiseOf,
+  roundelFeatures,
+  sampleRecipe,
+  tasteScores,
+} from '../src/script/thuluth/roundel';
 
 const ratings = join(import.meta.dirname, '../prototypes/thuluth-lab/refresh/data/ratings'),
   read = (f: string) => JSON.parse(readFileSync(join(ratings, f), 'utf8'));
@@ -60,8 +67,20 @@ describe('the decorative critic', () => {
     const [a, b] = tasteScores([roundelFeatures(th, lanes.r, lanes.f), roundelFeatures(th, free.r, free.f)]);
     expect(a).toBeGreaterThan(b);
     const chosen = buildRoundel(th, { text: 'علي', compose: { tries: 1, iters: 1500 }, choose: 3 })!;
-    expect(chosen.taste).toHaveLength(3);
+    expect(chosen.taste!.length).toBeGreaterThanOrEqual(1);
     expect(chosen.taste![chosen.picked!].score).toBe(Math.max(...chosen.taste!.map(t => t.score)));
+  });
+  it('samples what the recipe leaves open, seed by seed, and drops near-duplicates', () => {
+    const a = sampleRecipe({}, 4, 108),
+      b = sampleRecipe({ oval: 1.4, stack: true }, 1, 108);
+    expect(a).toEqual(sampleRecipe({}, 4, 108));
+    expect(b.oval).toBeUndefined();
+    expect(b.stack).toBeUndefined();
+    expect(b.lanes).toBeUndefined();
+    const th = thuluth(ROUNDEL_PEN),
+      // one word with nothing left open to vary and a pinned search: every seed finds the same, kept once
+      same = buildRoundel(th, { text: 'علي', compose: { tries: 1, iters: 0, oval: 1, fillTarget: 0.4, stack: false, learnedStack: false, girift: 0 }, choose: 3 })!; // prettier-ignore
+    expect(same.taste).toHaveLength(1);
   });
 });
 
