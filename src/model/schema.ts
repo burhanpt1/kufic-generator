@@ -193,7 +193,8 @@ export interface RoundelRecipe {
   rise?: { margin?: number; most?: number; oval?: number };
   /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms; `across`: a
    *  word's last tail runs on under the next word; `free`: a word's last tail is drawn out even with nothing in it;
-   *  `sag`: a level tail dips at its middle, so it swoops. */
+   *  `sag`: a level tail dips at its middle, so it swoops; `head`: a joined letter whose tail runs under the next word
+   *  rises into its tooth first; `dotAt`: its dots along the run (0 the middle). */
   tails?: {
     letters?: string;
     gap?: number;
@@ -202,6 +203,8 @@ export interface RoundelRecipe {
     across?: boolean;
     free?: number;
     sag?: number;
+    head?: boolean;
+    dotAt?: number;
   };
   /** Words that must sit on a shelf of a group of another word (an elongation by the letter it leads into, or with
    *  `tail` over that group's final tail, drawn out beneath it). */
@@ -345,6 +348,8 @@ const roundelRecipe = z
         across: z.boolean(),
         free: z.number().min(0).max(30),
         sag: z.number().min(0).max(8),
+        head: z.boolean(),
+        dotAt: z.number().min(-1).max(1),
       })
       .partial(),
     seat: z

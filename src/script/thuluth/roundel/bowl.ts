@@ -316,6 +316,11 @@ export interface TailOptions {
   free?: number;
   /** A level course dips by this much at its middle, so the tail swoops (pen units; default 0). */
   sag?: number;
+  /** A joined letter whose tail runs on under the next word is written with its head, a tooth rising from the join,
+   *  and the tail falls from the top of it (as the free-standing great nun has its head). */
+  head?: boolean;
+  /** Its dots along the drawn-out run, just inside it: 0 the middle, -1 its start, 1 its end (default: left). */
+  dotAt?: number;
 }
 
 /** Draw out the tail of a letter that has the rest of its word nested in it (a ra, a waw) as a long, level stroke
@@ -424,7 +429,17 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     // the tail leaves the letter where its own tail starts to fall, and from there is one curve: down onto its course,
     // along it, and up at its end
     const k0 = Math.max(1, pts.findIndex(q => q[1] < 0) - 1),
-      run = pts[k0][0] - xk + 1.2;
+      // with its head: along from the join, up into the tooth, and the tail falls from its top
+      headed = o.head && P.form === 'fin' && after.some(j => r.groups[j].word !== g.word),
+      lead: SkelPt[] = headed
+        ? [
+            [0, 0, 1],
+            [-0.7, 0.05, 1],
+            [-1.25, 0.55, 0.95],
+            [-1.45, 1.35, 0.7],
+          ]
+        : pts.slice(0, k0 + 1).map(([x, y, w]) => [x, y, w ?? 1] as SkelPt),
+      run = lead[lead.length - 1][0] - xk + 1.2;
     if (xe + 1.4 > xk - run) continue;
     let course: SkelPt[] | null = null;
     if (bo) {
@@ -466,8 +481,8 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     if (!course) continue;
     // onto the course along a cubic that leaves the letter in the direction its tail was going and arrives along the
     // course, joining it a little further on than the drop is deep
-    const [ax, ay] = pts[k0],
-      [bx, by] = pts[k0 + 1] ?? pts[k0],
+    const [ax, ay] = lead[lead.length - 1],
+      [bx, by] = headed ? [ax - 0.3, ay - 1] : (pts[k0 + 1] ?? pts[k0]),
       drop = Math.max(1, ay - course[0][1]),
       j = Math.max(
         1,
@@ -490,13 +505,7 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       ];
     });
     const [lx, ly] = course[course.length - 1],
-      tail: SkelPt[] = [
-        ...pts.slice(0, k0 + 1).map(([x, y, w]) => [x, y, w ?? 1] as SkelPt),
-        ...ease,
-        ...course.slice(j),
-        [lx - 1.1, ly + 0.4, 0.6],
-        [lx - 1.5, ly + 1.15, 0.2],
-      ];
+      tail: SkelPt[] = [...lead, ...ease, ...course.slice(j), [lx - 1.1, ly + 0.4, 0.6], [lx - 1.5, ly + 1.15, 0.2]];
     // the tail as it will be drawn keeps a pen's width from every other letter as drawn (but the piece nested right
     // after it, and the great bowl, which is redrawn later); otherwise it stays as written
     const drawn = sampleStroke(
@@ -511,7 +520,8 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       );
     if (drawn.some(q => kept.some(([x, y]) => Math.abs(x - q.x) < near && Math.hypot(x - q.x, y - q.y) < near)))
       continue;
-    P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: tail } : st)) };
+    // with its head, the letter's marks sit at its head (as the great bowl's at its start): the solver sees the head
+    P.g = { ...P.g, s: P.g.s.map((st, m) => (m === si ? { ...st, pts: headed ? lead : tail } : st)) };
     // the drawn stroke: the letter redrawn from where it begins, as one curve with no corners of its own
     const S = r.shapes[i],
       [sx, sy] = pts[0],
@@ -531,6 +541,17 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     const st = S.b.strokes[best.si];
     r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
     st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
+    // its dots just inside the run, at `dotAt` along it
+    const dg = o.dotAt != null ? S.b.dotGroups.find(d => d.li === P.li) : undefined;
+    if (dg) {
+      const xm = (ax + lx) / 2 + (o.dotAt! * (lx - ax)) / 2,
+        near = course.reduce((m, q) => (Math.abs(q[0] - xm) < Math.abs(m[0] - xm) ? q : m)),
+        dx = P.ox + xm * sc,
+        dy = (P.oy || 0) + near[1] * sc + 1.7;
+      // the letter it belongs to lies beneath dots above it (a nun's) and above dots below it (a ya's)
+      const [top, bot] = dg.side > 0 ? [dy - 1.2, dy - 2] : [dy + 1.6, dy + 0.9];
+      Object.assign(dg, { x: dx, y: dy, x0: dx - 1, x1: dx + 1, top, bot });
+    }
   }
   return r;
 }

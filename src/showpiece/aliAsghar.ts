@@ -33,8 +33,10 @@ export const ALI_ASGHAR_RECIPE: RoundelRecipe = {
 
 const MARKS = { markReach: 1.8, ornaments: true, density: 0.5 };
 /** أصغر nested in the swoop of علي's ya, the ra of أصغر swooping too: the ya's tail runs on under the next word, the
- *  ra's is drawn out with nothing in it, both dipping. */
-const swoop = (seed: number, fillTarget: number, oval: number, free: number, reach: number, sag: number): RoundelRecipe => ({
+ *  ra's is drawn out with nothing in it, both dipping. The ya is written ayn, lam, its tooth, and the swoop falls
+ *  from the top of the tooth (as the Burhan and Shamira nun), its dots in the middle of the swoop; `shift` moves
+ *  أصغر left by hand, to leave the ya's shadda room beside its alif. */
+const swoop = (seed: number, fillTarget: number, oval: number, free: number, reach: number, sag: number, shift = 0): RoundelRecipe => ({
   cross: true,
   noRise: true,
   kern: true,
@@ -42,7 +44,8 @@ const swoop = (seed: number, fillTarget: number, oval: number, free: number, rea
   oval,
   seed,
   seat: [{ word: 1, on: 0, tail: true }],
-  tails: { across: true, free, reach, follow: 'level', sag },
+  tails: { across: true, free, reach, follow: 'level', sag, head: true, dotAt: 0, gap: 2.8 },
+  ...(shift ? { tweaks: [{ at: 'ا', move: [-shift, 0] }, { at: 'صغر', move: [-shift, 0] }] } : {}),
   ...MARKS,
 }); // prettier-ignore
 /** The join between علي's lam and ya drawn out long, and أصغر stacked on it. */
@@ -63,7 +66,7 @@ const shelf = (seed: number, fillTarget: number, oval: number, rise: boolean): R
  *  also drew its proportions). */
 export const ALI_ASGHAR_LAYOUTS = {
   side: ALI_ASGHAR_RECIPE,
-  'swoop-27': swoop(27, 0.6, 1.68, 10.76, 2.1, 2.33),
+  'swoop-27': swoop(27, 0.6, 1.68, 10.76, 2.1, 2.33, 2.5),
   'swoop-1': swoop(1, 0.56, 1.63, 6.73, 1.8, 3.2),
   'swoop-6': swoop(6, 0.49, 1.61, 9.39, 0.81, 3.45),
   'shelf-18': shelf(18, 0.6, 1.7, false),
