@@ -3,8 +3,8 @@
 //   wordSpace: a word broken by too wide a gap between its pieces reads as two words;
 //   strayMarks: a vowel nearer another word's letters than its own reads as that word's;
 //   strayDots: a dot group nearer another letter than its own is misread;
-//   doubled: ink drawn twice along the same course by two letters or two strokes (a redraw leaving the old ink); a
-//   letter retracing its own course within one stroke is its design.
+//   doubled: ink run twice along the same course by two different letters. A letter's own overlaps are its design,
+//   and a redraw cannot leave old ink behind (redraw() replaces it).
 import type { Thuluth } from '../engine';
 import type { Roundel } from './compose';
 import type { Finished } from './finish';
@@ -65,7 +65,7 @@ export interface RoundelChecks {
   /** Vowels and dot groups nearer another word's (another letter's) ink than their own by more than a pen. */
   strayMarks: number;
   strayDots: number;
-  /** Length of ink (pen units) drawn twice along the same course. */
+  /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
 }
 
@@ -122,10 +122,12 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
     for (let k = 1; k < line.length; k++) {
       const p = line[k],
         seg = Math.hypot(p.x - line[k - 1].x, p.y - line[k - 1].y),
-        // each pair once (a later stroke, or a far later part of this one), and never a letter retracing its own
-        // course (the initial hah's head goes out and back by design)
+        // each pair once, and only between different letters: a letter retracing its own course or built of strokes
+        // that overlap (the initial hah's head, a lam's stem over its join) is its design
         twin = G.near(p.x, p.y, nib * 0.2).find(
-          q => (q.st > p.st || (q.st === p.st && q.k > p.k + 20)) && (q.g !== p.g || q.li !== p.li || q.st !== p.st),
+          q =>
+            (q.st > p.st || (q.st === p.st && q.k > p.k + 20)) &&
+            (q.g !== p.g || (q.li !== p.li && q.li >= 0 && p.li >= 0)),
         );
       if (!twin) continue;
       const [ax, ay] = tangent(p),

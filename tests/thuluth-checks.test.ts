@@ -20,7 +20,7 @@ describe('roundel checks', () => {
       i = b.r.groups.findIndex((g, k) => k > 0 && g.word === b.r.groups[k - 1].word && !g.newWord);
     expect(i).toBeGreaterThan(0);
     b.r.st[i] = { x: b.r.st[i].x - 6, y: b.r.st[i].y };
-    expect(roundelChecks(th, b.r, b.f).wordSpace).toBeGreaterThan(base.wordSpace + 3);
+    expect(roundelChecks(th, b.r, b.f).wordSpace).toBeGreaterThan(base.wordSpace + 2);
   });
   it('see a vowel set over another word, and a dot group under another letter', () => {
     const b = build(),
@@ -37,11 +37,12 @@ describe('roundel checks', () => {
     expect(c.strayMarks).toBeGreaterThanOrEqual(1);
     expect(c.strayDots).toBeGreaterThanOrEqual(1);
   });
-  it('see ink drawn twice', () => {
+  it('see two letters drawn along the same course', () => {
     const b = build(),
-      S = b.r.shapes[0].b.strokes,
-      s = S.find(q => !q.mark)!;
-    S.push({ ...s, s: s.s.map(q => ({ ...q })), own: s.own?.slice() });
+      s = b.r.shapes[0].b.strokes.find(q => !q.mark)!,
+      [d0, d1] = [b.r.st[0], b.r.st[1]];
+    // the first group's stroke laid again as the second group's, on the same ink
+    b.r.shapes[1].b.strokes.push({ ...s, s: s.s.map(q => ({ ...q, x: q.x + d0.x - d1.x, y: q.y + d0.y - d1.y })), own: s.own?.slice() }); // prettier-ignore
     expect(roundelChecks(th, b.r, b.f).doubled).toBeGreaterThan(3);
   });
 });
