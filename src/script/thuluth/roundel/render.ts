@@ -33,8 +33,8 @@ export interface RoundelArt {
   Rf: number;
   rim: number;
   Rout: number;
-  /** One list of polygons per unit, in writing order, with its tint. */
-  units: { polys: Poly[]; tint?: string; mark: boolean }[];
+  /** One list of polygons per unit, in writing order, with its tint, and a pen stroke's centreline (not a dot's). */
+  units: { polys: Poly[]; tint?: string; mark: boolean; centre?: [number, number][] }[];
   counters: Poly[][];
 }
 
@@ -54,6 +54,7 @@ export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint
       : th.strokePolys({ ang: u.ang!, nib: u.nib, s: u.s! }),
     tint: u.tint,
     mark: !!u.mark || !!u.dot,
+    ...(u.s ? { centre: u.s.map(q => [q.x, q.y] as [number, number]) } : {}),
   }));
   // counters of the letters only, not the marks
   const ls = units.filter(u => u.s && !u.mark && (u.nib || nib) > nib * 0.6).map(u => ({ ang: u.ang!, nib: u.nib, s: u.s! })); // prettier-ignore

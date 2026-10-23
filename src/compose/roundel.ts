@@ -69,17 +69,29 @@ export function drawRoundel(
   if (b) {
     const art = roundelArt(th, b.r, b.f, { discScale: 1, counters: counters ? '#000000' : undefined }),
       tints = new Map<string, string>();
-    let ink = '';
+    let ink = '',
+      marks = '',
+      lines = '',
+      lineMarks = '';
     for (const u of art.units) {
+      const line = u.centre
+        ? 'M' + u.centre.map(([x, y]) => f3(x - art.cx) + ' ' + f3(art.cy - y)).join('L')
+        : pathOf(u.polys, art.cx, art.cy);
+      if (u.mark) lineMarks += line;
+      else lines += line;
       const d = pathOf(u.polys, art.cx, art.cy);
       if (u.tint) tints.set(u.tint, (tints.get(u.tint) || '') + d);
+      else if (u.mark) marks += d;
       else ink += d;
     }
     out = {
       oval: art.oval,
       Rf: art.Rf,
       rim: art.rim,
-      ink,
+      ink: ink + marks,
+      markFrom: ink.length,
+      lines,
+      lineMarks,
       tints: [...tints].map(([colour, d]) => ({ colour, d })),
       counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
       marks: b.f.solved?.count ?? 0,

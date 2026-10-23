@@ -80,7 +80,13 @@ export interface RoundelDrawing {
   rim: number;
   /** Ink as path data: the untinted letters and marks, then each tint. */
   ink: string;
+  /** Where the marks (dots, vowels, ornaments) start in the ink: the letters come first. */
+  markFrom: number;
   tints: { colour: string; d: string }[];
+  /** The pen's centrelines as open paths, for single-line output: the letters, and the marks (dots as their
+   *  outlines). */
+  lines: string;
+  lineMarks: string;
   counters: string;
   /** Marks placed / missing, and ornaments, for the meta. */
   marks: number;

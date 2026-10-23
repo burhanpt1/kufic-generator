@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from '../src/compose';
 import { centrelines, laserSVG, orderForPlotting, plotterSVG, reliefSVG } from '../src/fabricate';
 import { preset } from '../src/model/presets';
+import { aliAsgharComposition } from '../src/showpiece/aliAsghar';
 import { U } from '../src/render/svg';
 import { toPNG } from '../scripts/raster.mjs';
 import { PNG } from 'pngjs';
@@ -90,4 +91,43 @@ describe('relief', () => {
     expect(hi).toBe(255);
     expect(lo).toBe(0);
   });
+});
+
+describe('a thuluth roundel on tiles (Ali Asghar)', () => {
+  const ali = resolve(aliAsgharComposition('lapis', 'side')),
+    rd = ali.items.find(i => i.type === 'roundel')!,
+    [ox, oy] = ali.canvas.origin,
+    [cx, cy] = [(ox + rd.centre[0]) * U, (oy + rd.centre[1]) * U];
+  it('plots its letters (as outlines, or the pen centreline), marks and rim, and tiles only round it', () => {
+    const ls = centrelines(ali),
+      kinds = new Set(ls.map(l => l.kind));
+    for (const k of ['letter', 'mark', 'rule', 'pattern']) expect(kinds.has(k as never), k).toBe(true);
+    expect(ls.filter(l => l.kind === 'letter').every(l => l.closed)).toBe(true);
+    // no tile line near the cartouche's centre
+    const near = (l: (typeof ls)[0]) => l.pts.some(([x, y]) => Math.hypot(x - cx, y - cy) < rd.Rf * rd.s * U * 0.8);
+    expect(ls.filter(l => l.kind === 'pattern').some(near)).toBe(false);
+    const centre = centrelines(ali, { pen: 'centre', patterns: false });
+    expect(centre.filter(l => l.kind === 'letter').some(l => !l.closed)).toBe(true);
+    expect(centre.some(l => l.kind === 'pattern')).toBe(false);
+  }, 60000);
+  it('laser: engraves the letters, scores the rim and the tiles', () => {
+    const svg = laserSVG(ali),
+      layers = bodyOf(svg)
+        .split(/(?=<g data-layer=")/)
+        .slice(1);
+    expect(svg).toContain('inkscape:label="score-tiles"');
+    expect(layers.some(p => p.startsWith('<g data-layer="letters"') && p.includes(rd.ink.slice(0, 40)))).toBe(true);
+    for (const part of layers) {
+      const name = /data-layer="([a-z]+)"/.exec(part)![1],
+        colours = [...part.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map(m => m[1]),
+        allowed = name === 'letters' ? ['#000000', '#ffffff', 'none'] : name === 'cut' ? ['#ff0000', 'none'] : ['#0000ff', 'none']; // prettier-ignore
+      for (const c of colours) expect(allowed, `${name}: ${c}`).toContain(c);
+    }
+  }, 60000);
+  it('relief: the letters stand above the field, the field above the ground', () => {
+    const svg = reliefSVG(ali);
+    expect(svg).toContain(`fill="#ffffff" d="${rd.ink.slice(0, 40)}`);
+    // the field at its own level, between the ground's and the letters'
+    expect(svg).toMatch(/<ellipse [^>]*fill="#808080"/);
+  }, 60000);
 });

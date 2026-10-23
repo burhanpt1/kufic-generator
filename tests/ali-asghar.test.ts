@@ -1,8 +1,9 @@
 // Ali Asghar (src/showpiece/aliAsghar): the name in a thuluth cartouche framed by ornament alone, one A3 sheet per
-// layout. `npm run ali-asghar` writes the print files to docs/ali-asghar.
+// layout. `npm run ali-asghar` writes the print files to docs/ali-asghar, and fabrication files for swoop 27.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { resolve } from '../src/compose';
+import { laserSVG, plotterSVG, reliefSVG } from '../src/fabricate';
 import { isValidComposition } from '../src/model/schema';
 import { ALI_ASGHAR_LAYOUTS, aliAsgharComposition, aliAsgharSheet } from '../src/showpiece/aliAsghar';
 import type { AliAsgharLayout } from '../src/showpiece/aliAsghar';
@@ -36,6 +37,14 @@ describe('Ali Asghar', () => {
       if (process.env.ALI_ASGHAR) {
         mkdirSync('docs/ali-asghar', { recursive: true });
         writeFileSync(`docs/ali-asghar/ali-asghar-${layout}.svg`, aliAsgharSheet('lapis', layout).svg);
+        // the chosen one also for making: a plotter drawing (letter outlines, and the pen's centreline), laser
+        // layers and a relief depth map, 400 mm wide
+        if (layout === 'swoop-27') {
+          writeFileSync(`docs/ali-asghar/${layout}-plotter.svg`, plotterSVG(p, { widthMM: 400 }));
+          writeFileSync(`docs/ali-asghar/${layout}-plotter-centre.svg`, plotterSVG(p, { widthMM: 400, pen: 'centre' }));
+          writeFileSync(`docs/ali-asghar/${layout}-laser.svg`, laserSVG(p, { widthMM: 400 }));
+          writeFileSync(`docs/ali-asghar/${layout}-relief.svg`, reliefSVG(p));
+        }
       }
     }, 60000);
 });
