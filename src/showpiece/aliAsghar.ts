@@ -8,6 +8,10 @@ import type { WeddingSheet, WeddingVariant } from './wedding';
 
 export const ALI_ASGHAR = 'عَلِيّ أَصْغَر';
 
+/** The marks as approved: before the tashkil rules (long fatha, clarifying letters under ع and ص), as the wedding piece
+ *  keeps its own. */
+const AS_APPROVED = { fathaRule: false, longFatha: false, allSigns: false };
+
 /** A pinned arrangement: left to itself the composer puts علي's great ya to the left of أصغر, so the name reads
  *  backwards; here علي (its plain ya) stands to the right and a little higher, أصغر to its left. */
 export const ALI_ASGHAR_RECIPE: RoundelRecipe = {
@@ -29,9 +33,10 @@ export const ALI_ASGHAR_RECIPE: RoundelRecipe = {
   markReach: 1.6,
   ornaments: true,
   density: 0.5,
+  ...AS_APPROVED,
 };
 
-const MARKS = { markReach: 1.8, ornaments: true, density: 0.5 };
+const MARKS = { markReach: 1.8, ornaments: true, density: 0.5, ...AS_APPROVED };
 /** أصغر nested in the swoop of علي's ya, the ra of أصغر swooping too: the ya's tail runs on under the next word, the
  *  ra's is drawn out with nothing in it, both dipping. The ya is written ayn, lam, its tooth, and the swoop falls
  *  from the top of the tooth (as the Burhan and Shamira nun), its dots in the middle of the swoop; `shift` moves
@@ -112,4 +117,13 @@ export function aliAsgharComposition(variant: WeddingVariant = 'lapis', layout: 
 
 export function aliAsgharSheet(variant: WeddingVariant = 'lapis', layout: AliAsgharLayout = 'side'): WeddingSheet {
   return cartoucheSheet(aliAsgharComposition(variant, layout), LOOKS[variant].palette, 'aa');
+}
+
+/** The name as a plaque, for making: the outline, its border (rules, braid, pearls) and the cartouche, without the
+ *  tiles round it or in the corners. */
+export function aliAsgharPlaque(layout: AliAsgharLayout = 'swoop-27'): Composition {
+  const c = aliAsgharComposition('lapis', layout);
+  delete c.root.spandrels;
+  if (c.root.child.fill?.type === 'roundel') delete c.root.child.fill.ground;
+  return c;
 }

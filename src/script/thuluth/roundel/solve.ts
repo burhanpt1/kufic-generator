@@ -1,14 +1,17 @@
 // The global mark solver (lab marks2.js): after the letters, vowels and dots are placed together as one even
 // distribution that counterweights the letters. Vowels take a pen a third of the letters'; dot groups may shift and
-// regroup but stay with their letter, on its side; optionally small muhmal signs (a little hah under hah, a little
-// seen under seen) and ornaments (plume or trefoil) fill the largest gaps left.
+// regroup but stay with their letter, on its side; optionally the clarifying letters (huruf idahiyya: a small hah under
+// hah, a small seen under seen, and so for sad, ta, ayn, kaf and mim) and ornaments (plume or trefoil) fill the largest
+// gaps left. The rules for the marks follow the Egyptian Cultural Development Fund's notes on tashkil and ornaments in
+// thuluth and naskh: three pens, each fatha as long as its space allows, all fathas parallel, and the dagger alif of
+// الله seated on its shadda.
 import type { Dot, Thuluth } from '../engine';
 import { isLetter } from '../engine';
-import { MARK_SHAPES, MARK_SIZE } from '../marks';
+import { ALIF_ANG, ALIF_PEN, ALIF_SCALE, MARK_PEN, MARK_SHAPES, MARK_SIZE, SIGN_PEN } from '../marks';
 import { sampleStroke } from '../pen';
 import { Alpha, toPixels } from '../raster';
 import type { MarkName } from '../shape';
-import { BELOW, FAM } from '../shape';
+import { BELOW } from '../shape';
 import type { SkelPt, Stroke } from '../types';
 import type { Roundel } from './compose';
 
@@ -22,6 +25,8 @@ export function dotOffsets(n: number, arr: string, nib: number): [number, number
   return [[-s / 2, -s * 0.45 * up], [s / 2, -s * 0.45 * up], [0, s * 0.55 * up]]; // prettier-ignore
 }
 export type Ornament = 'plume' | 'tirfil' | 'tirnak' | 'minihah' | 'minisin';
+/** An ornament, or a clarifying letter made from the engine's own letter ('mini:' and the letter). */
+type OrnKey = Ornament | `mini:${string}`;
 export const ORN_SHAPES: Record<Ornament, SkelPt[][]> = {
   plume: [[[0.05, -1.0, 0.3], [0.2, -0.35, 0.9], [0.55, 0.35, 1], [0.35, 0.95, 0.7], [-0.15, 1.05, 0.5], [-0.35, 0.55, 0.8], [-0.1, -0.1, 0.9], [0.05, -1.0, 0.3]], [[0.1, -0.5, 0.4], [0.15, 0.35, 0.6], [0.0, 0.8, 0.3]]],
   tirfil: [[[0.0, 0.55, 0.6], [-0.35, 0.95], [-0.05, 1.2], [0.25, 0.9], [0.0, 0.55, 0.6]], [[-0.1, 0.4, 0.6], [-0.75, 0.35], [-0.8, 0.0], [-0.35, 0.05], [-0.1, 0.4, 0.6]], [[0.1, 0.4, 0.6], [0.75, 0.35], [0.8, 0.0], [0.35, 0.05], [0.1, 0.4, 0.6]], [[0.0, 0.3, 0.8], [0.0, -0.9, 0.3]]],
@@ -30,6 +35,55 @@ export const ORN_SHAPES: Record<Ornament, SkelPt[][]> = {
   minisin: [[[1.0, 0.4, 0.4], [0.85, -0.1, 0.9, 1], [0.6, 0.35, 0.6, 1], [0.4, -0.1, 0.9, 1], [0.15, 0.35, 0.6, 1], [-0.05, -0.1, 0.9], [-0.6, -0.35], [-1.0, -0.05, 0.4]]],
 }; // prettier-ignore
 const ORN_SIZE: Record<Ornament, [number, number]> = { plume: [1.3, 2.3], tirfil: [1.7, 2.2], tirnak: [1.8, 0.8], minihah: [1.7, 1.8], minisin: [2.1, 0.9] }; // prettier-ignore
+
+/** The letters that take a clarifying letter beneath them. */
+export const CLARIFY = new Set(['ح', 'س', 'ص', 'ط', 'ع', 'ك', 'م']);
+/** The clarifying letters' size (their longer side, in pen units at a group scale of 1). */
+export const SIGN_SIZE = 2.5;
+interface OrnShape {
+  shapes: SkelPt[][];
+  size: [number, number];
+  /** Drawn at this scale (with the group's). */
+  scale: number;
+}
+const SIGNS = new WeakMap<Thuluth, Map<string, OrnShape | null>>();
+/** A clarifying letter: the engine's own isolated letter, centred and normalised to SIGN_SIZE (lab miniSign). */
+export function miniSign(th: Thuluth, c: string): OrnShape | null {
+  let m = SIGNS.get(th);
+  if (!m) SIGNS.set(th, (m = new Map()));
+  if (m.has(c)) return m.get(c)!;
+  const g = th.glyphFor(c, 'iso');
+  let out: OrnShape | null = null;
+  if (g && g.s.length) {
+    const pts = g.s.flatMap(st => st.pts),
+      x0 = Math.min(...pts.map(q => q[0])),
+      x1 = Math.max(...pts.map(q => q[0])),
+      y0 = Math.min(...pts.map(q => q[1])),
+      y1 = Math.max(...pts.map(q => q[1])),
+      sc = 2 / Math.max(x1 - x0, y1 - y0),
+      cx = (x0 + x1) / 2,
+      cy = (y0 + y1) / 2,
+      w = (x1 - x0) * sc,
+      h = (y1 - y0) * sc,
+      k = SIGN_SIZE / Math.max(w, h);
+    out = {
+      shapes: g.s.map(st => st.pts.map(q => [(q[0] - cx) * sc, (q[1] - cy) * sc, q[2] ?? 1, q[3]] as SkelPt)),
+      size: [w * k, h * k],
+      scale: k,
+    };
+  }
+  m.set(c, out);
+  return out;
+}
+const ornShape = (th: Thuluth, m: OrnKey): OrnShape | null =>
+  m.startsWith('mini:')
+    ? miniSign(th, m.slice(5))
+    : { shapes: ORN_SHAPES[m as Ornament], size: ORN_SIZE[m as Ornament], scale: 1 };
+
+/** The fathas' one slant (all fathas are parallel), and the lengths they may take, in dots (a dot is the main pen's
+ *  width): short, medium when the free run along the slant is at least 6, long (with the main pen) when it is 11. */
+const FATHA_SLANT = Math.atan2(0.8, 1.5);
+export const FATHA_DOTS = { short: 3.5, medium: 5, long: 10 } as const;
 
 export interface SolveOptions {
   discScale?: number;
@@ -43,6 +97,18 @@ export interface SolveOptions {
   markIters?: number;
   /** Vowel pen, as a share of the letters'. */
   markPen?: number;
+  /** The clarifying letters' pen, and the dagger alif's (shares of the letters'), and the dagger alif's size. */
+  signPen?: number;
+  alifPen?: number;
+  alifScale?: number;
+  /** Each fatha as long as the space along its slant allows (false: the short mark); the long fatha may be used. */
+  fathaRule?: boolean;
+  longFatha?: boolean;
+  /** With ornaments: a clarifying letter under each of ح س ص ط ع ك م (false: only the small ح and س, as drawn). */
+  allSigns?: boolean;
+  /** The pen of the ornaments in the gaps, as a share of the letters' at full size (0.38; the lab drew 0.42 before
+   *  the three-pen rule). */
+  ornPen?: number;
   /** Ink that is not the roundel's letters but blocks marks (a companion text). */
   extraInk?: { strokes: Stroke[]; dots: Dot[] } | null;
 }
@@ -53,6 +119,10 @@ export interface Solved {
   fillers: number;
   E: number;
   items: { kind: string; x: number; y: number; w: number; h: number }[];
+  /** Each fatha's length in dots, in order (0 for the plain mark). */
+  fathas: number[];
+  /** The clarifying letters placed. */
+  signs: string[];
 }
 
 interface Item {
@@ -62,6 +132,9 @@ interface Item {
   arrs?: string[];
   arr?: string;
   m?: string;
+  /** A fatha's length, set by the fatha rule, and whether it is written with the main pen. */
+  fathaLen?: number;
+  mainPen?: boolean;
   side: number;
   w?: number;
   h?: number;
@@ -177,13 +250,14 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     });
     if (o.ornaments)
       [...g.s].forEach((c, li) => {
-        const fam = FAM[c],
-          sign: Ornament | null =
-            fam === 'hah' && c === 'ح' ? 'minihah' : fam === 'sin' && c === 'س' ? 'minisin' : null;
+        const sign: OrnKey | null =
+          o.allSigns === false
+            ? c === 'ح' ? 'minihah' : c === 'س' ? 'minisin' : null
+            : CLARIFY.has(c) ? (miniSign(th, c) ? `mini:${c}` : c === 'ح' ? 'minihah' : c === 'س' ? 'minisin' : null) : null; // prettier-ignore
         if (!sign) return;
         const L = letterBox(li);
         if (!L) return;
-        const [w0, h0] = ORN_SIZE[sign],
+        const [w0, h0] = ornShape(th, sign)!.size,
           w = w0 * sc,
           h = h0 * sc,
           ay = L.bot - h / 2 - 0.6 * sc;
@@ -349,7 +423,51 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       fillers.push({ m, x: best[0], y: best[1], w: w * sz, h: h * sz, sz });
     }
   }
-  // drawn: vowels and ornaments with a third of the pen, dots as rhombs of the full pen
+  // the shadda and the dagger alif over one letter (as in الله) are one compound mark: the alif stands on the shadda
+  items.forEach(it => {
+    if (it.kind !== 'mark' || it.m !== 'alifk') return;
+    const sh = items.find(q => q.kind === 'mark' && q.m === 'shadda' && q.key === it.key);
+    if (!sh) return;
+    const [, hs] = boxOf(sh),
+      [, ha] = boxOf(it);
+    it.x = sh.x + 0.1 * nib;
+    it.y = sh.y + hs / 2 + ha / 2 - 0.15 * nib;
+  });
+  // each fatha as long as the space along its slant allows: the free run is measured both ways from its centre (stopped
+  // by letter ink within 0.9 of a pen, the field's edge, other marks, dots and ornaments), and the fatha is centred in it
+  if (o.fathaRule !== false) {
+    const dx = Math.cos(FATHA_SLANT),
+      dy = Math.sin(FATHA_SLANT),
+      reach = 7 * nib;
+    const blocked = (x: number, y: number, self: Item) => {
+      const gx = Math.round(X(x)),
+        gy = Math.round(Y(y));
+      if (gx < 0 || gy < 0 || gx >= Wd || gy >= Hd || dist[gy * Wd + gx] < nib * 0.9 * K) return true;
+      if (hyp(x - D.cx, y - D.cy) > RD) return true;
+      const near = (cx: number, cy: number, w: number, h: number) => Math.abs(x - cx) < w / 2 + 0.3 && Math.abs(y - cy) < h / 2 + 0.3; // prettier-ignore
+      return items.some(q => q !== self && near(q.x, q.y, ...boxOf(q))) || fillers.some(f => near(f.x, f.y, f.w, f.h));
+    };
+    items.forEach(it => {
+      if (it.kind !== 'mark' || it.m !== 'fatha') return;
+      const run = [1, -1].map(sg => {
+        let s2 = 0.4;
+        while (s2 < reach && !blocked(it.x + sg * dx * s2, it.y + sg * dy * s2, it)) s2 += 0.25;
+        return s2;
+      });
+      const free = run[0] + run[1],
+        len = free >= 11 * nib && o.longFatha !== false ? FATHA_DOTS.long : free >= 6 * nib ? FATHA_DOTS.medium : FATHA_DOTS.short; // prettier-ignore
+      it.fathaLen = len * nib;
+      it.mainPen = len === FATHA_DOTS.long;
+      // centred in its free run where the run is lopsided, so the longer stroke stays clear on both sides
+      const lo = it.fathaLen / 2 - run[1],
+        hi = run[0] - it.fathaLen / 2,
+        shift = lo <= hi ? Math.max(lo, Math.min(hi, 0)) : (run[0] - run[1]) / 2;
+      it.x += dx * shift;
+      it.y += dy * shift;
+    });
+  }
+  // drawn: vowels and ornaments with a third of the pen, the clarifying letters with a little less, the dagger alif
+  // with half at the stems' angle, long fathas with the full pen; dots as rhombs of the full pen
   const strokes: Stroke[] = [],
     dots: Dot[] = [];
   items.forEach(it => {
@@ -358,17 +476,31 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       dotOffsets(it.n!, it.arr!, nib * it.sc).forEach(([dx, dy]) => dots.push([it.x + dx, it.y + dy, it.sc, 0, tint]));
       return;
     }
-    const shapes = it.kind === 'orn' ? ORN_SHAPES[it.m as Ornament] : MARK_SHAPES[it.m as MarkName],
-      s2 = it.kind === 'orn' ? it.sc : ms * it.sc;
+    if (it.fathaLen) {
+      // a straight fatha of the chosen length, thinning at both ends
+      const L = it.fathaLen / 2,
+        cx = Math.cos(FATHA_SLANT) * L,
+        sy = Math.sin(FATHA_SLANT) * L,
+        pen = it.mainPen ? 1 : (o.markPen || MARK_PEN) * 1.15;
+      strokes.push({ tint, mark: true, ang: 70, nib: nib * pen * it.sc, s: sampleStroke([[it.x + cx, it.y + sy, 0.3], [it.x + cx * 0.5, it.y + sy * 0.5, 1], [it.x - cx * 0.6, it.y - sy * 0.6, 1], [it.x - cx, it.y - sy, 0.35]], th.style.tension) }); // prettier-ignore
+      return;
+    }
+    const orn = it.kind === 'orn' ? ornShape(th, it.m as OrnKey) : null,
+      alif = it.m === 'alifk',
+      shapes = orn ? orn.shapes : MARK_SHAPES[it.m as MarkName],
+      s2 = orn ? it.sc * orn.scale : ms * it.sc * (alif ? (o.alifScale ?? ALIF_SCALE) : 1),
+      pen = orn
+        ? it.m!.startsWith('mini:') ? (o.signPen ?? SIGN_PEN) : MARK_PEN * 1.3
+        : alif ? (o.alifPen ?? ALIF_PEN) : (o.markPen || MARK_PEN); // prettier-ignore
     (shapes || []).forEach(
       sh =>
-      strokes.push({ tint, mark: true, ang: 70, nib: nib * (o.markPen || 0.34) * it.sc * (it.kind === 'orn' ? 1.3 : 1), s: sampleStroke(sh.map(([a2, b2, ww, c]) => [it.x + a2 * s2, it.y + b2 * s2, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
+      strokes.push({ tint, mark: true, ang: alif ? ALIF_ANG : 70, nib: nib * pen * it.sc, s: sampleStroke(sh.map(([a2, b2, ww, c]) => [it.x + a2 * s2, it.y + b2 * s2, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
     );
   });
   fillers.forEach(f =>
     ORN_SHAPES[f.m].forEach(
       sh =>
-      strokes.push({ mark: true, ang: 70, nib: nib * 0.42 * f.sz, s: sampleStroke(sh.map(([a2, b2, ww, c]) => [f.x + a2 * f.sz, f.y + b2 * f.sz, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
+      strokes.push({ mark: true, ang: 70, nib: nib * (o.ornPen ?? 0.38) * f.sz, s: sampleStroke(sh.map(([a2, b2, ww, c]) => [f.x + a2 * f.sz, f.y + b2 * f.sz, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
     ),
   );
   return {
@@ -376,6 +508,8 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     dots,
     count: items.length,
     fillers: fillers.length,
+    fathas: items.filter(it => it.m === 'fatha').map(it => (it.fathaLen ? +(it.fathaLen / nib).toFixed(1) : 0)),
+    signs: items.filter(it => it.kind === 'orn').map(it => it.m!),
     E,
     items: items.map(it => {
       const [w, h] = boxOf(it);

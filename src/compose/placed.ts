@@ -99,6 +99,9 @@ export interface RoundelDrawing {
   /** Stacked pieces out of reading order (0: none); stroke points of different letters touching (0: none). */
   order: number;
   clash: number;
+  /** The decorative critic's features (roundel/deco.ts): texture, knots, unity, span and fill of the letters, and
+   *  noise (unresolved contact; lower is quieter). */
+  deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number };
 }
 
 /** Draw order, back to front. */

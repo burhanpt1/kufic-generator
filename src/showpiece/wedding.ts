@@ -41,6 +41,9 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   markReach: 2.2,
   ornaments: true,
   density: 0.6,
+  // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only)
+  fathaRule: false,
+  allSigns: false,
 };
 
 export type WeddingVariant = 'cobalt' | 'lapis';

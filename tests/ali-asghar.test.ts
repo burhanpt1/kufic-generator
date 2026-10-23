@@ -3,9 +3,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { resolve } from '../src/compose';
+import { PNG } from 'pngjs';
 import { laserSVG, plotterSVG, reliefSVG } from '../src/fabricate';
+import { cropToObject, heightmapFromPixels, heightmapToMesh, meshStats, meshToSTL } from '../src/fabricate/mesh';
+import { toPNG } from '../scripts/raster.mjs';
 import { isValidComposition } from '../src/model/schema';
-import { ALI_ASGHAR_LAYOUTS, aliAsgharComposition, aliAsgharSheet } from '../src/showpiece/aliAsghar';
+import { ALI_ASGHAR_LAYOUTS, aliAsgharComposition, aliAsgharPlaque, aliAsgharSheet } from '../src/showpiece/aliAsghar';
 import type { AliAsgharLayout } from '../src/showpiece/aliAsghar';
 
 describe('Ali Asghar', () => {
@@ -47,4 +50,35 @@ describe('Ali Asghar', () => {
         }
       }
     }, 60000);
+  it('swoop 27 as a plaque: no tiles, a watertight solid 200 mm wide', () => {
+    const p = resolve(aliAsgharPlaque());
+    expect(p.items.some(i => i.type === 'tilework')).toBe(false);
+    expect(p.items.some(i => i.type === 'roundel')).toBe(true);
+    const relief = reliefSVG(p),
+      solid = (width: number, resolution: number) => {
+        // the black floor outside the outline is cut away, so the solid is the plaque's own shape
+        const hm = heightmapFromPixels(cropToObject(PNG.sync.read(toPNG(relief, width))), { cutBelow: 0.05 });
+        return heightmapToMesh(hm, { widthMM: 200, baseMM: 3, reliefMM: 4, resolution });
+      };
+    const m = solid(600, 256),
+      st = meshStats(m);
+    expect(st.max[0] - st.min[0]).toBeGreaterThan(198);
+    expect(st.max[2]).toBeCloseTo(7, 5);
+    // closed: every edge has exactly one twin running the other way
+    const e = new Map<string, number>(),
+      T = m.triangles;
+    for (let t = 0; t < T.length; t += 3)
+      for (const [a, b] of [[T[t], T[t + 1]], [T[t + 1], T[t + 2]], [T[t + 2], T[t]]]) e.set(a + ',' + b, (e.get(a + ',' + b) ?? 0) + 1); // prettier-ignore
+    for (const [k, c] of e) expect(c === 1 && e.get(k.split(',').reverse().join(',')) === 1).toBe(true);
+    if (process.env.ALI_ASGHAR) {
+      mkdirSync('docs/ali-asghar', { recursive: true });
+      writeFileSync('docs/ali-asghar/swoop-27-plaque-relief.svg', relief);
+      // a 0.2 mm grid for filament printers, 0.1 mm for resin
+      for (const [res, name] of [
+        [1024, 'fdm'],
+        [2048, 'resin'],
+      ] as const)
+        writeFileSync(`docs/ali-asghar/swoop-27-plaque-${name}.stl`, meshToSTL(solid(2600, res), 'ali-asghar'));
+    }
+  }, 300000);
 });

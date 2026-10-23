@@ -19,6 +19,7 @@ import { wireCritic } from './critic';
 import { wireEditor } from './editor';
 import { wireGallery } from './gallery';
 import { wireLetters } from './letters';
+import { wirePrint3d } from './print3d';
 import { wireTrainer } from './trainer';
 
 export type Tab = 'gallery' | 'trainer' | 'editor' | 'chrono' | 'letters';
@@ -178,6 +179,7 @@ $('fab').onchange = () => {
   const sel = $<HTMLSelectElement>('fab'),
     v = sel.value;
   sel.value = '';
+  if (v === 'stl') return print3d.open();
   if (!placed || !v) return;
   if (v === 'plot') saveSVG(document, 'kufic-plotter', plotterSVG(placed));
   else if (v === 'laser') saveSVG(document, 'kufic-laser', laserSVG(placed));
@@ -185,6 +187,7 @@ $('fab').onchange = () => {
 };
 
 // ---- start ----
+const print3d = wirePrint3d(app);
 wireGallery(app);
 wireTrainer(app);
 wireEditor(app);

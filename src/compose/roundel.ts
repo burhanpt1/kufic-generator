@@ -7,7 +7,17 @@ import type { FillerNode, RoundelColours, RoundelRecipe, Style } from '../model/
 import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
 import type { Thuluth } from '../script/thuluth/engine';
-import { buildRoundel, clashes, roundelArt, roundelOrderFault } from '../script/thuluth/roundel';
+import type { FinishOptions, RoundelOptions } from '../script/thuluth/roundel';
+import {
+  buildRoundel,
+  clashes,
+  musenna,
+  musennaArt,
+  refusesMirror,
+  roundelArt,
+  roundelFeatures,
+  roundelOrderFault,
+} from '../script/thuluth/roundel';
 import type { Poly } from '../script/thuluth/types';
 import { fitInside, registerFiller } from './fillers';
 import type { RoundelDrawing } from './placed';
@@ -35,35 +45,51 @@ export function drawRoundel(
   const base = thuluthStyleOf(pen?.preset === 'roundel' ? pen : { preset: 'roundel' }),
     th: Thuluth = thuluth({ ...base, great: recipe.great });
   const fx = recipe.fixed && structuredClone(recipe.fixed);
+  const compose: RoundelOptions = {
+    elongate: recipe.elongate,
+    cross: recipe.cross,
+    merge: recipe.merge,
+    cradle: recipe.cradle,
+    kern: recipe.kern,
+    nest: recipe.nest,
+    stack: recipe.stack,
+    stackAt: recipe.stackAt,
+    seat: recipe.seat,
+    kashLengths: recipe.kashLengths,
+    learnedStack: recipe.learnedStack,
+    girift: recipe.girift,
+    noRise: recipe.noRise,
+    ceiling: recipe.ceiling,
+    topFirst: recipe.topFirst,
+    fillTarget: recipe.fillTarget,
+    oval: recipe.oval,
+    emph: recipe.emph,
+    tries: recipe.tries ?? (fx ? 1 : 4),
+    iters: recipe.iters,
+    seed: recipe.seed,
+    fixed: fx,
+    path: recipe.path,
+    lanes: recipe.lanes,
+    pathFill: recipe.pathFill,
+    pathTol: recipe.pathTol,
+    readRule: recipe.readRule,
+  };
+  const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns }; // prettier-ignore
+  if (recipe.mirror) {
+    const out = drawMusenna(th, text, recipe, compose, frame);
+    if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
+    CACHE.set(key, out);
+    return out;
+  }
   const b = buildRoundel(th, {
     text,
-    compose: {
-      elongate: recipe.elongate,
-      cross: recipe.cross,
-      merge: recipe.merge,
-      cradle: recipe.cradle,
-      kern: recipe.kern,
-      nest: recipe.nest,
-      stack: recipe.stack,
-      stackAt: recipe.stackAt,
-      seat: recipe.seat,
-      kashLengths: recipe.kashLengths,
-      noRise: recipe.noRise,
-      ceiling: recipe.ceiling,
-      topFirst: recipe.topFirst,
-      fillTarget: recipe.fillTarget,
-      oval: recipe.oval,
-      emph: recipe.emph,
-      tries: recipe.tries ?? (fx ? 1 : 4),
-      iters: recipe.iters,
-      seed: recipe.seed,
-      fixed: fx,
-    },
+    compose,
     tweaks: recipe.tweaks,
+    choose: recipe.choose,
     tails: recipe.tails,
     rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
-    frame: { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle }, // prettier-ignore
+    frame,
   });
   let out: RoundelDrawing | null = null;
   if (b) {
@@ -102,11 +128,53 @@ export function drawRoundel(
       levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
       order: roundelOrderFault(b.r),
       clash: clashes(th, b.r),
+      deco: (({ texture, knots, unity, span, fill, noise }) => ({ texture, knots, unity, span, fill, noise }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
     };
   }
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
   CACHE.set(key, out);
   return out;
+}
+
+/** A mirrored roundel (müsennâ): composed once, mirrored on a vertical axis, the halves combined into one design. Null
+ *  for a text holding الله, which the owner does not want mirrored. */
+function drawMusenna(
+  th: Thuluth,
+  text: string,
+  recipe: RoundelRecipe,
+  compose: RoundelOptions,
+  frame: FinishOptions,
+): RoundelDrawing | null {
+  const m = typeof recipe.mirror === 'object' ? recipe.mirror : {},
+    { tries, iters, seed } = compose,
+    // only what the recipe sets overrides the mirrored composer's own defaults (a pinned layout does not apply)
+    rest = Object.fromEntries(Object.entries(compose).filter(([k, v]) => v !== undefined && !['fixed', 'tries', 'iters', 'seed'].includes(k))) as RoundelOptions; // prettier-ignore
+  const c = musenna(th, text, { compose: rest, finish: frame, tries, iters, seeds: seed != null ? [seed] : undefined })[0]; // prettier-ignore
+  if (!c) return null;
+  const art = musennaArt(th, c, { shareStrokes: m.shareStrokes }),
+    Rf = art.rad * 1.036,
+    { texture, knots, unity, span, fill, noise } = c.features;
+  return {
+    oval: 1,
+    Rf,
+    rim: Rf * 0.075,
+    ink: pathOf(art.polys, art.cx, art.cy),
+    // the mirrored art comes as ink only: no centrelines, and its marks are not told apart
+    markFrom: Infinity,
+    lines: '',
+    lineMarks: '',
+    tints: [],
+    counters: '',
+    marks: c.f.solved?.count ?? 0,
+    missing: c.f.missing,
+    grow: 0,
+    overlap: c.r.overlap,
+    tails: 0,
+    levels: new Set(c.r.st.map(p => Math.round(p.y / 2))).size,
+    order: roundelOrderFault(c.r),
+    clash: clashes(th, c.r),
+    deco: { texture, knots, unity, span, fill, noise },
+  };
 }
 
 /** Polygon of an ellipse with half-axes (a, b), for fitting. */
@@ -128,6 +196,10 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     line: f.colours?.line ?? style.palette.ink2,
     counters: f.colours?.counters ?? '',
   };
+  if (f.recipe?.mirror && refusesMirror(slot.text)) {
+    ctx.fill = { type: 'roundel', ok: false, note: 'الله is not mirrored' };
+    return;
+  }
   const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters);
   if (!art) {
     ctx.fill = { type: 'roundel', ok: false, note: 'no letters' };
@@ -153,7 +225,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     scale: s,
     ok: art.missing === 0,
     note: art.missing ? `${art.missing} marks found no room` : undefined,
-    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash }, // prettier-ignore
+    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash, ...art.deco }, // prettier-ignore
   };
 }
 

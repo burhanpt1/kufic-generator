@@ -116,6 +116,16 @@ registerCritic('roundel', p => {
     order: clamp(1 - (m.order ?? 0) / 4),
     // letters of different pieces touching (a tail running into another letter's head)
     clear: clamp(1 - (m.clash ?? 0) / 12),
+    // the decorative critic (roundel/deco.ts), its features mapped onto 0–1; the taste weights follow the fit to the
+    // owner's ratings: unity most, then quiet and texture, against heavy knots and heavy fill
+    ...(m.texture != null && {
+      texture: clamp(m.texture),
+      calm: clamp(1 - m.knots / 0.2),
+      unity: clamp(m.unity),
+      span: clamp(m.span / 0.85),
+      light: clamp(1 - m.fill / 0.25),
+      quiet: clamp(1 - (m.noise + 1.5) / 5),
+    }),
   };
 });
 
@@ -128,7 +138,8 @@ export const METRIC_LABELS: Record<string, string> = {
   fill: 'Bands fill the canvas', centre: 'Centre about a quarter', legibility: 'Legible', compact: 'Compact',
   squareness: 'Square', symmetry: 'Symmetric', sharing: 'Shared strokes', space: 'Little empty space',
   clearance: 'Bowl clears the letters', apart: 'Words keep apart', marked: 'Every mark placed', layers: 'Layered',
-  order: 'Read in order', clear: 'Letters do not touch',
+  order: 'Read in order', clear: 'Letters do not touch', texture: 'Even texture', calm: 'No heavy knots',
+  unity: 'One body', span: 'Spans the field', light: 'Light, not heavy', quiet: 'Quiet (no near-touches)',
 }; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */
