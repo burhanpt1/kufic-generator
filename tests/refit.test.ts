@@ -1,10 +1,10 @@
 // Refit the critic to the owner's votes (PLAN-2 §1). The rated compositions are kept as ink and field masks
-// (tests/ratings/masks, cut from the lab's rating page) with their votes; newer rounds from the published rating page
-// add a manifest of features (from the sweep) and their votes (REFIT_EXTRA: a folder with manifest.json and
-// votes.json). `npm run refit` fits each genre and writes src/script/thuluth/roundel/fits.data.ts, reporting the
+// (tests/ratings/masks, cut from the lab's rating page) with their votes; each round rated on the published page keeps
+// its candidates' features in tests/ratings/rounds/<round>/items.json and, once read back, its votes.json
+// (tests/ratings/README.md; REFIT_EXTRA adds another such folder). `npm run refit` fits each genre and writes src/script/thuluth/roundel/fits.data.ts, reporting the
 // leave-one-out accuracy, and whether each reported check would improve it if promoted into the score. Without REFIT,
 // the test checks that the committed fits are what the votes give.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
@@ -38,20 +38,27 @@ function labSet() {
   }
   return { votes, feats, genre, checks: {} as Record<string, Record<string, number>> };
 }
-/** A newer round: the sweep's manifest (features, checks, genre) and the votes from the rating page. */
-function extraSet(d: string) {
-  const man: { id: string; features: DecoFeatures; checks: Record<string, number> | null; genre?: Genre; family?: string; text: string }[] = JSON.parse(readFileSync(join(d, 'manifest.json'), 'utf8')), // prettier-ignore
+/** A newer round from the published rating page: its candidates (items.json: features, checks, genre, from the
+ *  sweep) and the votes read back from the page's store (votes.json). */
+function roundSet(d: string) {
+  const man: { id: string; features: DecoFeatures; checks: Record<string, number> | null; genre: Genre }[] = JSON.parse(readFileSync(join(d, 'items.json'), 'utf8')).items, // prettier-ignore
     votes: Vote[] = JSON.parse(readFileSync(join(d, 'votes.json'), 'utf8'));
   return {
     votes,
     feats: Object.fromEntries(man.map(m => [m.id, m.features])),
-    genre: Object.fromEntries(man.map(m => [m.id, m.genre ?? (m.family === 'mirror' ? 'mirror' : m.text.trim().includes(' ') ? 'dense' : 'single')])) as Record<string, Genre>, // prettier-ignore
+    genre: Object.fromEntries(man.map(m => [m.id, m.genre])) as Record<string, Genre>,
     checks: Object.fromEntries(man.filter(m => m.checks).map(m => [m.id, m.checks!])),
   };
 }
+/** Every round in tests/ratings/rounds that has its votes, and REFIT_EXTRA if given. */
+const rounds = () =>
+  [
+    ...(existsSync(join(dir, 'rounds')) ? readdirSync(join(dir, 'rounds')).map(r => join(dir, 'rounds', r)) : []),
+    ...(process.env.REFIT_EXTRA ? [process.env.REFIT_EXTRA] : []),
+  ].filter(d => existsSync(join(d, 'items.json')) && existsSync(join(d, 'votes.json')));
 
 function refit() {
-  const sets = [labSet(), ...(process.env.REFIT_EXTRA && existsSync(process.env.REFIT_EXTRA) ? [extraSet(process.env.REFIT_EXTRA)] : [])]; // prettier-ignore
+  const sets = [labSet(), ...rounds().map(roundSet)];
   const votes = sets.flatMap(s => s.votes),
     feats = Object.assign({}, ...sets.map(s => s.feats)) as Record<string, DecoFeatures>,
     genre = Object.assign({}, ...sets.map(s => s.genre)) as Record<string, Genre>,
