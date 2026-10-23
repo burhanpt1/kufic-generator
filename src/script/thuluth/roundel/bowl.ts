@@ -310,6 +310,12 @@ export interface TailOptions {
   follow?: 'bowl' | 'level';
   /** The bowl's options, so its curve can be foreseen before it is drawn. */
   bowl?: BowlOptions;
+  /** A word's last tail runs on under the next word too, which nests in it. */
+  across?: boolean;
+  /** A word's last tail with nothing nested in it is drawn out this far all the same (pen units; default: left). */
+  free?: number;
+  /** A level course dips by this much at its middle, so the tail swoops (pen units; default 0). */
+  sag?: number;
 }
 
 /** Draw out the tail of a letter that has the rest of its word nested in it (a ra, a waw) as a long, level stroke
@@ -368,11 +374,19 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     const g = r.groups[i],
       P = r.shapes[i].b.placed.filter(isLetter).pop();
     if (!P || !set.includes(P.c)) continue;
-    const after = r.groups
-      .map((_, j) => j)
-      .filter(j => j > i && r.groups[j].word === g.word && !r.groups[j].newWord && !deep(j));
-    if (!after.length) continue;
-    // what nests: the rest of the word's letters, in composition coordinates
+    const last = !r.groups[i + 1] || r.groups[i + 1].word !== g.word,
+      after = r.groups
+        .map((_, j) => j)
+        .filter(
+          j =>
+            j > i &&
+            (r.groups[j].word === g.word
+              ? !r.groups[j].newWord
+              : o.across && last && r.groups[j].word === g.word + 1) &&
+            !deep(j),
+        );
+    if (!after.length && !(o.free && last)) continue;
+    // what nests: the rest of the word's letters (and with `across` the next word), in composition coordinates
     let fx0 = 1e9,
       fy0 = 1e9;
     const nested: [number, number][] = [];
@@ -398,6 +412,11 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       // from the bottom of the tail's own curve
       k = pts.reduce((m, q, a) => (q[1] < pts[m][1] ? a : m), 0);
     if (k < 1) continue;
+    if (!after.length) {
+      // a free tail: as if something as long as `free` sat on it, level with its own bottom
+      fx0 = O.x + (pts[k][0] - o.free!) * sc;
+      fy0 = O.y + pts[k][1] * sc + gap;
+    }
     const [xk, yk] = pts[k],
       Ly = Math.min((fy0 - gap - O.y) / sc, yk),
       xe = (fx0 - reach - O.x) / sc;
@@ -428,12 +447,20 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     if (!course && (o.follow === 'level' || !bo)) {
       // level, if that too keeps clear of the letters that do not nest in it
       const x0 = O.x + (xk - run) * sc,
-        y = O.y + Ly * sc;
-      if (allInk(new Set([i, ...after])).every(([x, y2]) => x < xe || x > x0 || Math.abs(y2 - y) > gap))
-        course = [
-          [xk - run, Ly, 1],
-          [xe + 1.4, Ly - 0.05, 1],
-        ];
+        a = xk - run,
+        e = xe + 1.4,
+        // the course in the letter's units at x: level, or dipping by `sag` at its middle
+        yAt = (x: number) => Ly - (o.sag ?? 0) * Math.sin((Math.PI * (a - x)) / (a - e));
+      if (
+        allInk(new Set([i, ...after])).every(
+          ([x, y2]) => x < O.x + xe * sc || x > x0 || Math.abs(y2 - (O.y + yAt((x - O.x) / sc) * sc)) > gap,
+        )
+      ) {
+        // sampled along its length, so the tail can join it part way
+        const ls: SkelPt[] = [];
+        for (let X = a; X > e; X -= 0.7) ls.push([X, yAt(X), 1]);
+        course = [...ls, [e, Ly - 0.05, 1]];
+      }
     }
     // no clear course: the tail stays as written
     if (!course) continue;
@@ -490,14 +517,17 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
       [sx, sy] = pts[0],
       cx = P.ox + sx * sc,
       cy = (P.oy || 0) + sy * sc;
-    // where the letter begins: the first sample there (a loop like the waw's head comes back past its own start)
-    let best = { d: 1e9, si: 0, qi: 0 };
-    S.b.strokes.forEach((st, a) =>
-      st.s.forEach((q, b) => {
-        const d = Math.hypot(q.x - cx, q.y - cy);
-        if (d < best.d - 0.15) best = { d, si: a, qi: b };
-      }),
-    );
+    // where the letter begins: a stroke of its own that starts there (the stroke of the letter before, ending at the
+    // join, is not it), else the first sample there (a loop like the waw's head comes back past its own start)
+    const own = S.b.strokes.findIndex(st2 => st2.s.length && Math.hypot(st2.s[0].x - cx, st2.s[0].y - cy) < 0.3);
+    let best = { d: 1e9, si: Math.max(0, own), qi: 0 };
+    if (own < 0)
+      S.b.strokes.forEach((st, a) =>
+        st.s.forEach((q, b) => {
+          const d = Math.hypot(q.x - cx, q.y - cy);
+          if (d < best.d - 0.15) best = { d, si: a, qi: b };
+        }),
+      );
     const st = S.b.strokes[best.si];
     r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
     st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore

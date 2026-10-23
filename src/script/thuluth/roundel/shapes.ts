@@ -30,6 +30,8 @@ export interface Shelf {
   y: number;
   /** Inside a great bowl. */
   cradle?: boolean;
+  /** An elongation: the letter (index in the group) it leads into. */
+  at?: number;
 }
 /** One way of writing a group: its strokes and a typed raster (1 stem, 2 horizontal, 3 other). */
 export interface GroupShape {
@@ -56,6 +58,8 @@ export interface GroupShape {
   emph?: boolean;
   stacked?: boolean;
   elong?: number;
+  /** The lowest point of a final tail (ra, zay, waw, ya), which a word can nest over once it is drawn out. */
+  tailLow?: [number, number];
 }
 
 /** Options the stacking and the roundel share (lab o). */
@@ -72,8 +76,10 @@ export interface StackOptions {
   tails?: boolean;
   /** Elongated joins as shelves for other words. */
   elongate?: boolean;
-  /** The letter given an emphatic long final (a ba, say). */
+  /** The letters given an emphatic long final (a ba, say; several may be named). */
   emph?: string;
+  /** The lengths an elongated join is tried at (default 6, 9, 13). */
+  kashLengths?: number[];
   longFinal?: number;
   kashMap?: Record<number, number>;
   tail?: { sx: number; sy: number } | null;
@@ -247,11 +253,18 @@ export function groupShape(
       s.s.forEach(q => q.y > t.y && (t = q));
       return [t.x, t.y] as [number, number];
     });
-  const shelves: Shelf[] = b.placed
-    .filter((p): p is Extract<typeof p, { kash: true }> => 'kash' in p && p.len >= 5)
-    .map(p => ({ x0: p.ox - p.len, x1: p.ox, y: p.oy || 0 }));
+  const shelves: Shelf[] = [];
+  let seen = 0;
+  for (const p of b.placed)
+    if (isLetter(p)) seen++;
+    else if ('kash' in p && p.len >= 5) shelves.push({ x0: p.ox - p.len, x1: p.ox, y: p.oy || 0, at: seen });
   const letters = b.placed.filter(isLetter),
     last = letters[letters.length - 1];
+  let tailLow: [number, number] | undefined;
+  if (last && 'رزوي'.includes(last.c) && (last.form === 'fin' || last.form === 'iso'))
+    for (const sd of last.g.s)
+      for (const q of sd.pts)
+        if (!tailLow || q[1] + (last.oy || 0) < tailLow[1]) tailLow = [q[0] + last.ox, q[1] + (last.oy || 0)];
   if (last) {
     // a great final bowl is a cradle: another word can sit inside its curve
     const ps = last.g.s.flatMap(sd => sd.pts.map(q => [q[0] + last.ox, q[1] + (last.oy || 0)])),
@@ -271,7 +284,7 @@ export function groupShape(
       shelves.push({ x0: Math.min(...xs) + 0.8, x1: Math.max(...xs) - 0.6, y: (last.oy || 0) + 0.3 });
     }
   }
-  return { b, mask, dil, W, H, x0, x1, y0, y1, ink, level, cx, cy, hull, shelves, stemTops, cost: 0 };
+  return { b, mask, dil, W, H, x0, x1, y0, y1, ink, level, cx, cy, hull, shelves, stemTops, cost: 0, tailLow };
 }
 
 /** The ways of writing one group: stretch levels, stacked joins, tails, elongations, an emphatic long final. */
@@ -282,7 +295,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
     const cs = [...g.s],
       fs = forms(g.s),
       j = cs.length - 1;
-    if (j >= 1 && cs[j] === o.emph && fs[j].form === 'fin') {
+    if (j >= 1 && o.emph.includes(cs[j]) && fs[j].form === 'fin') {
       [
         { dx: -1.2, dy: -1.6 },
         { dx: -2.2, dy: -2.2 },
@@ -324,7 +337,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
     const fs = forms(g.s);
     for (let j = 1; j < fs.length; j++) {
       if (fs[j].form !== 'med' && fs[j].form !== 'fin') continue;
-      [6, 9, 13].forEach(L => {
+      (o.kashLengths ?? [6, 9, 13]).forEach(L => {
         const v = groupShape(th, g, 0, { ...o, kashMap: { [j]: L } }, K, null);
         if (v) {
           v.cost = 0.08 * L;

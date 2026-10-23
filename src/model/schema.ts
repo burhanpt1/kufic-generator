@@ -191,8 +191,23 @@ export interface RoundelRecipe {
   stackAt?: string[];
   /** Tall stems rise into the empty space above them, up to the oval. */
   rise?: { margin?: number; most?: number; oval?: number };
-  /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms. */
-  tails?: { letters?: string; gap?: number; reach?: number; follow?: 'bowl' | 'level' };
+  /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms; `across`: a
+   *  word's last tail runs on under the next word; `free`: a word's last tail is drawn out even with nothing in it;
+   *  `sag`: a level tail dips at its middle, so it swoops. */
+  tails?: {
+    letters?: string;
+    gap?: number;
+    reach?: number;
+    follow?: 'bowl' | 'level';
+    across?: boolean;
+    free?: number;
+    sag?: number;
+  };
+  /** Words that must sit on a shelf of a group of another word (an elongation by the letter it leads into, or with
+   *  `tail` over that group's final tail, drawn out beneath it). */
+  seat?: { word: number; on: number; at?: number; tail?: boolean }[];
+  /** The lengths elongated joins are tried at (default 6, 9, 13). */
+  kashLengths?: number[];
   noRise?: boolean;
   ceiling?: boolean;
   topFirst?: boolean;
@@ -327,8 +342,22 @@ const roundelRecipe = z
         gap: z.number().min(0).max(6),
         reach: z.number().min(-6).max(10),
         follow: z.enum(['bowl', 'level']),
+        across: z.boolean(),
+        free: z.number().min(0).max(30),
+        sag: z.number().min(0).max(8),
       })
       .partial(),
+    seat: z
+      .array(
+        z.object({
+          word: z.number().int().min(0),
+          on: z.number().int().min(0),
+          at: z.number().int().min(0).optional(),
+          tail: z.boolean().optional(),
+        }),
+      )
+      .max(10),
+    kashLengths: z.array(z.number().min(1).max(40)).min(1).max(8),
     noRise: z.boolean(),
     ceiling: z.boolean(),
     topFirst: z.boolean(),

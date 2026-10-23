@@ -56,6 +56,17 @@ export interface RoundelOptions extends StackOptions {
   companion?: string;
   companionScale?: number;
   fixed?: Layout;
+  /** Words that must sit on a shelf of a group of another word (an elongation or a long final): `at` names the
+   *  elongation by the letter it leads into (index in the group); without it any shelf of the group will do. With
+   *  `tail`, the word nests instead over the group's final tail, to its left and just above its bottom, for the tail
+   *  to be drawn out beneath it (extendTails with `across`). */
+  seat?: Seat[];
+}
+export interface Seat {
+  word: number;
+  on: number;
+  at?: number;
+  tail?: boolean;
 }
 export interface Roundel {
   E: number;
@@ -455,8 +466,31 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           tops.forEach(tp => (ceil += (mx - tp) ** 2));
         }
       }
+      // a seated word over its shelf: how far it overhangs either end, and how far its line is from resting on it
+      let seat = 0;
+      for (const s of o.seat || []) {
+        if (s.word >= W || s.on >= n) continue;
+        const B = bx[s.word],
+          base = Math.min(...words[s.word].map(i => gpos[i].y));
+        let best = 30;
+        const tl = s.tail && shapes[s.on][lv[s.on]].tailLow;
+        if (tl) {
+          // left of where the tail falls, its ink just clear above the tail's bottom
+          const tx = gpos[s.on].x + tl[0],
+            lift = B.y0 - (gpos[s.on].y + tl[1]);
+          best = Math.max(0, B.x1 - (tx + 1)) + 2 * (Math.max(0, 1.4 - lift) + Math.max(0, lift - 4.5));
+        }
+        for (const sh of s.tail ? [] : shapes[s.on][lv[s.on]].shelves) {
+          if (s.at != null && sh.at !== s.at) continue;
+          const x0 = gpos[s.on].x + sh.x0,
+            x1 = gpos[s.on].x + sh.x1,
+            gap = base - (gpos[s.on].y + sh.y);
+          best = Math.min(best, Math.max(0, x0 - B.x0) + Math.max(0, B.x1 - x1) + 2 * (Math.max(0, 1.2 - gap) + Math.max(0, gap - 4))); // prettier-ignore
+        }
+        seat += best;
+      }
       return (
-        0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / (o.oval || 1))) +
+        6 * seat + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / (o.oval || 1))) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };
@@ -488,10 +522,38 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           layoutWord(w);
           recompute(w);
         };
-      } else if ((o.emph || o.elongate) && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
+      } else if ((o.emph || o.elongate || o.seat?.length) && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
         // lift a word onto a shelf (an elongated stroke or a long final sweep) or into a cradle
-        const withShelf = groups.map((_, i) => i).filter(i => shapes[i][lv[i]].shelves.length);
-        if (withShelf.length) {
+        // a seat lifts its word onto its own shelf
+        const seat = o.seat?.length ? o.seat[Math.floor(R() * o.seat.length)] : null,
+          seatShape = seat && shapes[seat.on]?.[lv[seat.on]],
+          tl = seat?.tail && seatShape ? seatShape.tailLow : undefined,
+          // a tail seat: the stretch to the left of where the tail falls, a little above its bottom
+          seatShelf = tl
+            ? { x0: tl[0] - 14, x1: tl[0] + 1, y: tl[1] + 1.4 }
+            : seatShape && !seat.tail
+              ? seatShape.shelves.find(s2 => seat.at == null || s2.at === seat.at)
+              : undefined,
+          withShelf = groups.map((_, i) => i).filter(i => shapes[i][lv[i]].shelves.length);
+        if (seat && seatShelf && seat.word < W) {
+          const gi = seat.on,
+            sh = seatShelf,
+            w = seat.word;
+          const old = { ...wp[w] },
+            bxw = wbox(w),
+            sx0 = gpos[gi].x + sh.x0,
+            sy = gpos[gi].y + sh.y,
+            base = Math.min(...words[w].map(i => gpos[i].y));
+          wp[w].x += sx0 + (bxw.x1 - bxw.x0) / 2 + 0.6 + R() * Math.max(0, sh.x1 - sh.x0 - (bxw.x1 - bxw.x0)) - (bxw.x0 + bxw.x1) / 2; // prettier-ignore
+          wp[w].y += sy + 1.4 + R() * 2 - base;
+          layoutWord(w);
+          recompute(w);
+          undo = () => {
+            wp[w] = old;
+            layoutWord(w);
+            recompute(w);
+          };
+        } else if (withShelf.length) {
           const gi = withShelf[Math.floor(R() * withShelf.length)],
             shs = shapes[gi][lv[gi]].shelves,
             sh = shs.find(s2 => s2.cradle) || shs[0],

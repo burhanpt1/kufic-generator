@@ -16,16 +16,17 @@ figure img{display:block;width:100%;height:auto;border-radius:3px}figcaption{fon
 </head>
 <body>
 <h1>Ali Asghar</h1>
-<p>The name in a thuluth cartouche, علي on the right of أصغر with the alif rising between them, framed by ornament alone (a braid between pearls and rules), on eight-fold Iznik tiles to the edge of an A3 sheet. <code>npm run ali-asghar</code> writes the print files.</p>
+<p>The name in a thuluth cartouche framed by ornament alone (a braid between pearls and rules) on eight-fold Iznik tiles to the edge of an A3 sheet. Side by side; أصغر nested in the swoop of علي's ya with the ra swooping too; and أصغر stacked on the drawn-out join of علي's lam and ya (the best three of thirty seeds of each). <code>npm run ali-asghar</code> writes the print files.</p>
 <div class="row" id="out"></div>
 <script type="module">
 import { loadKernels } from '../src/kernels/index.ts';
 await loadKernels();
-import { aliAsgharSheet } from '../src/showpiece/aliAsghar.ts';
+import { ALI_ASGHAR_LAYOUTS, aliAsgharSheet } from '../src/showpiece/aliAsghar.ts';
 const out = document.getElementById('out');
-for (const v of ['lapis', 'cobalt']) {
-  const t0 = performance.now(), s = aliAsgharSheet(v), f = document.createElement('figure');
-  f.innerHTML = `<img alt="Ali Asghar, ${v}" src="${URL.createObjectURL(new Blob([s.svg], { type: 'image/svg+xml' }))}"><figcaption>${v === 'cobalt' ? 'White on cobalt' : 'Gold on lapis'} · ${(performance.now() - t0).toFixed(0)} ms</figcaption>`;
+const CAPS = { side: 'Side by side', 'swoop-27': 'Swoop · seed 27', 'swoop-1': 'Swoop · seed 1', 'swoop-6': 'Swoop · seed 6', 'shelf-18': 'Shelf · seed 18', 'shelf-29': 'Shelf · seed 29', 'shelf-6': 'Shelf · seed 6' };
+for (const layout of Object.keys(ALI_ASGHAR_LAYOUTS)) {
+  const t0 = performance.now(), s = aliAsgharSheet('lapis', layout), f = document.createElement('figure');
+  f.innerHTML = `<img alt="Ali Asghar, ${CAPS[layout]}" src="${URL.createObjectURL(new Blob([s.svg], { type: 'image/svg+xml' }))}"><figcaption>${CAPS[layout]} · ${(performance.now() - t0).toFixed(0)} ms</figcaption>`;
   out.append(f);
 }
 </script>
