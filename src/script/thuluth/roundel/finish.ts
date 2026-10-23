@@ -8,6 +8,7 @@ import type { MarkName } from '../shape';
 import { BELOW, parseVowels } from '../shape';
 import type { Sample, Stroke } from '../types';
 import type { Roundel } from './compose';
+import { fieldTest } from './fields';
 import type { SolveOptions, Solved } from './solve';
 import { solveMarks } from './solve';
 
@@ -46,10 +47,12 @@ export function placeMarks(
     y0 = Math.min(y0, r.st[i].y + S.y0);
     y1 = Math.max(y1, r.st[i].y + S.y1);
   });
-  x0 = Math.min(x0, D.cx - RD - 3);
-  x1 = Math.max(x1, D.cx + RD + 3);
-  y0 = Math.min(y0, D.cy - RD - 3);
-  y1 = Math.max(y1, D.cy + RD + 3);
+  // a shaped field confines the marks to its outline (the disc is the greedy pass's own, round field otherwise)
+  const FT = D.field ? fieldTest(D, o.discScale || 1.12, 1.2) : null;
+  x0 = Math.min(x0, (FT?.x0 ?? D.cx - RD) - 3);
+  x1 = Math.max(x1, (FT?.x1 ?? D.cx + RD) + 3);
+  y0 = Math.min(y0, (FT?.y0 ?? D.cy - RD) - 3);
+  y1 = Math.max(y1, (FT?.y1 ?? D.cy + RD) + 3);
   const Wd = Math.ceil((x1 - x0) * K),
     Hd = Math.ceil((y1 - y0) * K),
     X = (x: number) => (x - x0) * K,
@@ -62,7 +65,7 @@ export function placeMarks(
     ),
   );
   const occ = A.mask(60);
-  const inDisc = (mx: number, my: number, w: number, h: number) => Math.hypot(mx - D.cx, my - D.cy) + Math.hypot(w, h) / 2 < RD; // prettier-ignore
+  const inDisc = (mx: number, my: number, w: number, h: number) => (FT ? FT.inside(mx, my, Math.hypot(w, h) / 2) : Math.hypot(mx - D.cx, my - D.cy) + Math.hypot(w, h) / 2 < RD); // prettier-ignore
   const free = (mx: number, my: number, w: number, h: number) => {
     if (!inDisc(mx, my, w, h)) return false;
     const ax = Math.floor(X(mx - w / 2)),
@@ -144,6 +147,7 @@ export function placeCompanion(th: Thuluth, r: Roundel, text: string, occ: Occ, 
   const nib = th.style.nib,
     D = r.disc,
     RD = D.r * (o.discScale || 1.12) - 1.0,
+    FC = D.field ? fieldTest(D, o.discScale || 1.12, 1.0) : null,
     { Wd, Hd, X, Y, K } = occ,
     oc = occ.occ;
   const pv = parseVowels(text),
@@ -172,7 +176,7 @@ export function placeCompanion(th: Thuluth, r: Roundel, text: string, occ: Occ, 
         for (const [px, py] of pts) {
           const mx = gx + px,
             my = gy + py;
-          if (Math.hypot(mx - D.cx, my - D.cy) > RD - pad) {
+          if (FC ? !FC.inside(mx, my, pad) : Math.hypot(mx - D.cx, my - D.cy) > RD - pad) {
             ok = false;
             break;
           }
@@ -239,7 +243,7 @@ export function placeCompanion(th: Thuluth, r: Roundel, text: string, occ: Occ, 
             bx = Math.ceil(X(mx + w / 2)),
             ay2 = Math.floor(Y(my + h / 2)),
             by = Math.ceil(Y(my - h / 2));
-          let ok = Math.hypot(mx - D.cx, my - D.cy) < RD;
+          let ok = FC ? FC.inside(mx, my) : Math.hypot(mx - D.cx, my - D.cy) < RD;
           for (let y = ay2; y <= by && ok; y++)
             for (let x = ax; x <= bx; x++)
               if (x < 0 || y < 0 || x >= Wd || y >= Hd || oc[y * Wd + x]) {
@@ -264,6 +268,7 @@ export interface Unit {
   nib?: number;
   tint?: string;
   mark?: boolean;
+  orn?: boolean;
   dot?: Dot;
 }
 /** Everything to draw, in writing order: the letters, their dots and marks, then the companion. */

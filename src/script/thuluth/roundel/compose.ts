@@ -5,6 +5,8 @@
 import type { Thuluth } from '../engine';
 import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
+import type { FieldName } from './fields';
+import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
 import { fitLanes, pathTargets, PATHS } from './paths';
 import type { GroupShape, RGroup, StackOptions } from './shapes';
@@ -17,6 +19,8 @@ export interface Disc {
   ink: number;
   /** Width over height (1 = a circle). */
   oval: number;
+  /** A shaped field instead (fields.ts): r is then its half-height. */
+  field?: FieldName;
 }
 /** A pinned arrangement: the variant of each group, and where each word sits. */
 export interface Layout {
@@ -62,6 +66,9 @@ export interface RoundelOptions extends StackOptions {
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
+  /** A shaped field (fields.ts: pear, drop, tulip, mihrab, hull): the letters keep inside its outline, its proportion
+   *  replaces oval, and lanes become its chords. */
+  field?: FieldName;
   /** A reading path (paths.ts): the words keep near their targets along it, in reading order. A name from PATHS, the
    *  path itself, or 'auto' (buildRoundel tries each of AUTO_PATHS and keeps the best as finished). */
   path?: string | ReadingPath;
@@ -191,6 +198,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
   });
+  // a shaped field sets the proportion
+  const OVAL = o.field ? FIELDS[o.field].aspect : o.oval || 1;
   const shapes = groups.map(g => {
     const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
       st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
@@ -350,7 +359,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const pFill = o.pathFill ?? 0.7;
     if (!PP && o.lanes && W > 1) {
       const bx0 = words.map((_, w) => wbox(w)),
-        L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill); // prettier-ignore
+        L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill, o.field ? (n, gap) => fieldLanes(o.field!, n, gap) : undefined); // prettier-ignore
       PP = L.path;
       fitted = { n: L.n, gap: L.gap };
     }
@@ -418,10 +427,10 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         cx += ((far[0] - cx) * 0.08) / (1 + it * 0.3);
         cy += ((far[1] - cy) * 0.08) / (1 + it * 0.3);
       }
-      const ovl = o.oval || 1;
+      const ovl = OVAL;
       r = 0;
       pts.forEach(p => (r = Math.max(r, Math.hypot((p[0] - cx) / ovl, p[1] - cy))));
-      return { cx, cy, r: r + 0.8, ink: sw, oval: ovl };
+      return { cx, cy, r: r + 0.8, ink: sw, oval: ovl, field: o.field };
     };
     const stackOrder = () =>
       o.stack
@@ -498,7 +507,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         if (i > 0 && shapes[i][lv[i]].elong && shapes[i - 1][lv[i - 1]].elong) cost += 2.5;
       });
       const d = disc(),
-        fill = d.ink / (Math.PI * d.r * d.r * (o.oval || 1) * K * K);
+        fill = d.ink / (Math.PI * d.r * d.r * OVAL * K * K);
       let bx0 = 1e9,
         bx1 = -1e9,
         by0 = 1e9,
@@ -567,8 +576,28 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           tops.forEach(tp => (ceil += (mx - tp) ** 2));
         }
       }
+      // a shaped field: the letters' outline points, scaled to their own box, must fall inside the shape
+      let sil = 0;
+      if (o.field) {
+        const F = FIELDS[o.field],
+          hx = (bx1 - bx0) / 2,
+          hy = (by1 - by0) / 2,
+          mx = (bx0 + bx1) / 2,
+          my = (by0 + by1) / 2;
+        let out = 0,
+          tot = 0;
+        groups.forEach((_, i) =>
+          shapes[i][lv[i]].hull.forEach(([hx2, hy2]) => {
+            const u = (gpos[i].x + hx2 - mx) / hx,
+              v = (gpos[i].y + hy2 - my) / hy;
+            tot++;
+            out += Math.max(0, Math.abs(u) - F.half(Math.max(-1, Math.min(1, v))));
+          }),
+        );
+        sil = tot ? out / tot : 0;
+      }
       return (
-        0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / (o.oval || 1))) +
+        90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };

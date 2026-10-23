@@ -14,6 +14,7 @@ import type { MarkName } from '../shape';
 import { BELOW } from '../shape';
 import type { SkelPt, Stroke } from '../types';
 import type { Roundel } from './compose';
+import { fieldTest } from './fields';
 
 const DOT_ARR: Record<number, string[]> = { 2: ['h', 'v'], 3: ['up', 'down'] };
 export function dotOffsets(n: number, arr: string, nib: number): [number, number][] {
@@ -154,15 +155,14 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   const nib = th.style.nib,
     K = 2,
     D = r.disc,
-    RD = D.r * (o.discScale || 1.18) - 1.0,
-    ms = o.markScale || 1.6,
-    OV = D.oval || 1,
-    hyp = (dx: number, dy: number) => Math.hypot(dx / OV, dy);
+    // the field marks may use: the disc or oval, or a shaped field's outline (fields.ts), less a margin
+    FT = fieldTest(D, o.discScale || 1.18, 1.0),
+    ms = o.markScale || 1.6;
   // the letters' ink (no dots), rasterised
-  const x0 = D.cx - RD * OV - 4,
-    x1 = D.cx + RD * OV + 4,
-    y0 = D.cy - RD - 4,
-    y1 = D.cy + RD + 4,
+  const x0 = FT.x0 - 4,
+    x1 = FT.x1 + 4,
+    y0 = FT.y0 - 4,
+    y1 = FT.y1 + 4,
     Wd = Math.ceil((x1 - x0) * K),
     Hd = Math.ceil((y1 - y0) * K);
   const X = (x: number) => (x - x0) * K,
@@ -287,13 +287,13 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     if (it.kind === 'mark' && o.markReach && (it.side > 0 ? it.y - h / 2 - Math.max(it.top, it.ay - h / 2 - 0.5 * it.sc) : Math.min(it.bot, it.ay + h / 2) - (it.y + h / 2)) > o.markReach * it.sc) return false; // prettier-ignore
     if (it.x < it.lx0 - reach || it.x > it.lx1 + reach) return false;
     if (it.side > 0 ? it.y - h / 2 < Math.min(it.top, it.ay - h / 2) - (it.kind === 'dots' ? 1.2 : 0.2) * it.sc : it.y + h / 2 > Math.max(it.bot, it.ay + h / 2) + (it.kind === 'dots' ? 1.2 : 0.2) * it.sc) return false; // prettier-ignore
-    return hyp(it.x - D.cx, it.y - D.cy) + Math.hypot(w, h) / 2 < RD;
+    return FT.inside(it.x, it.y, Math.hypot(w, h) / 2);
   };
   // gaps: on a coarse grid inside the disc, the distance to the nearest ink or mark
   const cells: [number, number, number][] = [];
-  for (let gy = D.cy - RD + 0.7; gy < D.cy + RD; gy += 1.4)
-    for (let gx = D.cx - RD * OV + 0.7; gx < D.cx + RD * OV; gx += 1.4)
-      if (hyp(gx - D.cx, gy - D.cy) < RD - 0.7) {
+  for (let gy = FT.y0 + 0.7; gy < FT.y1; gy += 1.4)
+    for (let gx = FT.x0 + 0.7; gx < FT.x1; gx += 1.4)
+      if (FT.inside(gx, gy, 0.7)) {
         const ix = Math.round(X(gx)),
           iy = Math.round(Y(gy));
         cells.push([gx, gy, ix >= 0 && iy >= 0 && ix < Wd && iy < Hd ? dist[iy * Wd + ix] / K : 0]);
@@ -414,6 +414,8 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           const [w, h] = 'kind' in it ? boxOf(it) : [it.w, it.h];
           d = Math.min(d, Math.max(0, Math.hypot(gx - it.x, gy - it.y) - Math.hypot(w, h) / 2));
         }
+        // in a shaped field an ornament keeps its whole size inside the outline (its pointed or narrow parts)
+        if (D.field) d = Math.min(d, FT.room(gx, gy));
         if (!best || d > best[2]) best = [gx, gy, d];
       }
       if (!best || best[2] < thresh) break;
@@ -444,7 +446,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       const gx = Math.round(X(x)),
         gy = Math.round(Y(y));
       if (gx < 0 || gy < 0 || gx >= Wd || gy >= Hd || dist[gy * Wd + gx] < nib * 0.9 * K) return true;
-      if (hyp(x - D.cx, y - D.cy) > RD) return true;
+      if (!FT.inside(x, y)) return true;
       const near = (cx: number, cy: number, w: number, h: number) => Math.abs(x - cx) < w / 2 + 0.3 && Math.abs(y - cy) < h / 2 + 0.3; // prettier-ignore
       return items.some(q => q !== self && near(q.x, q.y, ...boxOf(q))) || fillers.some(f => near(f.x, f.y, f.w, f.h));
     };
@@ -501,7 +503,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   fillers.forEach(f =>
     ORN_SHAPES[f.m].forEach(
       sh =>
-      strokes.push({ mark: true, ang: 70, nib: nib * (o.ornPen ?? 0.38) * f.sz, s: sampleStroke(sh.map(([a2, b2, ww, c]) => [f.x + a2 * f.sz, f.y + b2 * f.sz, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
+      strokes.push({ mark: true, orn: true, ang: 70, nib: nib * (o.ornPen ?? 0.38) * f.sz, s: sampleStroke(sh.map(([a2, b2, ww, c]) => [f.x + a2 * f.sz, f.y + b2 * f.sz, ww ?? 1, c] as SkelPt), th.style.tension) }), // prettier-ignore
     ),
   );
   return {

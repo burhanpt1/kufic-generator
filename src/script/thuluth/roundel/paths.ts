@@ -87,12 +87,13 @@ export function fitLanes(
   wordHeight: number,
   o: { deg?: number; n?: number; bandFrac?: number } = {},
   fill = 0.7,
+  make: (n: number, gap: number) => ReadingPath = (n, gap) => lanes(o.deg ?? 180, n, gap),
 ): { path: ReadingPath; n: number; gap: number } {
   let best: { cost: number; path: ReadingPath; n: number; gap: number } | null = null;
   for (const n of o.n ? [o.n] : [2, 3, 4])
     for (let k = 0; k <= 15; k++) {
       const gap = 0.3 + k * 0.05,
-        L = lanes(o.deg ?? 180, n, gap),
+        L = make(n, gap),
         Lp = L.reduce((s, q) => s + Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), 0),
         band = ((textWidth * fill) / Lp) * gap,
         cost = Math.log(band / ((o.bandFrac ?? 0.75) * wordHeight)) ** 2 + 0.6 * (n * gap - 1.85) ** 2 + (n > words ? 9 : 0); // prettier-ignore

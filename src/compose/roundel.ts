@@ -6,6 +6,7 @@ import type { Pt } from '../geometry/types';
 import type { FillerNode, RoundelColours, RoundelRecipe, Style } from '../model/schema';
 import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
+import { FIELDS, fieldPolygon } from '../script/thuluth/roundel/fields';
 import type { Thuluth } from '../script/thuluth/engine';
 import type { FinishOptions, RoundelOptions } from '../script/thuluth/roundel';
 import {
@@ -72,6 +73,7 @@ export function drawRoundel(
     seed: recipe.seed,
     fixed: fx,
     path: recipe.path,
+    field: recipe.field,
     lanes: recipe.lanes,
     pathFill: recipe.pathFill,
     pathTol: recipe.pathTol,
@@ -110,6 +112,7 @@ export function drawRoundel(
       oval: art.oval,
       Rf: art.Rf,
       rim: art.rim,
+      field: art.field,
       ink,
       tints: [...tints].map(([colour, d]) => ({ colour, d })),
       counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
@@ -203,7 +206,11 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
   const b = bounds(inner.pts),
     centres: Pt[] = [[0, 0], deepestPoint(inner.pts).p, [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2]];
   const wide = (art.Rf + art.rim) * (art.oval - 1),
-    fit = fitInside(ellipse(R + wide + (framed ? art.rim * (art.oval - 1) : 0), R), inner.pts, centres);
+    // a shaped field fits by its own outline (y down here), the finial's room above a point included
+    outline: Pt[] = art.field
+      ? fieldPolygon(art.field).map(([x, y]) => [x * R, -y * R * (y > 0.95 && FIELDS[art.field!].tip ? 1 + (art.rim * 6) / R : 1)] as Pt) // prettier-ignore
+      : ellipse(R + wide + (framed ? art.rim * (art.oval - 1) : 0), R),
+    fit = fitInside(outline, inner.pts, centres);
   if (!fit || fit.s * R < 1) {
     ctx.fill = { type: 'roundel', ok: false, note: 'too little room' };
     return;

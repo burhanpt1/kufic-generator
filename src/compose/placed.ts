@@ -2,6 +2,7 @@
 // in cells, centred on the region's outline; canvas.origin is where that centre sits on the canvas.
 import type { Pt } from '../geometry/types';
 import type { IznikSpec, PatternSpec, RoundelColours, SeparatorKind, Style } from '../model/schema';
+import type { FieldName } from '../script/thuluth/roundel/fields';
 import type { CellStrip, Strip } from '../script/types';
 
 /** Where a strip goes: strip (x, y) in cells -> canvas. y runs from the band's outer edge inward. */
@@ -75,6 +76,8 @@ export type PlacedItem =
 /** A roundel's drawing in its own units (pen units, y down, centred on the oval), ready to scale onto the canvas. */
 export interface RoundelDrawing {
   oval: number;
+  /** A shaped field (thuluth roundel fields.ts) instead of the oval: Rf is then its half-height. */
+  field?: FieldName;
   /** Field radius (vertical) and rim width. */
   Rf: number;
   rim: number;

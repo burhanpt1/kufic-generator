@@ -3,6 +3,7 @@
 import type { PlacedLetter, Thuluth } from '../engine';
 import { isLetter } from '../engine';
 import { redraw } from '../drawn';
+import { FIELDS, fitField } from './fields';
 import { sampleStroke } from '../pen';
 import type { SkelPt } from '../types';
 import type { Roundel } from './compose';
@@ -225,9 +226,19 @@ export function fitFrame(th: Thuluth, r: Roundel, o: FrameOptions = {}): Finishe
     const units = roundelParts(r, { solved: f.solved, companion: f.companion }),
       pts: [number, number, number][] = [];
     units.forEach(u => {
+      // a shaped field holds the letters, dots and vowels; the ornaments then fill what it leaves
+      if (r.disc.field && u.orn) return;
       if (u.s) u.s.forEach((q, i) => i % 2 === 0 && pts.push([q.x, q.y, (u.nib || nib) * 0.7]));
       if (u.dot) pts.push([u.dot[0], u.dot[1], nib * 0.8]);
     });
+    if (r.disc.field) {
+      // a shaped field: the smallest of its shape that holds everything drawn
+      const F = fitField(r.disc.field, pts);
+      r.disc = { ...r.disc, cx: F.cx, cy: F.cy, r: F.k / 1.02, oval: FIELDS[r.disc.field].aspect };
+      f = finishRoundel(th, r, '', o);
+      f.discScale = 1.0;
+      continue;
+    }
     const xs = pts.map(q => q[0]),
       ys = pts.map(q => q[1]),
       mx = (Math.min(...xs) + Math.max(...xs)) / 2,

@@ -15,6 +15,7 @@ export * from './bowl';
 export * from './checks';
 export * from './compose';
 export * from './deco';
+export * from './fields';
 export * from './counters';
 export * from './finish';
 export * from './musenna';

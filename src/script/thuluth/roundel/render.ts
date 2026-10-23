@@ -5,6 +5,8 @@ import type { Thuluth } from '../engine';
 import type { Poly } from '../types';
 import type { Roundel } from './compose';
 import { findCounters } from './counters';
+import type { FieldName } from './fields';
+import { FIELDS, fieldPath, finialPath } from './fields';
 import type { Finished, Unit } from './finish';
 import { roundelParts } from './finish';
 
@@ -36,6 +38,8 @@ export interface RoundelArt {
   /** One list of polygons per unit, in writing order, with its tint. */
   units: { polys: Poly[]; tint?: string; mark: boolean }[];
   counters: Poly[][];
+  /** A shaped field (fields.ts) instead of the oval: Rf and Rout are then its half-heights. */
+  field?: FieldName;
 }
 
 export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint = {}): RoundelArt {
@@ -44,7 +48,8 @@ export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint
     d = r.disc,
     OV = d.oval || 1;
   let R0 = d.r * (o.discScale ?? f.discScale ?? 1.12);
-  units.forEach(u => u.s?.forEach(q => (R0 = Math.max(R0, Math.hypot((q.x - d.cx) / OV, q.y - d.cy) + nib * 0.7))));
+  // a shaped field was fitted round everything drawn; an oval grows to hold any ink beyond it
+  if (!d.field) units.forEach(u => u.s?.forEach(q => (R0 = Math.max(R0, Math.hypot((q.x - d.cx) / OV, q.y - d.cy) + nib * 0.7)))); // prettier-ignore
   const Rin = R0 * 1.03,
     Rf = Rin,
     rim = Rin * 0.075;
@@ -58,7 +63,7 @@ export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint
   // counters of the letters only, not the marks
   const ls = units.filter(u => u.s && !u.mark && (u.nib || nib) > nib * 0.6).map(u => ({ ang: u.ang!, nib: u.nib, s: u.s! })); // prettier-ignore
   const counters = o.counters ? findCounters(th, ls) : [];
-  return { cx: d.cx, cy: d.cy, oval: OV, Rf, rim, Rout: Rf + rim, units: polys, counters };
+  return { cx: d.cx, cy: d.cy, oval: OV, Rf, rim, Rout: Rf + rim, units: polys, counters, field: d.field };
 }
 
 let RID = 0;
@@ -93,6 +98,31 @@ export function renderRoundel(th: Thuluth, r: Roundel, f: Finished, o: RoundelPa
     (o.noOutline ? '' : `<g fill="${outline}" stroke="${outline}" stroke-width="${(0.22 * U).toFixed(1)}" stroke-linejoin="round"><path d="${all}"/></g>`) + // prettier-ignore
     `<g fill="url(#gd${id})"><path d="${all}"/></g>` +
     [...tints].map(([t, d2]) => `<path fill="${t}" d="${d2}"/>`).join('');
+  if (art.field) {
+    // a shaped field: the rim and field as its outline, a finial at a pointed tip
+    const fin = finialPath(art.field, Rout, rim * 1.8),
+      Hh = Rout + (fin ? rim * 6 : 0) + pad,
+      Hw = Rout * FIELDS[art.field].aspect + rim + pad,
+      Wd = 2 * Hw * U,
+      Ht = (Hh + Rout + pad) * U,
+      cyp = Hh * U;
+    const X2 = (x: number) => Wd / 2 + (x - art.cx) * U,
+      Y2 = (y: number) => cyp - (y - art.cy) * U,
+      path2 = (ps: Poly[]) => ps.map(q => 'M' + q.map(([x, y]) => X2(x).toFixed(1) + ' ' + Y2(y).toFixed(1)).join('L') + 'Z').join(''); // prettier-ignore
+    const all2 = art.units
+        .filter(u => !u.tint)
+        .map(u => path2(u.polys))
+        .join(''),
+      tints2 = new Map<string, string>();
+    art.units.forEach(u => u.tint && tints2.set(u.tint, (tints2.get(u.tint) || '') + path2(u.polys)));
+    const at = `transform="translate(${(Wd / 2).toFixed(1)} ${cyp.toFixed(1)}) scale(${U})"`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd.toFixed(0)} ${Ht.toFixed(0)}" width="${Wd.toFixed(0)}" height="${Ht.toFixed(0)}">
+<defs><linearGradient id="gd${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gold}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${gold}"/></linearGradient></defs>
+<rect width="100%" height="100%" fill="${bg}"/>
+<g ${at}><path d="${fieldPath(art.field, Rout)}" fill="url(#gd${id})" stroke="${goldDark}" stroke-width="0.12"/><path d="${fieldPath(art.field, Rf)}" fill="${field}" stroke="${goldDark}" stroke-width="0.1"/>${fin ? `<path d="${fin}" fill="url(#gd${id})" stroke="${goldDark}" stroke-width="0.06"/>` : ''}</g>
+${o.noOutline ? '' : `<g fill="${outline}" stroke="${outline}" stroke-width="${(0.22 * U).toFixed(1)}" stroke-linejoin="round"><path d="${all2}"/></g>`}<g fill="url(#gd${id})"><path d="${all2}"/></g>${[...tints2].map(([t, d2]) => `<path fill="${t}" d="${d2}"/>`).join('')}
+</svg>`;
+  }
   const wide = (Rout * OV - Rout) * U;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S2.toFixed(0)} ${S2.toFixed(0)}" width="${S2.toFixed(0)}" height="${S2.toFixed(0)}">
 <defs><linearGradient id="gd${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gold}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${gold}"/></linearGradient>

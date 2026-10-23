@@ -242,6 +242,9 @@ export interface RoundelRecipe {
   /** A reading path for the words, read from the top: a named path (line, diagonal, zigzag, bolt, cup, rows2, rows3,
    *  stag2, stag3, calliar1–4, calliar6) or polylines in field coordinates (−1…1, y up), one per stroke. */
   path?: string | [number, number][][];
+  /** A shaped field (Derman's classical fields): the letters fill its outline, its lanes are its chords, marks and
+   *  ornaments stay inside it, and a pointed field gets a finial. */
+  field?: 'pear' | 'drop' | 'tulip' | 'mihrab' | 'hull';
   /** Fitted lanes (best for many words): level by default (deg 180), their number and spacing fitted to the text. */
   lanes?: { deg?: number; n?: number; bandFrac?: number };
   /** On a path: its length as a share of the text's width, and how far a word may stray from its target. */
@@ -423,6 +426,7 @@ const roundelRecipe = z
         .min(1)
         .max(8),
     ]),
+    field: z.enum(['pear', 'drop', 'tulip', 'mihrab', 'hull']),
     lanes: z
       .object({
         deg: z.number().min(0).max(360),

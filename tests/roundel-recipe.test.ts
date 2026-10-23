@@ -53,6 +53,7 @@ const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelR
   density: { set: { density: 1 }, with: { ornaments: true } },
   ornStyle: { set: { ornStyle: 'trefoil' }, with: { ornaments: true, density: 1 } },
   path: { text: BASMALA, set: { path: 'stag3' } },
+  field: { text: BASMALA, set: { field: 'drop' } },
   lanes: { text: BASMALA, set: { lanes: {} } },
   pathFill: { text: BASMALA, set: { pathFill: 1.1 }, with: { lanes: {} } },
   pathTol: { text: BASMALA, set: { pathTol: 6 }, with: { lanes: {} } },
