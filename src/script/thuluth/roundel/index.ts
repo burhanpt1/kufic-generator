@@ -21,6 +21,7 @@ export * from './paths';
 export * from './render';
 export * from './shapes';
 export * from './solve';
+export * from './sweep';
 
 /** A hand adjustment to one group, found by its letters (the first group spelling `at`). */
 export interface GroupTweak {

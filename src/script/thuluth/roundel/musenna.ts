@@ -222,3 +222,23 @@ export function musennaArt(th: Thuluth, c: MusennaCandidate, o: { shareStrokes?:
   });
   return { cx: ax, cy: c.cy, rad: c.rad, polys, shared };
 }
+
+/** A mirrored roundel on its own page: gilded rim, night field, gold letters (lab renderMusenna's palette). */
+export function musennaSVG(
+  a: MusennaArt,
+  o: { U?: number; letters?: string; field?: string; rim?: string; bg?: string } = {},
+): string {
+  const U = o.U ?? 10,
+    pad = a.rad * 0.12,
+    S = (a.rad + pad) * 2 * U,
+    C = S / 2,
+    d = a.polys
+      .map(
+        q =>
+          'M' +
+          q.map(([x, y]) => (C + (x - a.cx) * U).toFixed(1) + ' ' + (C - (y - a.cy) * U).toFixed(1)).join('L') +
+          'Z',
+      ) // prettier-ignore
+      .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S.toFixed(0)} ${S.toFixed(0)}" width="${S.toFixed(0)}" height="${S.toFixed(0)}"><rect width="100%" height="100%" fill="${o.bg ?? '#0b1029'}"/><circle cx="${C}" cy="${C}" r="${((a.rad + pad * 0.55) * U).toFixed(1)}" fill="${o.rim ?? '#D8AC45'}"/><circle cx="${C}" cy="${C}" r="${((a.rad + pad * 0.3) * U).toFixed(1)}" fill="${o.field ?? '#0E1736'}"/><path fill="${o.letters ?? '#D8AC45'}" d="${d}"/></svg>`; // prettier-ignore
+}
