@@ -1,7 +1,7 @@
 // The sweep (src/script/thuluth/roundel/sweep.ts). `npm run sweep` writes many roundels per text to docs/sweep: a PNG
 // each, manifest.json (family, seed, recipe, critic features, taste score, checks) and index.html, a contact sheet
 // best first. SWEEP_TEXTS ('|'-separated), SWEEP_N (seeds per family), SWEEP_FAMILIES (comma-separated: free, lanes,
-// mirror, path:<name>) and SWEEP_OUT set it. Without SWEEP, a small sweep checks the shape of its output.
+// mirror, path:<name>), SWEEP_PREFIX (ids) and SWEEP_OUT set it. Without SWEEP, a small sweep checks the shape of its output.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -33,7 +33,7 @@ describe('sweep', () => {
         families = (process.env.SWEEP_FAMILIES?.split(',') as SweepFamily[]) ?? undefined,
         out = process.env.SWEEP_OUT ?? join(import.meta.dirname, '../docs/sweep'),
         th = thuluth({ ...ROUNDEL_PEN, great: { ya: true } }),
-        items = sweep(th, texts, { n: +(process.env.SWEEP_N ?? 3), families });
+        items = sweep(th, texts, { n: +(process.env.SWEEP_N ?? 3), families, prefix: process.env.SWEEP_PREFIX });
       mkdirSync(out, { recursive: true });
       for (const i of items) writeFileSync(join(out, `${i.id}.png`), toPNG(i.svg, 480));
       const manifest = items.map(m => ({ ...m, svg: undefined }));

@@ -2,7 +2,18 @@
 // reading order, read across and then downward.
 import { describe, expect, it } from 'vitest';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { composeRoundel, downward, headOf, lanes, pathTargets, PATHS } from '../src/script/thuluth/roundel';
+import {
+  AUTO_PATHS,
+  buildRoundel,
+  composeRoundel,
+  downward,
+  headOf,
+  lanes,
+  pathTargets,
+  PATHS,
+  stairs,
+  toReadingPath,
+} from '../src/script/thuluth/roundel';
 
 describe('reading paths', () => {
   it('give each word a target along the path in proportion to its width', () => {
@@ -61,5 +72,43 @@ describe('girift', () => {
     // crossings earn their keep (overlap below nothing), and the text draws in tighter
     expect(knot.overlap).toBeLessThan(0);
     expect(knot.disc.r).toBeLessThan(plain.disc.r);
+  });
+});
+
+describe('paths, second generation', () => {
+  it('lay a staircase of level rows, each shifted left of the one above', () => {
+    const S = stairs(3);
+    S.forEach(row => expect(row[0][1]).toBe(row[1][1]));
+    for (let i = 1; i < S.length; i++) {
+      expect(S[i][0][1]).toBeLessThan(S[i - 1][0][1]);
+      expect((S[i][0][0] + S[i][1][0]) / 2).toBeLessThan((S[i - 1][0][0] + S[i - 1][1][0]) / 2);
+    }
+  });
+  it('offer every traced master route, each reading downward', () => {
+    const routes = Object.keys(PATHS).filter(k => k.startsWith('route:'));
+    expect(routes).toHaveLength(64);
+    for (const k of routes) {
+      const ys = PATHS[k].flat().map(p => p[1]);
+      for (let i = 1; i < ys.length; i++) expect(ys[i], k).toBeLessThanOrEqual(ys[i - 1] + 1e-12);
+    }
+  });
+  it('fit the path to the text: auto tries each family and keeps the best finished', () => {
+    const th = thuluth(ROUNDEL_PEN),
+      b = buildRoundel(th, { text: 'اللهم صل على محمد', compose: { elongate: true, cross: true, tries: 1, iters: 800, path: 'auto' }, judge: 1 })!; // prettier-ignore
+    expect(AUTO_PATHS).toContain(b.path);
+    // one word has no path to fit
+    expect(buildRoundel(th, { text: 'علي', compose: { tries: 1, iters: 300, path: 'auto' } })!.path).toBeUndefined();
+  }, 300_000);
+});
+
+describe('a drawn path', () => {
+  it('is simplified, normalised to the field with y up, and keeps its strokes in drawing order', () => {
+    const wobble = Array.from({ length: 30 }, (_, i) => [200 - i * 6, 50 + (i % 2) * 0.5] as [number, number]),
+      p = toReadingPath([wobble, [[190, 150], [20, 150]], [[5, 5], [6, 6]]], 220); // prettier-ignore
+    expect(p).toHaveLength(2); // the dot is dropped
+    expect(p[0].length).toBeLessThanOrEqual(3);
+    expect(p[0][0][0]).toBeGreaterThan(p[0].at(-1)![0]); // drawn right to left
+    expect(p[0][0][1]).toBeGreaterThan(p[1][0][1]); // the first stroke above the second
+    expect(Math.abs(p[1][0][1] - (1 - 300 / 220))).toBeLessThan(1e-3);
   });
 });

@@ -62,8 +62,8 @@ export interface RoundelOptions extends StackOptions {
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
-  /** A reading path (paths.ts): the words keep near their targets along it, in reading order. A name from PATHS, or
-   *  the path itself. */
+  /** A reading path (paths.ts): the words keep near their targets along it, in reading order. A name from PATHS, the
+   *  path itself, or 'auto' (buildRoundel tries each of AUTO_PATHS and keeps the best as finished). */
   path?: string | ReadingPath;
   /** Fitted lanes: parallel lanes across the field at `deg` (180, level, by default), their number and spacing
    *  chosen to suit the text. Ignored with `path`. */

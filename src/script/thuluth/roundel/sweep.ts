@@ -7,7 +7,7 @@ import { roundelChecks } from './checks';
 import type { DecoFeatures } from './deco';
 import type { Genre } from './deco';
 import { featuresIn, genreOf, roundelFeatures, tasteScore } from './deco';
-import { buildRoundel, sampleRecipe } from './index';
+import { buildRoundel, nearSame, sampleRecipe } from './index';
 import { musenna, musennaArt, musennaSVG, refusesMirror } from './musenna';
 import { renderRoundel } from './render';
 
@@ -24,6 +24,8 @@ export interface SweepOptions {
   base?: RoundelOptions;
   /** Pixels per pen unit for the SVGs. */
   U?: number;
+  /** Prefix for the ids, so several sweeps can be rated together. */
+  prefix?: string;
 }
 export interface SweepItem {
   id: string;
@@ -45,7 +47,13 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
   let id = 0;
   texts.forEach((text, ti) => {
     const mine: Omit<SweepItem, 'score' | 'genre'>[] = [],
-      words = text.trim().split(/\s+/).length;
+      words = text.trim().split(/\s+/).length,
+      // the mirrored candidates, ranked once: the k-th seed takes the k-th distinct design
+      mirrored = fams.includes('mirror') && !refusesMirror(text) ? musenna(th, text, { tries: o.tries ?? 3, iters: o.iters ?? 3000 }) : [], // prettier-ignore
+      add = (m: Omit<SweepItem, 'score' | 'genre'>) => {
+        // a near-duplicate of one already in the sweep adds nothing to rate
+        if (!mine.some(q => q.family === m.family && nearSame(q.features, m.features))) mine.push(m);
+      };
     for (const family of fams) {
       if (family === 'mirror' && refusesMirror(text)) continue;
       for (let k = 0; k < (o.n ?? 3); k++) {
@@ -54,17 +62,17 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
         delete recipe.lanes;
         if (family === 'lanes') recipe.lanes = {};
         if (family.startsWith('path:')) recipe.path = family.slice(5);
-        const tag = `s${String(id++).padStart(3, '0')}`;
+        const tag = `${o.prefix ?? 's'}${String(id++).padStart(3, '0')}`;
         if (family === 'mirror') {
-          const c = musenna(th, text, { seeds: [seed], tries: recipe.tries, iters: recipe.iters })[0];
+          const c = mirrored.filter((q, i) => !mirrored.slice(0, i).some(p => nearSame(p.features, q.features)))[k];
           if (!c) continue;
           const art = musennaArt(th, c);
-          mine.push({ id: tag, text, family, seed, recipe, features: featuresIn(th, c.units, { cx: c.axis, cy: c.cy, rx: c.rad, ry: c.rad }, 480, c.axis), checks: null, svg: musennaSVG(art, { U: o.U ?? 8 }) }); // prettier-ignore
+          add({ id: tag, text, family, seed, recipe, features: featuresIn(th, c.units, { cx: c.axis, cy: c.cy, rx: c.rad, ry: c.rad }, 480, c.axis), checks: null, svg: musennaSVG(art, { U: o.U ?? 8 }) }); // prettier-ignore
           continue;
         }
         const b = buildRoundel(th, { text, compose: recipe, frame: { ornaments: true, density: 0.35 } });
         if (!b) continue;
-        mine.push({ id: tag, text, family, seed, recipe, features: roundelFeatures(th, b.r, b.f), checks: roundelChecks(th, b.r, b.f), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }) }); // prettier-ignore
+        add({ id: tag, text, family, seed, recipe, features: roundelFeatures(th, b.r, b.f), checks: roundelChecks(th, b.r, b.f), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }) }); // prettier-ignore
       }
     }
     mine.forEach(m => {

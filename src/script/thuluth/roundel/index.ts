@@ -6,7 +6,8 @@ import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shap
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel, roundelOrderFault } from './compose';
 import type { DecoFeatures } from './deco';
-import { genreOf, roundelFeatures, tasteScores } from './deco';
+import { genreOf, roundelFeatures, tasteScore, tasteScores } from './deco';
+import { AUTO_PATHS } from './paths';
 import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
@@ -64,6 +65,8 @@ export interface BuiltRoundel {
   /** With `choose`: each seed's features and taste score, and the one kept. */
   taste?: { seed: number; varied: RoundelOptions; features: DecoFeatures; score: number }[];
   picked?: number;
+  /** With path: 'auto', the family chosen. */
+  path?: string;
 }
 
 function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
@@ -98,7 +101,7 @@ export function sampleRecipe(given: RoundelOptions, words: number, seed: number)
   return out;
 }
 /** Two roundels whose critic features all but agree are the same choice. */
-const nearSame = (a: DecoFeatures, b: DecoFeatures) =>
+export const nearSame = (a: DecoFeatures, b: DecoFeatures) =>
   Math.abs(a.texture - b.texture) < 0.01 &&
   Math.abs(a.unity - b.unity) < 0.01 &&
   Math.abs(a.span - b.span) < 0.01 &&
@@ -114,6 +117,23 @@ const BOWL_CHOICES = 6;
  *  needed the least: the composer places the letters before the bowl is redrawn, so it cannot see a tail that the new
  *  bowl will run into. */
 export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+  if (spec.compose?.path === 'auto' && !spec.compose.fixed) {
+    // fit the path to the text: each family composed and finished, the best kept by the genre's taste, less marks
+    // without room, clashes and order faults (one word has no reading path to fit)
+    const genre = genreOf(spec.text),
+      rest: RoundelOptions = { ...spec.compose, path: undefined },
+      words = spec.text.trim().split(/\s+/).length;
+    if (words < 2) return buildRoundel(th, { ...spec, compose: rest });
+    let best: (BuiltRoundel & { score: number }) | null = null;
+    for (const fam of AUTO_PATHS) {
+      const compose: RoundelOptions = fam === 'lanes' ? { ...rest, lanes: rest.lanes ?? {} } : { ...rest, path: fam },
+        b = buildRoundel(th, { ...spec, compose });
+      if (!b) continue;
+      const score = tasteScore(roundelFeatures(th, b.r, b.f), genre) - 3 * b.f.missing - clashes(th, b.r) / 6 - roundelOrderFault(b.r); // prettier-ignore
+      if (!best || score > best.score) best = { ...b, path: fam, score };
+    }
+    return best;
+  }
   if ((spec.choose ?? 1) > 1 && !spec.compose?.fixed) {
     const seed0 = spec.compose?.seed ?? 7,
       words = spec.text.trim().split(/\s+/).length,

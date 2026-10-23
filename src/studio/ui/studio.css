@@ -499,3 +499,16 @@ details.critic input[type='password'] {
   margin: 10px auto 0;
   background: #000;
 }
+.pathbox {
+  display: grid;
+  gap: 6px;
+  margin-block: 6px;
+}
+.pathpad {
+  width: min(220px, 100%);
+  aspect-ratio: 1;
+  touch-action: none;
+  border-radius: 50%;
+  background: var(--panel, transparent);
+  cursor: crosshair;
+}

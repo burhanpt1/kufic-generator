@@ -3,6 +3,7 @@
 // along it in proportion to its width, and the composer keeps every word near its target; letters still stack, dip and
 // interlock round the spine. Fitted horizontal lanes, read from the top lane down, gave the owner's best basmala,
 // salawat and الحمد لله رب العالمين.
+import { CALLIAR_ROUTES } from './calliar.data';
 
 /** A path: subpaths (a break is a pen lift), each a polyline in reading order. */
 export type ReadingPath = [number, number][][];
@@ -27,6 +28,35 @@ export function pathTargets(path: ReadingPath, widths: readonly number[], fill =
       f = Math.max(0, Math.min(1, (u - g.s0) / Math.max(1e-9, g.L)));
     return [sc * (g.a[0] + (g.b[0] - g.a[0]) * f), sc * (g.a[1] + (g.b[1] - g.a[1]) * f)];
   });
+}
+
+/** Sketching a path (Studio's pad): */
+/** Ramer–Douglas–Peucker: keep the points that carry the stroke's shape. */
+export function simplify(pts: [number, number][], tol: number): [number, number][] {
+  if (pts.length < 3) return pts;
+  const [ax, ay] = pts[0],
+    [bx, by] = pts[pts.length - 1],
+    L = Math.hypot(bx - ax, by - ay) || 1;
+  let far = 0,
+    at = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.abs((bx - ax) * (ay - pts[i][1]) - (ax - pts[i][0]) * (by - ay)) / L;
+    if (d > far) [far, at] = [d, i];
+  }
+  if (far <= tol) return [pts[0], pts[pts.length - 1]];
+  return [...simplify(pts.slice(0, at + 1), tol).slice(0, -1), ...simplify(pts.slice(at), tol)];
+}
+
+/** Strokes in pad pixels to a reading path: normalised to −1…1 with y up, simplified, at most 8 strokes of 40 points
+ *  (the recipe's limits); strokes too short to read along are dropped. */
+export function toReadingPath(strokes: [number, number][][], size: number): ReadingPath {
+  return strokes
+    .map(s =>
+      s.map(([x, y]) => [+((2 * x) / size - 1).toFixed(3), +(1 - (2 * y) / size).toFixed(3)] as [number, number]),
+    )
+    .map(s => simplify(s, 0.03).slice(0, 40))
+    .filter(s => s.length >= 2 && Math.hypot(s[s.length - 1][0] - s[0][0], s[s.length - 1][1] - s[0][1]) > 0.15)
+    .slice(0, 8);
 }
 
 /** n parallel chords of the field's circle (radius R), travelling at `deg` (180 = right to left), `gap` apart, sorted
@@ -92,6 +122,25 @@ export function downward(path: ReadingPath): ReadingPath {
   return raw.map(sp => sp.map(([x, ry]) => [x, hi + ry * k] as [number, number]));
 }
 
+/** A staircase of level rows: n rows from the top down, each shifted left of the one above by `shift` (of the field's
+ *  width), so the outline is a diagonal while every line reads across (the owner liked the diagonal staircase but not
+ *  its empty corners, and parallel diagonal lanes scramble the reading). Each row is a chord of the field's circle. */
+export function stairs(n: number, shift = 0.22, R = 0.95): ReadingPath {
+  const out: ReadingPath = [];
+  for (let i = 0; i < n; i++) {
+    const y = n === 1 ? 0 : 0.8 - (1.6 * i) / (n - 1),
+      half = Math.sqrt(Math.max(0.05, R * R - y * y)),
+      c = ((n - 1) / 2 - i) * shift,
+      x1 = Math.min(half, c + half * 0.75),
+      x0 = Math.max(-half, c - half * 0.75);
+    out.push([
+      [x1, y],
+      [x0, y],
+    ]);
+  }
+  return out;
+}
+
 /** Reading paths traced from Calliar thuluth compositions (prototypes/thuluth-lab/refresh/data/calliar_picks.json):
  *  letter centres in writing order, split where the route jumps back right, smoothed within each storey, simplified,
  *  and those built from the bottom up flipped to read from the top; made to read downward. */
@@ -116,5 +165,12 @@ export const PATHS: Record<string, ReadingPath> = {
   rows3: lanes(180, 3, 0.62),
   stag2: [[[0.92, 0.88], [-0.92, 0.12]], [[0.92, -0.12], [-0.92, -0.88]]],
   stag3: [[[0.9, 0.92], [-0.9, 0.42]], [[0.95, 0.25], [-0.95, -0.25]], [[0.9, -0.42], [-0.9, -0.92]]],
+  stairs2: stairs(2), stairs3: stairs(3), stairs4: stairs(4),
   ...Object.fromEntries(Object.entries(CALLIAR).map(([k, p]) => [k, downward(p)])),
+  // every route traced from Calliar (calliar.data.ts), made to read downward: route:0 … route:63
+  ...Object.fromEntries(CALLIAR_ROUTES.map((r, i) => [`route:${i}`, downward(r.path)])),
 }; // prettier-ignore
+
+/** The families path: 'auto' chooses among, by how the finished roundel is judged: fitted lanes, staggered lanes, the
+ *  staircase, and the master routes that gave the densest, quietest compositions. */
+export const AUTO_PATHS = ['lanes', 'stag2', 'stag3', 'stairs3', 'calliar3', 'calliar4'] as const;

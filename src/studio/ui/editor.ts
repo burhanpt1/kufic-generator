@@ -12,6 +12,7 @@ import { abjadTable, valueOf } from '../chronogram';
 import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt } from '../tree';
 import type { Path } from '../tree';
 import { svgOutline } from './editor-outline';
+import { pathPad } from './editor-path';
 import { valueLabel } from './labels';
 import type { App } from './main';
 import { $, h } from './main';
@@ -289,6 +290,17 @@ export function wireEditor(app: App) {
         apply(setAt(c, [...sel, 'spandrels'], f));
       };
       bar.append(ss);
+    }
+    if (node.type === 'roundel') {
+      // the reading path: drawn on a pad, or named ('lanes' fits level lanes to the text)
+      const r = node as Extract<FillerNode, { type: 'roundel' }>,
+        recipe = r.recipe ?? {};
+      box.append(
+        pathPad(recipe.path, p => {
+          const next = { ...recipe, path: p === 'lanes' ? undefined : p, lanes: p === 'lanes' ? {} : undefined };
+          apply(setAt(c, [...sel, 'recipe'], next));
+        }),
+      );
     }
     // nodes with nested children are edited through the tree; show their own fields only
     const shown =
