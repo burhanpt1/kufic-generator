@@ -1,6 +1,11 @@
 // Lamiah (لمية) in thuluth, three ways, letters only (no ring, field or paper): a classic line, a tughra after the
 // Ottoman imperial monogram (a tall spine with its flag, nested loops sweeping left, arms running right) and a mirrored
-// (aynalı) monogram, the name and its reflection meeting at the lam. `npm run lamiah` writes them to docs/lamiah.
+// (aynalı) monogram, the name and its reflection meeting at the lam. And as square Kufic monograms from the
+// composition engine: a maze, a pinwheel and a spiral. `npm run lamiah` writes them to docs/lamiah.
+import { resolve } from '../compose';
+import { preset } from '../model/presets';
+import type { Composition, FillerNode } from '../model/schema';
+import { renderPlaced } from '../render/composition';
 import { DEFAULT_THULUTH, nibPolys, polyPath, sampleStroke, thuluth } from '../script/thuluth';
 import type { Poly, SkelPt, ThuluthStyle } from '../script/thuluth';
 
@@ -168,4 +173,30 @@ export const lamiahSVGs = (o: InkOptions = {}) => ({
   classic: inkSVG(classicPolys(), o),
   tughra: inkSVG(tughraPolys(), o),
   monogram: inkSVG(mirrorPolys(), o),
+});
+
+/** The square Kufic monograms: the name filling a square region with no border, by each method. */
+export const KUFIC_FILLS: Record<'maze' | 'pinwheel' | 'spiral', FillerNode> = {
+  maze: { type: 'maze', text: 'name', corridors: 0.55, wall: false, seed: 3 },
+  pinwheel: { type: 'monogram', text: 'name', method: 'pinwheel', params: {} },
+  spiral: { type: 'monogram', text: 'name', method: 'spiral', params: {} },
+};
+
+/** A square Kufic monogram of the name in one ink on a transparent page (the paper rect, which the palette needs as a colour, left out). The page keeps
+ *  the composition's square; crop to the ink where that matters. */
+export function kuficSVG(kind: keyof typeof KUFIC_FILLS, ink = '#1b1b1b'): string {
+  const c = structuredClone(preset('kufic-maze-tile')) as Composition;
+  c.texts = { name: { text: LAMIAH, repeat: 'fill', wordGap: 2 } };
+  c.style.palette = { ink, ink2: ink, mark: ink, paper: '#ffffff' };
+  c.root.child = { ...c.root.child, borders: [], fill: KUFIC_FILLS[kind] };
+  return renderPlaced(resolve(c), { idPrefix: kind }).replace(
+    /<rect width="[\d.]+" height="[\d.]+" fill="#ffffff"\/>/,
+    '',
+  );
+}
+
+export const lamiahKuficSVGs = () => ({
+  maze: kuficSVG('maze'),
+  pinwheel: kuficSVG('pinwheel'),
+  spiral: kuficSVG('spiral'),
 });
