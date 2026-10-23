@@ -118,7 +118,8 @@ export interface Solved {
   count: number;
   fillers: number;
   E: number;
-  items: { kind: string; x: number; y: number; w: number; h: number }[];
+  /** Where each item went; key is 'group:letter' for dots and vowels (the letter they belong to), m the mark's name. */
+  items: { kind: string; x: number; y: number; w: number; h: number; key?: string; m?: string }[];
   /** Each fatha's length in dots, in order (0 for the plain mark). */
   fathas: number[];
   /** The clarifying letters placed. */
@@ -513,7 +514,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     E,
     items: items.map(it => {
       const [w, h] = boxOf(it);
-      return { kind: it.kind, x: it.x, y: it.y, w, h };
+      return { kind: it.kind, x: it.x, y: it.y, w, h, key: it.key, m: it.m };
     }),
   };
 }

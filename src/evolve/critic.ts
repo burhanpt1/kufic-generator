@@ -126,6 +126,12 @@ registerCritic('roundel', p => {
       light: clamp(1 - m.fill / 0.25),
       quiet: clamp(1 - (m.noise + 1.5) / 5),
     }),
+    // reported, not scored (no taste weight) until the ratings show they predict the owner's choices
+    ...(m.wordSpace != null && {
+      spaced: clamp(1 - m.wordSpace / 4),
+      ownMarks: clamp(1 - (m.strayMarks + m.strayDots) / 4),
+      single: clamp(1 - m.doubled / 6),
+    }),
   };
 });
 
@@ -140,6 +146,7 @@ export const METRIC_LABELS: Record<string, string> = {
   clearance: 'Bowl clears the letters', apart: 'Words keep apart', marked: 'Every mark placed', layers: 'Layered',
   order: 'Read in order', clear: 'Letters do not touch', texture: 'Even texture', calm: 'No heavy knots',
   unity: 'One body', span: 'Spans the field', light: 'Light, not heavy', quiet: 'Quiet (no near-touches)',
+  spaced: 'Words hold together', ownMarks: 'Marks by their letters', single: 'No ink drawn twice',
 }; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */

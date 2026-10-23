@@ -15,6 +15,7 @@ import {
   musennaArt,
   refusesMirror,
   roundelArt,
+  roundelChecks,
   roundelFeatures,
   roundelOrderFault,
 } from '../script/thuluth/roundel';
@@ -115,6 +116,7 @@ export function drawRoundel(
       order: roundelOrderFault(b.r),
       clash: clashes(th, b.r),
       deco: (({ texture, knots, unity, span, fill, noise }) => ({ texture, knots, unity, span, fill, noise }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
+      checks: roundelChecks(th, b.r, b.f),
     };
   }
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
@@ -156,6 +158,7 @@ function drawMusenna(
     order: roundelOrderFault(c.r),
     clash: clashes(th, c.r),
     deco: { texture, knots, unity, span, fill, noise },
+    checks: roundelChecks(th, c.r, c.f),
   };
 }
 
@@ -207,7 +210,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     scale: s,
     ok: art.missing === 0,
     note: art.missing ? `${art.missing} marks found no room` : undefined,
-    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash, ...art.deco }, // prettier-ignore
+    metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash, ...art.deco, ...art.checks }, // prettier-ignore
   };
 }
 

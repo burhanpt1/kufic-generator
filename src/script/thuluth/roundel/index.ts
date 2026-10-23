@@ -11,6 +11,7 @@ import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
 export * from './bowl';
+export * from './checks';
 export * from './compose';
 export * from './deco';
 export * from './counters';
