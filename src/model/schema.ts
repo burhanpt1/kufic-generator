@@ -240,6 +240,8 @@ export interface RoundelRecipe {
   pathTol?: number;
   /** On a path, the reading rules (across, then downward); on by default. */
   readRule?: boolean;
+  /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best. */
+  choose?: number;
   /** The rules for the marks from the Arabic sources (on by default): each fatha as long as its space allows (short,
    *  medium, or long with the main pen), and with ornaments a clarifying letter under each of ح س ص ط ع ك م. false
    *  restores the short fatha, no long fatha, and only the small ح and س. */
@@ -408,6 +410,7 @@ const roundelRecipe = z
     pathFill: z.number().min(0.2).max(1.5),
     pathTol: z.number().min(0).max(10),
     readRule: z.boolean(),
+    choose: z.number().int().min(1).max(12),
     fathaRule: z.boolean(),
     longFatha: z.boolean(),
     allSigns: z.boolean(),

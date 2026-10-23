@@ -5,11 +5,14 @@ import type { BowlOptions, FrameOptions, RiseOptions, TailOptions } from './bowl
 import { extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel } from './compose';
+import type { DecoFeatures } from './deco';
+import { roundelFeatures, tasteScores } from './deco';
 import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
 export * from './bowl';
 export * from './compose';
+export * from './deco';
 export * from './counters';
 export * from './finish';
 export * from './paths';
@@ -44,10 +47,16 @@ export interface RoundelSpec {
   frame?: FrameOptions | false;
   /** A short companion text set small in the space left (only without `frame`). */
   companion?: string;
+  /** Compose with this many seeds (from compose.seed) and keep the one the fitted taste (deco.ts) likes best: in
+   *  almost every test in the lab one seed worked and another didn't. */
+  choose?: number;
 }
 export interface BuiltRoundel {
   r: Roundel;
   f: Finished;
+  /** With `choose`: each seed's features and taste score, and the one kept. */
+  taste?: { seed: number; features: DecoFeatures; score: number }[];
+  picked?: number;
 }
 
 function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
@@ -74,6 +83,22 @@ const BOWL_CHOICES = 6;
  *  little widening) is kept, else the one that needed the least: the composer places the letters before the bowl is
  *  redrawn, so it cannot see a tail that the new bowl will run into. */
 export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+  if ((spec.choose ?? 1) > 1 && !spec.compose?.fixed) {
+    const seed0 = spec.compose?.seed ?? 7,
+      built = Array.from({ length: spec.choose! }, (_, k) => {
+        const seed = seed0 + k * 101;
+        return { seed, b: buildOne(th, { ...spec, compose: { ...spec.compose, seed } }) };
+      }).filter((c): c is { seed: number; b: BuiltRoundel } => !!c.b);
+    if (!built.length) return null;
+    const features = built.map(c => roundelFeatures(th, c.b.r, c.b.f)),
+      scores = tasteScores(features),
+      picked = scores.indexOf(Math.max(...scores));
+    return { ...built[picked].b, taste: built.map((c, i) => ({ seed: c.seed, features: features[i], score: scores[i] })), picked }; // prettier-ignore
+  }
+  return buildOne(th, spec);
+}
+
+function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
   const all = composeRoundel(th, spec.text, spec.compose);
   if (!all.length) return null;
   let r: Roundel;
