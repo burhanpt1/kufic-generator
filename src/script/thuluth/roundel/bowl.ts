@@ -541,16 +541,16 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     const st = S.b.strokes[best.si];
     r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
     st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
-    // its dots just inside the run, at `dotAt` along it
+    // its dots on their own side of the run (a ya's below it, a nun's above), at `dotAt` along it
     const dg = o.dotAt != null ? S.b.dotGroups.find(d => d.li === P.li) : undefined;
     if (dg) {
-      const xm = (ax + lx) / 2 + (o.dotAt! * (lx - ax)) / 2,
+      const nib = th.style.nib,
+        xm = (ax + lx) / 2 + (o.dotAt! * (lx - ax)) / 2,
         near = course.reduce((m, q) => (Math.abs(q[0] - xm) < Math.abs(m[0] - xm) ? q : m)),
         dx = P.ox + xm * sc,
-        dy = (P.oy || 0) + near[1] * sc + 1.7;
-      // the letter it belongs to lies beneath dots above it (a nun's) and above dots below it (a ya's)
-      const [top, bot] = dg.side > 0 ? [dy - 1.2, dy - 2] : [dy + 1.6, dy + 0.9];
-      Object.assign(dg, { x: dx, y: dy, x0: dx - 1, x1: dx + 1, top, bot });
+        ly2 = (P.oy || 0) + near[1] * sc,
+        dy = ly2 + (dg.side > 0 ? nib * 1.3 : -nib * 1.5);
+      Object.assign(dg, { x: dx, y: dy, x0: dx - 1, x1: dx + 1, top: ly2 + nib * 0.5, bot: ly2 - nib * 0.5 });
     }
   }
   return r;
