@@ -2,6 +2,7 @@
 // drawn, and the small adjustments a calligrapher makes by hand (a smaller conjunction set under a letter).
 import type { PlacedLetter, Thuluth } from '../engine';
 import { isLetter } from '../engine';
+import { redraw } from '../drawn';
 import { sampleStroke } from '../pen';
 import type { SkelPt } from '../types';
 import type { Roundel } from './compose';
@@ -147,8 +148,8 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
   // a free bowl is the whole letter: its head, a short tooth turning in at the top, then the bowl, as one stroke
   if (free) {
     const head: SkelPt[] = [[J.x + 1.7, J.y + 0.2, 0.45], [J.x + 1.0, J.y + 0.95, 1], [J.x + 0.2, J.y + 0.45, 1]];
-    st.s = sampleStroke([...head, ...pts.slice(1)].map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension); // prettier-ignore
-  } else st.s = st.s.slice(0, at.qi + 1).concat(sampleStroke(pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension)); // prettier-ignore
+    redraw(st, 0, [...head, ...pts.slice(1)].map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), B.li, th.style.tension); // prettier-ignore
+  } else redraw(st, at.qi + 1, pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), B.li, th.style.tension); // prettier-ignore
   // the letter's vowels sit at its start; its dots inside the bowl, low and to the left
   B.g = {
     s: [
@@ -500,7 +501,7 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     );
     const st = S.b.strokes[best.si];
     r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
-    st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
+    redraw(st, best.qi, tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), P.li, th.style.tension); // prettier-ignore
   }
   return r;
 }
