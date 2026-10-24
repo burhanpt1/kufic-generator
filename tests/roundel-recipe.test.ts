@@ -66,6 +66,9 @@ const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelR
   fathaRule: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ', set: { fathaRule: false } },
   longFatha: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { longFatha: false }, with: { iters: 1500 } },
   allSigns: { text: 'حسين', set: { allSigns: false }, with: { ornaments: true } },
+  clearance: { text: 'مُحَمَّد عَلِيّ', set: { clearance: 1.2 } },
+  markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
+  fathaGap: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {

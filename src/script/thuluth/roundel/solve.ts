@@ -85,6 +85,9 @@ const ornShape = (th: Thuluth, m: OrnKey): OrnShape | null =>
  *  width): short, medium when the free run along the slant is at least 6, long (with the main pen) when it is 11. */
 const FATHA_SLANT = Math.atan2(0.8, 1.5);
 export const FATHA_DOTS = { short: 3.5, medium: 5, long: 10 } as const;
+/** The density from which each mark is written (see SolveOptions.markDensity). */
+const markLevel = (m: MarkName): number =>
+  ['shadda', 'madda', 'hamza', 'hamzaB', 'alifk'].includes(m) ? 0 : ['sukun', 'fathatan', 'kasratan', 'dammatan'].includes(m) ? 0.25 : m === 'fatha' ? 0.75 : 0.5; // prettier-ignore
 
 export interface SolveOptions {
   discScale?: number;
@@ -107,6 +110,15 @@ export interface SolveOptions {
   longFatha?: boolean;
   /** With ornaments: a clarifying letter under each of ح س ص ط ع ك م (false: only the small ح and س, as drawn). */
   allSigns?: boolean;
+  /** Clearance as a rule: every vowel, dot group and sign keeps at least this far (pen units) from the letters and
+   *  from each other; the solver pays heavily for less, and reports what it could not clear (clearFaults). */
+  clearance?: number;
+  /** The density of marks, from Râkım's sparse (0) to Sâmi's dense (1), as Derman describes them: below a quarter
+   *  only the shadda, madda, hamza and dagger alif; then sukun and tanwin; from a half damma and kasra; from three
+   *  quarters every fatha; the clarifying letters from 0.6; the ornaments' density follows it unless set. */
+  markDensity?: number;
+  /** The long fatha (main pen) only where it spans a gap: its centre at least two pens from any letter. */
+  fathaGap?: boolean;
   /** The pen of the ornaments in the gaps, as a share of the letters' at full size (0.38; the lab drew 0.42 before
    *  the three-pen rule). */
   ornPen?: number;
@@ -125,6 +137,8 @@ export interface Solved {
   fathas: number[];
   /** The clarifying letters placed. */
   signs: string[];
+  /** Items left nearer the letters or each other than the clearance (0 without a clearance). */
+  clearFaults: number;
 }
 
 interface Item {
@@ -235,7 +249,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       items.push({ kind: 'dots', key: i + ':' + dg.li, n, arrs, arr: arrs[0], side: dg.side, x: dg.x + ox, y: dg.y + oy, ax: dg.x + ox, ay: dg.y + oy, lx0: dg.x0 + ox, lx1: dg.x1 + ox, top: dg.top + oy, bot: dg.bot + oy, sc: dg.sc || 1 }); // prettier-ignore
     });
     const byLetter: Record<number, MarkName[]> = {};
-    (g.marks || []).forEach(m => (byLetter[m.k] ??= []).push(m.m));
+    (g.marks || []).filter(m => o.markDensity == null || o.markDensity >= markLevel(m.m)).forEach(m => (byLetter[m.k] ??= []).push(m.m)); // prettier-ignore
     Object.entries(byLetter).forEach(([k, list]) => {
       const L = letterBox(+k);
       if (!L) return;
@@ -249,7 +263,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
         items.push({ kind: 'mark', key: i + ':' + k, m, side: below ? -1 : 1, w, h, x: L.lx, y: ay, ax: L.lx, ay, lx0: L.x0, lx1: L.x1, top: L.top, bot: L.bot, sc }); // prettier-ignore
       });
     });
-    if (o.ornaments)
+    if (o.ornaments && (o.markDensity == null || o.markDensity >= 0.6))
       [...g.s].forEach((c, li) => {
         const sign: OrnKey | null =
           o.allSigns === false
@@ -326,10 +340,13 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     }
     return e2 / Math.max(1, nC);
   };
+  const clear = o.clearance ?? 0;
   const itemCost = (it: Item) => {
     const [w, h] = boxOf(it);
     return (
-      30 * inkHits(it.x, it.y, w + 0.5, h + 0.5) + (0.5 * ((it.x - it.ax) ** 2 + (it.y - it.ay) ** 2)) / (it.sc * it.sc)
+      30 * inkHits(it.x, it.y, w + 0.5, h + 0.5) +
+      (clear ? 200 * inkHits(it.x, it.y, w + 2 * clear, h + 2 * clear) : 0) +
+      (0.5 * ((it.x - it.ax) ** 2 + (it.y - it.ay) ** 2)) / (it.sc * it.sc)
     );
   };
   const pairCost = () => {
@@ -340,9 +357,10 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           B = items[b],
           [wa, ha] = boxOf(A2),
           [wb, hb] = boxOf(B);
-        const ox2 = Math.min(A2.x + wa / 2, B.x + wb / 2) - Math.max(A2.x - wa / 2, B.x - wb / 2) + 0.4,
-          oy2 = Math.min(A2.y + ha / 2, B.y + hb / 2) - Math.max(A2.y - ha / 2, B.y - hb / 2) + 0.4;
-        if (ox2 > 0 && oy2 > 0) c += 40 * ox2 * oy2;
+        const m = Math.max(0.4, clear),
+          ox2 = Math.min(A2.x + wa / 2, B.x + wb / 2) - Math.max(A2.x - wa / 2, B.x - wb / 2) + m,
+          oy2 = Math.min(A2.y + ha / 2, B.y + hb / 2) - Math.max(A2.y - ha / 2, B.y - hb / 2) + m;
+        if (ox2 > 0 && oy2 > 0) c += (clear ? 200 : 40) * ox2 * oy2;
       }
     return c;
   };
@@ -403,7 +421,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   // ornaments in the largest gaps that remain, as many as the density asks for
   const fillers: { m: Ornament; x: number; y: number; w: number; h: number; sz: number }[] = [];
   if (o.ornaments) {
-    const density = o.density ?? 0.5,
+    const density = o.density ?? o.markDensity ?? 0.5,
       thresh = 3.2 - 1.6 * density,
       maxN = Math.round(2 + 10 * density);
     for (let n2 = 0; n2 < maxN; n2++) {
@@ -457,8 +475,12 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
         while (s2 < reach && !blocked(it.x + sg * dx * s2, it.y + sg * dy * s2, it)) s2 += 0.25;
         return s2;
       });
+      // the long fatha spans a gap: with fathaGap, only where its centre stands two pens clear of the letters
       const free = run[0] + run[1],
-        len = free >= 11 * nib && o.longFatha !== false ? FATHA_DOTS.long : free >= 6 * nib ? FATHA_DOTS.medium : FATHA_DOTS.short; // prettier-ignore
+        gx = Math.round(X(it.x)),
+        gy = Math.round(Y(it.y)),
+        spans = !o.fathaGap || (gx >= 0 && gy >= 0 && gx < Wd && gy < Hd && dist[gy * Wd + gx] / K >= 2 * nib),
+        len = free >= 11 * nib && o.longFatha !== false && spans ? FATHA_DOTS.long : free >= 6 * nib ? FATHA_DOTS.medium : FATHA_DOTS.short; // prettier-ignore
       it.fathaLen = len * nib;
       it.mainPen = len === FATHA_DOTS.long;
       // centred in its free run where the run is lopsided, so the longer stroke stays clear on both sides
@@ -513,6 +535,17 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     fillers: fillers.length,
     fathas: items.filter(it => it.m === 'fatha').map(it => (it.fathaLen ? +(it.fathaLen / nib).toFixed(1) : 0)),
     signs: items.filter(it => it.kind === 'orn').map(it => it.m!),
+    clearFaults: clear
+      ? items.filter((it, a) => {
+          const [w, h] = boxOf(it);
+          if (inkHits(it.x, it.y, w + 2 * clear, h + 2 * clear) > 0) return true;
+          return items.some((q, b) => {
+            if (a === b) return false;
+            const [w2, h2] = boxOf(q);
+            return Math.abs(it.x - q.x) < (w + w2) / 2 + clear && Math.abs(it.y - q.y) < (h + h2) / 2 + clear;
+          });
+        }).length
+      : 0,
     E,
     items: items.map(it => {
       const [w, h] = boxOf(it);

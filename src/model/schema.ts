@@ -271,6 +271,11 @@ export interface RoundelRecipe {
   fathaRule?: boolean;
   longFatha?: boolean;
   allSigns?: boolean;
+  /** Marks, second generation: a clearance every mark keeps from letters and other marks (pen units); the density of
+   *  marks from Râkım's sparse (0) to Sâmi's dense (1); the long fatha only where it spans a gap. */
+  clearance?: number;
+  markDensity?: number;
+  fathaGap?: boolean;
 }
 export interface RoundelColours {
   field?: string;
@@ -448,6 +453,9 @@ const roundelRecipe = z
     fathaRule: z.boolean(),
     longFatha: z.boolean(),
     allSigns: z.boolean(),
+    clearance: z.number().min(0).max(3),
+    markDensity: z.number().min(0).max(1),
+    fathaGap: z.boolean(),
   })
   .partial();
 const abjadOpts = z.object({

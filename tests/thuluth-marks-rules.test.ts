@@ -59,3 +59,29 @@ describe('mark rules', () => {
     for (const c of 'حسصطعكم') expect(miniSign(th, c), c).not.toBeNull();
   });
 });
+
+describe('marks, second generation', () => {
+  const text = 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ';
+  it('thin from Sâmi to Râkım: fathas go first, the shadda and dagger alif stay', () => {
+    const dense = build(text, { markDensity: 1 }),
+      mid = build(text, { markDensity: 0.5 }),
+      sparse = build(text, { markDensity: 0.1 });
+    expect(dense.fathas.length).toBeGreaterThan(0);
+    expect(mid.fathas).toHaveLength(0);
+    expect(sparse.count).toBeLessThan(mid.count);
+    expect(sparse.strokes.some(s => s.ang === ALIF_ANG)).toBe(true);
+    expect(sparse.signs).toHaveLength(0);
+  });
+  it('keep a clearance as a rule, and report what could not be cleared', () => {
+    const loose = build(text),
+      clear = build(text, { clearance: 0.8 });
+    expect(loose.clearFaults).toBe(0); // no clearance asked, none reported
+    expect(clear.clearFaults).toBeLessThanOrEqual(Math.ceil(clear.count / 4));
+  });
+  it('write the long fatha only across a gap when asked', () => {
+    const all = build(text),
+      gap = build(text, { fathaGap: true }),
+      longs = (f: number[]) => f.filter(x => x === FATHA_DOTS.long).length;
+    expect(longs(gap.fathas)).toBeLessThanOrEqual(longs(all.fathas));
+  });
+});
