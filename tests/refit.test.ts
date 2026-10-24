@@ -48,8 +48,12 @@ function roundSet(d: string) {
     disliked: string[] = existsSync(join(d, 'dislikes.json')) ? JSON.parse(readFileSync(join(d, 'dislikes.json'), 'utf8')) : [], // prettier-ignore
     genreOf = Object.fromEntries(man.map(m => [m.id, m.genre])),
     winners = [...new Set(rated.flatMap(v => (v.w === 'a' ? [v.a] : v.w === 'b' ? [v.b] : [])))].filter(id => !disliked.includes(id)), // prettier-ignore
+    // a tie means both weak but not bad enough to set aside (the owner): each tied composition loses to up to two of
+    // its genre that won a vote
+    tied = [...new Set(rated.flatMap(v => (v.w === 'tie' ? [v.a, v.b] : [])))].filter(id => !disliked.includes(id) && !winners.includes(id)), // prettier-ignore
     votes = [
-      ...rated,
+      ...rated.filter(v => v.w !== 'tie'),
+      ...tied.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 2).map(w => ({ a: w, b: id, w: 'a' as const }))), // prettier-ignore
       ...disliked.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 5).map(w => ({ a: w, b: id, w: 'a' as const }))), // prettier-ignore
     ];
   return {

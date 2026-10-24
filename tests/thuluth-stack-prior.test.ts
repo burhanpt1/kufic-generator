@@ -6,9 +6,12 @@ import { splitGroups } from '../src/script/thuluth/shape';
 
 describe('learned stacking', () => {
   it('opens the joins masters stack, and keeps the rule otherwise', () => {
-    // حسين: sin (0.125) stays closed, final nun (0.31) opens; ya medial is a tooth
+    // حسين: sin (0.125) stays closed, final nun (0.31) opens only when bowls may stack; ya medial is a tooth
     expect(stackable('حسين')).toEqual([]);
-    expect(stackable('حسين', { learnedStack: true })).toEqual([3]);
+    expect(stackable('حسين', { learnedStack: true })).toEqual([]);
+    expect(stackable('حسين', { learnedStack: true, stackBowls: true })).toEqual([3]);
+    // على: the final ya's bowl stays level under the lam (the owner set aside the salawats where it hung below)
+    expect(stackable('على', { learnedStack: true })).toEqual([]);
     // محمد: before hah and mim by the rule, and before the final dal (0.5) too
     expect(stackable('محمد')).toEqual([1, 2]);
     expect(stackable('محمد', { learnedStack: true })).toEqual([1, 2, 3]);
@@ -22,7 +25,7 @@ describe('learned stacking', () => {
   });
   it('lowers the composer’s energy for the names it opens joins in', () => {
     const th = thuluth(ROUNDEL_PEN),
-      E = (learnedStack: boolean) => composeRoundel(th, 'حسن', { elongate: true, cross: true, deep: true, tries: 2, iters: 2000, seed: 29, learnedStack })[0]; // prettier-ignore
+      E = (learnedStack: boolean) => composeRoundel(th, 'محمد', { elongate: true, cross: true, deep: true, tries: 2, iters: 2000, seed: 29, learnedStack })[0]; // prettier-ignore
     const a = E(false),
       b = E(true);
     expect(b.E).toBeLessThan(a.E);

@@ -73,6 +73,8 @@ export interface StackOptions {
    *  the time may be, pulled in proportion to that rate (against mim's); off, only joins before hah and mim. */
   learnedStack?: boolean;
   stackMin?: number;
+  /** Learned stacking may also stack a final bowl (ى ي ن) under the letter before (off: the bowl stays level). */
+  stackBowls?: boolean;
   /** Nesting: the final bowls of NEST_BOWLS letters become cradles for a short word. */
   nest?: boolean;
   /** Towers: three stacked joins in one group, pulled at towerPull (1) times the stacks' own pull. */
@@ -135,7 +137,8 @@ export function stackWeight(s: string, i: number, o: StackOptions = {}): number 
 }
 
 /** Joins where the next letter may be written underneath the one before it: before hah and mim, or, learned, before
- *  any letter masters stack often enough. */
+ *  any letter masters stack often enough, but not into a final bowl (ى ي ن) unless stackBowls: dropped below the letter
+ *  before, the bowl hangs empty and apart (the owner set aside both salawats whose على was written so). */
 export function stackable(s: string, o: StackOptions = {}): number[] {
   const fs = forms(s),
     out: number[] = [];
@@ -143,6 +146,7 @@ export function stackable(s: string, o: StackOptions = {}): number[] {
     const f = fs[i],
       fam = FAM[f.c];
     if (!(f.form === 'med' || f.form === 'fin') || fs[i - 1].form === 'iso') continue;
+    if (o.learnedStack && !o.stackBowls && f.form === 'fin' && 'ىين'.includes(f.c)) continue;
     if (o.learnedStack ? (STACK_PRIOR[stackFam(f)] ?? 0) >= (o.stackMin ?? 0.2) : fam === 'hah' || fam === 'mim')
       out.push(i);
   }

@@ -13,7 +13,8 @@ What the critic is fitted to (`npm run refit`, tests/refit.test.ts, writing `src
 To refit after a batch of votes: read the page's `votes` collection back (Claude: ArtifactData list on the page's URL),
 save it as `rounds/<date>/votes.json` (an array of {a, b, w, t}); save the `dislikes` collection's ids as
 `rounds/<date>/dislikes.json` (each disliked composition counts as losing to up to five of its genre that won a vote);
-and run `npm run refit`. It reports each genre's
+and run `npm run refit`. A tie means both weak but not bad enough to set aside: each tied composition that never won
+counts as losing to up to two of its genre that did. It reports each genre's
 leave-one-out accuracy, and for each reported check whether adding it would raise that accuracy: a check is promoted
 into the score only when it does.
 
