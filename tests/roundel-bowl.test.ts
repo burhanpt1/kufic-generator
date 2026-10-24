@@ -118,7 +118,7 @@ describe('a cartouche on tiles', () => {
     expect(tiled.length).toBeGreaterThan(plain.length * 2);
     const ellipses = (s: string) => (s.match(/<ellipse cx="0"/g) || []).length;
     expect(ellipses(tiled)).toBe(ellipses(plain) - 1);
-  }, 60000);
+  }, 180_000);
 });
 
 describe('nesting in a tail', () => {
@@ -202,7 +202,7 @@ describe('the roundel critic', () => {
       expect(m[k]).toBeGreaterThanOrEqual(0);
       expect(m[k]).toBeLessThanOrEqual(1);
     }
-  }, 60000);
+  }, 180_000);
 });
 
 describe('reading order of stacked pieces', () => {
@@ -231,7 +231,7 @@ describe('a free-standing great nun', () => {
     const alifX = (b: ReturnType<typeof go>) => b.r.st[b.r.groups.findIndex(g => g.s === 'ها')].x;
     // set beside the alif when joined by a lead-in; at the far side of the bowl when free
     expect(alifX(go(false)) - nunHead(go(false))).toBeLessThan(alifX(go(true)) - nunHead(go(true)) - 5);
-  }, 60000);
+  }, 180_000);
 });
 
 describe('height: rising stems and stacked joins', () => {
@@ -268,7 +268,7 @@ describe('clashes', () => {
       spec({ compose: { ...opts, tries: 6, seed: 7, stack: true }, tails: { reach: 6 }, rise: {} }),
     )!;
     expect(clashes(th, b.r)).toBe(0);
-  }, 60000);
+  }, 180_000);
 });
 
 describe('a two-name colour scheme', () => {

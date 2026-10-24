@@ -255,6 +255,9 @@ export interface RoundelRecipe {
   pathTol?: number;
   /** On a path, the reading rules (across, then downward); on by default. */
   readRule?: boolean;
+  /** Ruled composition (the constrained mode): words exactly on ruled lines, in order, each line packed tight and
+   *  justified to its chord; the search fills that structure. Replaces path and lanes. */
+  ruled?: boolean | { lines?: number; anchors?: boolean; maxGap?: number; justify?: number; rhythm?: number; axis?: number }; // prettier-ignore
   /** Compose with this many seeds and keep the one the taste fitted to the owner's ratings likes best; later seeds
    *  also sample the options left open, unless vary is false. */
   choose?: number;
@@ -450,6 +453,19 @@ const roundelRecipe = z
     pathFill: z.number().min(0.2).max(1.5),
     pathTol: z.number().min(0).max(10),
     readRule: z.boolean(),
+    ruled: z.union([
+      z.boolean(),
+      z
+        .object({
+          lines: z.number().int().min(1).max(8),
+          anchors: z.boolean(),
+          maxGap: z.number().min(0).max(10),
+          justify: z.number().min(0).max(50),
+          rhythm: z.number().min(0).max(20),
+          axis: z.number().min(0).max(20),
+        })
+        .partial(),
+    ]),
     choose: z.number().int().min(1).max(12),
     vary: z.boolean(),
     judge: z.number().int().min(1).max(12),

@@ -87,7 +87,29 @@ export interface RoundelOptions extends StackOptions {
   readW?: number;
   orderFirm?: number;
   orderSlack?: number;
+  /** Ruled composition, the constrained mode (true for the defaults): see RuledOptions. Replaces path and lanes. */
+  ruled?: boolean | RuledOptions;
   fixed?: Layout;
+}
+/** Ruled composition: the structure is fixed and the search only fills it. The baselines are ruled as the field's
+ *  chords, read from the top down; each word sits exactly on its line, the words of a line in reading order from the
+ *  right, packed tight (each slides in until it would touch the one before, so tails run under the next word), and the
+ *  line's slack is shared out evenly between its words. The search moves the line breaks, the variants (elongations
+ *  take up slack, so a line is justified by kashida rather than space), the stacks, the anchors and the line pitch;
+ *  stem rhythm and the axis are preferences it weighs. */
+export interface RuledOptions {
+  /** The number of lines (fitted to the text, and varied from try to try, if not given). */
+  lines?: number;
+  /** A word may ride on the elongation or in the bowl of the word before it on its line, read straight after it. */
+  anchors?: boolean;
+  /** The widest even gap between words (pen units, 2) before a line pays, and how much a line's slack or overflow
+   *  costs (4). */
+  maxGap?: number;
+  justify?: number;
+  /** Weights (1 each): the stems' rhythm (their tops evenly spaced along each line, and on one or two common
+   *  heights), and the axis (the longest stroke centred on it). */
+  rhythm?: number;
+  axis?: number;
 }
 export interface Roundel {
   E: number;
@@ -103,8 +125,10 @@ export interface Roundel {
   up: number[];
   /** How much the great bowl had to widen to clear the letters (0: not at all), once it is drawn. */
   bowlGrow?: number;
-  /** The lanes fitted, if lanes were asked for. */
+  /** The lanes fitted, if lanes were asked for (and the lines of a ruled composition). */
   lanes?: { n: number; gap: number };
+  /** A ruled composition: the first word of each line, and the words riding on the word before them. */
+  ruled?: { breaks: number[]; anchored: number[] };
   /** Tails drawn out under what nests in them; stems risen into the space above. */
   tailsDrawn?: number;
   risen?: number;
@@ -159,6 +183,19 @@ export const roundelOrderFault = (r: Roundel) =>
     r.shapes.map((S, i) => ({ x0: r.st[i].x + S.x0, x1: r.st[i].x + S.x1, y0: r.st[i].y + S.y0, y1: r.st[i].y + S.y1, base: r.st[i].y })), // prettier-ignore
     Object.assign(new Uint8Array(r.groups.length), Object.fromEntries((r.up || []).map(i => [i, 1]))),
   );
+
+/** How far heights fall from one or two common levels: the least sum of squared deviations over every split of the
+ *  sorted heights into a lower and an upper level. */
+export function twoLevels(ys: readonly number[]): number {
+  const v = [...ys].sort((a, b) => a - b),
+    sse = (a: number[]) => {
+      const m = a.reduce((s, x) => s + x, 0) / (a.length || 1);
+      return a.reduce((s, x) => s + (x - m) ** 2, 0);
+    };
+  let best = sse(v);
+  for (let k = 1; k < v.length; k++) best = Math.min(best, sse(v.slice(0, k)) + sse(v.slice(k)));
+  return best;
+}
 
 export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
   const tries = o.tries ?? 18,
@@ -354,10 +391,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       return { x0, x1, y0, y1 };
     };
     // on a reading path, words start at their targets (essential for the search to converge)
-    let PP: ReadingPath | null = typeof o.path === 'string' ? (PATHS[o.path] ?? null) : (o.path ?? null),
+    const RU: RuledOptions | null = o.ruled && W > 1 && !o.fixed ? (o.ruled === true ? {} : o.ruled) : null;
+    let PP: ReadingPath | null = RU ? null : typeof o.path === 'string' ? (PATHS[o.path] ?? null) : (o.path ?? null),
       fitted: { n: number; gap: number } | undefined;
     const pFill = o.pathFill ?? 0.7;
-    if (!PP && o.lanes && W > 1) {
+    if (!PP && !RU && o.lanes && W > 1) {
       const bx0 = words.map((_, w) => wbox(w)),
         L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill, o.field ? (n, gap) => fieldLanes(o.field!, n, gap) : undefined); // prettier-ignore
       PP = L.path;
@@ -393,6 +431,137 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = wordOverlap(a, b);
     };
     for (let a = 0; a < W; a++) recompute(a);
+    // ruled: the lines as the field's chords, scaled so their length is about the text's (pathFill)
+    let brk: number[] = [0],
+      pk = 1,
+      wk = 1,
+      lineFit: { over: number; loose: number }[] = [];
+    const anc = new Uint8Array(W),
+      chord: { x: number; y: number; half: number }[] = [],
+      lineOf = (w: number) => {
+        let l = 0;
+        while (l + 1 < brk.length && brk[l + 1] <= w) l++;
+        return l;
+      },
+      wkey = (w: number) => words[w].map(g => lv[g] + (up[g] ? 'u' : '')).join(','),
+      // where a word sits when it slides in after the one before on a line, as an offset from that word's place
+      kerns = new Map<string, number>(),
+      kernAfter = (a: number, b: number) => {
+        const key = a + ':' + wkey(a) + '|' + b + ':' + wkey(b);
+        if (kerns.has(key)) return kerns.get(key)!;
+        wp[b] = { x: wp[a].x, y: wp[a].y };
+        layoutWord(b);
+        const A = wbox(a),
+          B = wbox(b),
+          cap = 0.6 * Math.min(A.x1 - A.x0, B.x1 - B.x0),
+          touch = () => {
+            let c = 0;
+            words[a].forEach(i => words[b].forEach(j => (c += pairOverlap(shapes[i][lv[i]], gpos[i].x, gpos[i].y, shapes[j][lv[j]], gpos[j].x, gpos[j].y, true)))); // prettier-ignore
+            return c;
+          },
+          shift = (d: number) => words[b].forEach(j => (gpos[j].x += d));
+        let off = A.x0 - B.x1 - 1.2;
+        shift(off);
+        for (let s = 0.4; s <= cap; s += 0.4) {
+          shift(0.4);
+          if (touch() > (o.kernTouch ?? 3)) break;
+          off += 0.4;
+        }
+        // and back off a little, so words that interlock still read apart
+        off -= off > A.x0 - B.x1 - 1.2 ? 0.8 : 0;
+        kerns.set(key, off);
+        return off;
+      },
+      // a word's best shelf (a bowl first, else the longest), in composition coordinates
+      shelfOf = (w: number) => {
+        let best: { x0: number; x1: number; y: number; cradle?: boolean } | null = null;
+        words[w].forEach(g =>
+          shapes[g][lv[g]].shelves.forEach(sh => {
+            const c = { x0: gpos[g].x + sh.x0, x1: gpos[g].x + sh.x1, y: gpos[g].y + sh.y, cradle: sh.cradle };
+            if (!best || (c.cradle && !best.cradle) || (!!c.cradle === !!best.cradle && c.x1 - c.x0 > best.x1 - best.x0)) best = c; // prettier-ignore
+          }),
+        );
+        return best as { x0: number; x1: number; y: number; cradle?: boolean } | null;
+      },
+      layoutRuled = (ls: number[]) => {
+        for (const l of ls) {
+          const ws = words.map((_, w) => w).slice(brk[l], l + 1 < brk.length ? brk[l + 1] : W),
+            y = chord[l].y * pk,
+            main: number[] = [],
+            riders: [number, number][] = [];
+          ws.forEach(w => {
+            const host = main[main.length - 1];
+            if (RU!.anchors && anc[w] && host != null && shelfOf(host)) return riders.push([w, host]);
+            if (host == null) wp[w] = { x: 0, y };
+            else wp[w] = { x: wp[host].x + kernAfter(host, w), y };
+            layoutWord(w);
+            main.push(w);
+          });
+          // the line's slack shared evenly between its words, and the line centred on its chord
+          const bs = main.map(w => wbox(w)),
+            right = bs[0].x1,
+            P = right - Math.min(...bs.map(q => q.x0)),
+            target = 2 * chord[l].half * wk,
+            e = main.length > 1 ? Math.max(0, (target - P) / (main.length - 1)) : 0,
+            dx = chord[l].x * wk - (right - (P + e * (main.length - 1)) / 2);
+          main.forEach((w, i) => {
+            wp[w].x += dx - i * e;
+            layoutWord(w);
+          });
+          lineFit[l] = { over: Math.max(0, P - target), loose: Math.max(0, e - (RU!.maxGap ?? 2)) };
+          // riders: over their host's shelf, centred on it, or down in its bowl
+          riders.forEach(([w, host]) => {
+            const sh = shelfOf(host)!;
+            wp[w] = { x: 0, y: 0 };
+            layoutWord(w);
+            const b = wbox(w);
+            wp[w] = { x: (sh.x0 + sh.x1) / 2 - (b.x0 + b.x1) / 2, y: sh.y + (sh.cradle ? 0.2 : 0.9) - b.y0 };
+            layoutWord(w);
+          });
+        }
+        const moved = new Set(ls.flatMap(l => words.map((_, w) => w).filter(w => lineOf(w) === l)));
+        moved.forEach(w => recompute(w));
+      },
+      allLines = () => brk.map((_, l) => l);
+    if (RU) {
+      const bx0 = words.map((_, w) => wbox(w)),
+        tw = bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0),
+        wh = bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W,
+        make = o.field ? (k: number, gap: number) => fieldLanes(o.field!, k, gap) : undefined,
+        lo = { bandFrac: o.lanes?.bandFrac },
+        nL = Math.max(
+          Math.min(W, 2),
+          Math.min(W, RU.lines ?? fitLanes(W, tw, wh, lo, pFill, make).n + [0, 1, -1][t % 3]),
+        ),
+        L = fitLanes(W, tw, wh, { ...lo, n: nL }, pFill, make),
+        len = L.path.map(sp => Math.abs(sp[0][0] - sp[sp.length - 1][0])),
+        lenAll = len.reduce((a, b) => a + b, 0),
+        u = (tw * pFill) / lenAll,
+        sx = o.field ? 1 : OVAL;
+      L.path.forEach(sp => {
+        const a = sp[0],
+          b = sp[sp.length - 1];
+        chord.push({ x: ((a[0] + b[0]) / 2) * u * sx, y: a[1] * u, half: (Math.abs(a[0] - b[0]) / 2) * u * sx });
+      });
+      fitted = { n: nL, gap: L.gap };
+      // the first breaks: each line takes its chord's share of the text
+      let acc = 0;
+      const at = bx0.map(q => {
+        const mid = acc + (q.x1 - q.x0) / 2;
+        acc += q.x1 - q.x0;
+        let l = 0,
+          c = (len[0] / lenAll) * tw;
+        while (l + 1 < nL && mid > c) c += (len[++l] / lenAll) * tw;
+        return l;
+      });
+      brk = [0];
+      for (let l = 1; l < nL; l++) {
+        let s0 = at.findIndex(a => a >= l);
+        if (s0 < 0) s0 = W;
+        brk.push(Math.max(brk[l - 1] + 1, Math.min(s0, W - (nL - l))));
+      }
+      layoutRuled(allLines());
+    }
     // the disc: centred on the ink, radius reaching the furthest ink
     const disc = (): Disc => {
       const pts: [number, number][] = [];
@@ -485,7 +654,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             if (back > 0) order += (o.orderFirm ?? 3) * back * back;
           }
         }
-      } else
+      } else if (!RU)
         for (let w = 0; w + 1 < W; w++) {
           // each word starts to the left of where the one before started
           const v = hd[w + 1].x - (hd[w].x - 1.5);
@@ -596,8 +765,58 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         );
         sil = tot ? out / tot : 0;
       }
+      // ruled: each line filling its chord, the stems in rhythm, the longest stroke on the axis
+      let ruled = 0;
+      if (RU) {
+        let just = 0,
+          rhy = 0;
+        lineFit.forEach(f => (just += f.over ** 2 + f.loose ** 2));
+        // each line keeps to its band: a stacked piece no higher than a third of the way to the line above, the ink no
+        // lower than half way to the line below (the last line's, than 0.7 of a line)
+        const pitch = chord.length > 1 ? (chord[0].y - chord[1].y) * pk : 6;
+        groups.forEach((g, i) => {
+          const l = lineOf(g.word);
+          if (anc[g.word] && g.word > brk[l]) return;
+          const S = shapes[i][lv[i]],
+            y = chord[l].y * pk,
+            dev = gpos[i].y - y,
+            lo = y - (l + 1 < chord.length ? 0.5 : 0.7) * pitch - (gpos[i].y + S.y0);
+          if (dev > 0.34 * pitch) just += (dev - 0.34 * pitch) ** 2;
+          if (lo > 0) just += lo * lo;
+        });
+        const tops: number[] = [];
+        brk.forEach((_, l) => {
+          const xs: number[] = [];
+          groups.forEach((g, i) => {
+            if (lineOf(g.word) !== l || (anc[g.word] && g.word > brk[l])) return;
+            shapes[i][lv[i]].stemTops.forEach(([tx, ty]) => (xs.push(gpos[i].x + tx), tops.push(gpos[i].y + ty)));
+          });
+          xs.sort((a, b) => a - b);
+          const gaps = xs.slice(1).map((x, k) => x - xs[k]);
+          if (gaps.length >= 2) {
+            const m = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+            rhy += gaps.reduce((a, g2) => a + (g2 - m) ** 2, 0) / gaps.length / Math.max(1, m * m);
+          }
+        });
+        rhy += 0.04 * twoLevels(tops);
+        // the longest stroke (the longest shelf, else the widest piece) centred on the axis
+        let li = 0,
+          ll = -1,
+          lx = 0,
+          wi = 0;
+        groups.forEach((_, i) => {
+          const S = shapes[i][lv[i]],
+            T = shapes[wi][lv[wi]];
+          S.shelves.forEach(sh => sh.x1 - sh.x0 > ll && ((ll = sh.x1 - sh.x0), (li = i), (lx = (sh.x0 + sh.x1) / 2)));
+          if (S.x1 - S.x0 > T.x1 - T.x0) wi = i;
+        });
+        const W2 = shapes[wi][lv[wi]],
+          ax = ll >= 0 ? gpos[li].x + lx : gpos[wi].x + (W2.x0 + W2.x1) / 2;
+        ruled =
+          (RU.justify ?? 4) * just + (RU.rhythm ?? 1) * 12 * rhy + (RU.axis ?? 1) * 20 * (Math.abs(ax - d.cx) / d.r);
+      }
       return (
-        90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
+        ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };
@@ -614,10 +833,57 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     // the pieces that can be stacked: not a word's first, not a companion's
     const stackable = o.stack ? groups.map((_, i) => i).filter(i => i > 0 && groups[i - 1].word === groups[i].word && !groups[i].newWord) : []; // prettier-ignore
+    // a ruled composition's state, to undo a move by
+    const save = () => ({ lv: lv.slice(), up: up.slice(), anc: anc.slice(), brk: brk.slice(), pk, wk, wp: wp.map(p => ({ ...p })), gp: gpos.map(p => ({ ...p })), ov: ov.map(r => r.slice()), lf: lineFit.map(f => ({ ...f })) }); // prettier-ignore
+    const restore = (k: ReturnType<typeof save>) => {
+      k.lv.forEach((v, i) => (lv[i] = v));
+      up.set(k.up);
+      anc.set(k.anc);
+      brk = k.brk;
+      pk = k.pk;
+      wk = k.wk;
+      k.wp.forEach((p, i) => (wp[i] = p));
+      k.gp.forEach((p, i) => (gpos[i] = p));
+      k.ov.forEach((r, i) => ov[i].set(r));
+      lineFit = k.lf;
+    };
     for (let it = 0; it < (o.fixed ? 0 : iters); it++) {
       const mv = R();
       let undo: () => void;
-      if (stackable.length && mv < 0.1) {
+      if (RU) {
+        const k = save();
+        undo = () => restore(k);
+        if (stackable.length && mv < 0.1) {
+          // a stack lifted or set down
+          const gi = stackable[Math.floor(R() * stackable.length)];
+          up[gi] ^= 1;
+          layoutRuled([lineOf(groups[gi].word)]);
+        } else if (mv < 0.25 && brk.length > 1) {
+          // a line break moved by a word, each line keeping one
+          const l = 1 + Math.floor(R() * (brk.length - 1)),
+            nb = brk[l] + (R() < 0.5 ? -1 : 1);
+          if (nb > brk[l - 1] && nb < (l + 1 < brk.length ? brk[l + 1] : W)) {
+            brk[l] = nb;
+            layoutRuled([l - 1, l]);
+          }
+        } else if (RU.anchors && mv < 0.35) {
+          // a word set to ride on the word before it, or back on the line
+          const w = 1 + Math.floor(R() * (W - 1));
+          if (!brk.includes(w)) {
+            anc[w] ^= 1;
+            layoutRuled([lineOf(w)]);
+          }
+        } else if (mv < 0.45) {
+          // the lines drawn closer or apart, or made shorter or longer
+          if (R() < 0.5) pk = Math.max(0.6, Math.min(1.15, pk * Math.exp((R() - 0.5) * 0.2)));
+          else wk = Math.max(0.6, Math.min(1.5, wk * Math.exp((R() - 0.5) * 0.2)));
+          layoutRuled(allLines());
+        } else {
+          const g2 = Math.floor(R() * n);
+          lv[g2] = Math.floor(R() * shapes[g2].length);
+          layoutRuled([lineOf(groups[g2].word)]);
+        }
+      } else if (stackable.length && mv < 0.1) {
         // lift a piece onto the one before it, or set it back down
         const gi = stackable[Math.floor(R() * stackable.length)],
           w = groups[gi].word;
@@ -686,7 +952,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     let o2 = 0;
     for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
-    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]), lanes: fitted }); // prettier-ignore
+    results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]), lanes: fitted, ...(RU ? { ruled: { breaks: brk.slice(), anchored: [...anc.keys()].filter(w => anc[w] && !brk.includes(w)) } } : {}) }); // prettier-ignore
     if (o.fixed) break;
   }
   results.sort((a, b) => a.E - b.E);

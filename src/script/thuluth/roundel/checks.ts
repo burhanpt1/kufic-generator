@@ -7,6 +7,7 @@
 //   and a redraw cannot leave old ink behind (redraw() replaces it).
 import type { Thuluth } from '../engine';
 import type { Roundel } from './compose';
+import { headOf, twoLevels } from './compose';
 import type { Finished } from './finish';
 
 interface Pt {
@@ -67,6 +68,55 @@ export interface RoundelChecks {
   strayDots: number;
   /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
+  /** Alignment (alignment()). */
+  baselines: number;
+  stemRhythm: number;
+  topLevels: number;
+}
+
+/** Alignment, the deliberateness of a layout: how far each word's baseline (its first letter's) lies from the nearest
+ *  other word's (pens, at most 3, averaged: 0 when words share ruled lines); how unevenly the stems' tops are spaced
+ *  along each line of words (the spread of the gaps over their mean, averaged over lines with three stems or more);
+ *  and how far the tops fall from one or two common heights (pens, root mean square). */
+export function alignment(r: Roundel, nib: number): { baselines: number; stemRhythm: number; topLevels: number } {
+  const first = new Map<number, number>();
+  r.groups.forEach((g, i) => !first.has(g.word) && first.set(g.word, i));
+  const base = [...first.entries()].map(([w, g]) => ({ w, y: r.st[g].y + headOf(r.shapes[g]).y }));
+  let baselines = 0;
+  base.forEach(p => {
+    const d = Math.min(3, ...base.filter(q => q !== p).map(q => Math.abs(q.y - p.y) / nib));
+    baselines += d / base.length;
+  });
+  // lines of words: baselines within 3 pens of the line's first, from the top down
+  const lines: { y: number; ws: number[] }[] = [];
+  [...base]
+    .sort((a, b) => b.y - a.y)
+    .forEach(p => {
+      const L = lines.find(q => Math.abs(q.y - p.y) < 3 * nib);
+      if (L) L.ws.push(p.w);
+      else lines.push({ y: p.y, ws: [p.w] });
+    });
+  let rhythm = 0,
+    counted = 0;
+  const tops: number[] = [];
+  lines.forEach(L => {
+    const xs: number[] = [];
+    r.groups.forEach((g, i) => {
+      if (!L.ws.includes(g.word)) return;
+      r.shapes[i].stemTops.forEach(([tx, ty]) => (xs.push(r.st[i].x + tx), tops.push(r.st[i].y + ty)));
+    });
+    xs.sort((a, b) => a - b);
+    const gaps = xs.slice(1).map((x, k) => x - xs[k]);
+    if (gaps.length < 2) return;
+    const m = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    rhythm += Math.sqrt(gaps.reduce((a, g) => a + (g - m) ** 2, 0) / gaps.length) / Math.max(1e-6, m);
+    counted++;
+  });
+  return {
+    baselines,
+    stemRhythm: counted ? rhythm / counted : 0,
+    topLevels: tops.length ? Math.sqrt(twoLevels(tops) / tops.length) / nib : 0,
+  };
 }
 
 export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChecks {
@@ -134,7 +184,7 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
         [bx, by] = tangent(twin);
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
-  return { wordSpace, strayMarks, strayDots, doubled };
+  return { wordSpace, strayMarks, strayDots, doubled, ...alignment(r, nib) };
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */

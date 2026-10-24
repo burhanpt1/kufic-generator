@@ -11,8 +11,8 @@ import { buildRoundel, nearSame, sampleRecipe } from './index';
 import { musenna, musennaArt, musennaSVG, refusesMirror } from './musenna';
 import { renderRoundel } from './render';
 
-/** A family of layouts: free, fitted lanes, a named path, or mirrored. */
-export type SweepFamily = 'free' | 'lanes' | 'mirror' | `path:${string}`;
+/** A family of layouts: free, fitted lanes, ruled (the constrained mode), a named path, or mirrored. */
+export type SweepFamily = 'free' | 'lanes' | 'ruled' | 'mirror' | `path:${string}`;
 export interface SweepOptions {
   /** Seeds per text and family. */
   n?: number;
@@ -61,6 +61,7 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
           recipe: RoundelOptions = { elongate: true, cross: true, kern: true, ...o.base, ...sampleRecipe(o.base ?? {}, words, seed), tries: o.tries ?? 3, iters: o.iters ?? 3000, seed }; // prettier-ignore
         delete recipe.lanes;
         if (family === 'lanes') recipe.lanes = {};
+        if (family === 'ruled') recipe.ruled = true;
         if (family.startsWith('path:')) recipe.path = family.slice(5);
         const tag = `${o.prefix ?? 's'}${String(id++).padStart(3, '0')}`;
         if (family === 'mirror') {

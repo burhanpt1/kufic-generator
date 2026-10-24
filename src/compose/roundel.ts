@@ -81,6 +81,7 @@ export function drawRoundel(
     pathFill: recipe.pathFill,
     pathTol: recipe.pathTol,
     readRule: recipe.readRule,
+    ruled: recipe.ruled,
   };
   const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap }; // prettier-ignore
   if (recipe.mirror) {

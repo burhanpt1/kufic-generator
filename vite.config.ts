@@ -19,6 +19,7 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     setupFiles: ['tests/setup.ts'],
-    testTimeout: 30_000,
+    // the roundel composer and critic tests take 30–70 s on a four-core machine
+    testTimeout: 120_000,
   },
 });
