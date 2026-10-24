@@ -285,9 +285,10 @@ export interface RoundelColours {
   rim?: string;
   line?: string;
   counters?: string;
-  /** Two names and a conjunction: the first name's letters in one primary with its eyes in the other, the second
-   *  name the other way round, and the conjunction (the tinted tweak, or a waw opening a word) in the accent. */
-  pair?: { first: string; second: string; accent: string };
+  /** Two names and a conjunction: the first name's letters in one colour with its eyes in the second's, the second
+   *  name the other way round, and the conjunction (the tinted tweak, or a waw opening a word) in the accent. With
+   *  eyes, every letter's eyes take that colour instead (no inversion). */
+  pair?: { first: string; second: string; accent: string; eyes?: string };
 }
 
 export interface FeatureSet {
@@ -629,7 +630,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
           rim: colour,
           line: colour,
           counters: colour,
-          pair: z.object({ first: colour, second: colour, accent: colour }),
+          pair: z.object({ first: colour, second: colour, accent: colour, eyes: colour.optional() }),
         })
         .partial()
         .optional(),

@@ -45,6 +45,7 @@
     "node": ">=22.12"
   },
   "dependencies": {
+    "@adobe/leonardo-contrast-colors": "^1.1.0",
     "@countertype/clipper2-ts": "^1.5.4",
     "clipper2-wasm": "0.4.0",
     "polylabel": "^2.1.0",

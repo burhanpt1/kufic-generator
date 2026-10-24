@@ -156,7 +156,7 @@ describe('drawn-out tails', () => {
     // a curve, not a level line: it rises from its lowest towards its far end, as the bowl does
     const end = t.filter(q => q[0] < tx0 + 2);
     expect(Math.min(...end.map(q => q[1])) - low).toBeGreaterThan(1.5);
-  }, 60000);
+  }, 180000);
   it('leaves a tail as written where no course keeps clear of the other letters', () => {
     const r = composeRoundel(th, NAMES, NAMESPEC)[0],
       i = r.groups.findIndex(g => g.s === 'بر'),

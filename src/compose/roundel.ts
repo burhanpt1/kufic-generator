@@ -146,7 +146,7 @@ export function drawRoundel(
 function pairCounters(th: Thuluth, r: Roundel, pair: NonNullable<RoundelColours['pair']>, cx: number, cy: number) {
   const by = new Map<string, string>();
   r.groups.forEach((g, i) => {
-    const colour = g.tint === pair.accent ? pair.accent : g.word % 2 ? pair.first : pair.second,
+    const colour = g.tint === pair.accent ? pair.accent : (pair.eyes ?? (g.word % 2 ? pair.first : pair.second)),
       { x, y } = r.st[i],
       strokes = r.shapes[i].b.strokes.map(st => ({ ...st, s: st.s.map(q => ({ x: q.x + x, y: q.y + y, w: q.w })) }));
     const d = findCounters(th, strokes)

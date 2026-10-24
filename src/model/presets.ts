@@ -1,6 +1,7 @@
 // Saved trees shipped with the app (COMPOSITION_ENGINE.md §8).
 import type { Composition, RegionNode, Style, TextSlot } from './schema';
 import { DEFAULT_STYLE, PALETTES } from './style';
+import { namesComposition } from '../showpiece/names';
 
 export const TEXTS = {
   basmala: 'بسم الله الرحمن الرحيم',
@@ -246,6 +247,12 @@ export const PRESETS: { id: string; name: string; comp: Composition }[] = [
         },
       },
     ),
+  },
+  {
+    // two names in the great bowl of a free-standing nun, layered and nested (src/showpiece/names)
+    id: 'names-cartouche',
+    name: 'Names cartouche',
+    comp: namesComposition('بُرْهَان وَشَمِيرَة', '#1E5B4F', '#D9A23A'),
   },
 ];
 export const preset = (id: string) => PRESETS.find(p => p.id === id)!.comp;
