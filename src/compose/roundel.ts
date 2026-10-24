@@ -7,7 +7,8 @@ import type { FillerNode, RoundelColours, RoundelRecipe, Style } from '../model/
 import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
 import type { Thuluth } from '../script/thuluth/engine';
-import { buildRoundel, clashes, roundelArt, roundelOrderFault } from '../script/thuluth/roundel';
+import { buildRoundel, clashes, findCounters, roundelArt, roundelOrderFault } from '../script/thuluth/roundel';
+import type { Roundel } from '../script/thuluth/roundel';
 import type { Poly } from '../script/thuluth/types';
 import { fitInside, registerFiller } from './fillers';
 import type { RoundelDrawing } from './placed';
@@ -28,9 +29,10 @@ export function drawRoundel(
   recipe: RoundelRecipe = {},
   pen: Style['pen'],
   counters: boolean,
+  pair?: RoundelColours['pair'],
 ): RoundelDrawing | null {
   // prettier-ignore
-  const key = JSON.stringify([text, recipe, pen ?? null, counters]);
+  const key = JSON.stringify([text, recipe, pen ?? null, counters, pair ?? null]);
   if (CACHE.has(key)) return CACHE.get(key)!;
   const base = thuluthStyleOf(pen?.preset === 'roundel' ? pen : { preset: 'roundel' }),
     th: Thuluth = thuluth({ ...base, great: recipe.great });
@@ -58,6 +60,7 @@ export function drawRoundel(
       fixed: fx,
     },
     tweaks: recipe.tweaks,
+    ...(pair ? { wordTints: [pair.first, pair.second], accent: pair.accent } : {}),
     tails: recipe.tails,
     rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
@@ -80,6 +83,7 @@ export function drawRoundel(
       ink,
       tints: [...tints].map(([colour, d]) => ({ colour, d })),
       counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
+      ...(pair ? { counterTints: pairCounters(th, b.r, pair, art.cx, art.cy) } : {}),
       marks: b.f.solved?.count ?? 0,
       missing: b.f.missing,
       grow: b.r.bowlGrow ?? 0,
@@ -95,6 +99,21 @@ export function drawRoundel(
   return out;
 }
 
+/** A two-name scheme's eyes: each group's own counters, in the other name's colour (the accent's in the accent). */
+function pairCounters(th: Thuluth, r: Roundel, pair: NonNullable<RoundelColours['pair']>, cx: number, cy: number) {
+  const by = new Map<string, string>();
+  r.groups.forEach((g, i) => {
+    const colour = g.tint === pair.accent ? pair.accent : g.word % 2 ? pair.first : pair.second,
+      { x, y } = r.st[i],
+      strokes = r.shapes[i].b.strokes.map(st => ({ ...st, s: st.s.map(q => ({ x: q.x + x, y: q.y + y, w: q.w })) }));
+    const d = findCounters(th, strokes)
+      .map(rs => pathOf(rs, cx, cy))
+      .join('');
+    if (d) by.set(colour, (by.get(colour) || '') + d);
+  });
+  return [...by].map(([colour, d]) => ({ colour, d }));
+}
+
 /** Polygon of an ellipse with half-axes (a, b), for fitting. */
 const ellipse = (a: number, b: number, n = 72): Pt[] =>
   Array.from({ length: n }, (_, i) => [a * Math.cos((2 * Math.PI * i) / n), b * Math.sin((2 * Math.PI * i) / n)]);
@@ -106,7 +125,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     ctx.fill = { type: 'roundel', ok: false, note: 'no text' };
     return;
   }
-  const colours: Required<RoundelColours> = {
+  const colours: Required<Omit<RoundelColours, 'pair'>> = {
     field: f.colours?.field ?? style.palette.paper,
     letters: f.colours?.letters ?? style.palette.ink,
     sheen: f.colours?.sheen ?? '#f0d07a',
@@ -114,7 +133,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     line: f.colours?.line ?? style.palette.ink2,
     counters: f.colours?.counters ?? '',
   };
-  const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters);
+  const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters, f.colours?.pair);
   if (!art) {
     ctx.fill = { type: 'roundel', ok: false, note: 'no letters' };
     return;

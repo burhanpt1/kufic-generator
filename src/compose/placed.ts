@@ -66,7 +66,7 @@ export type PlacedItem =
       centre: Pt;
       s: number;
       framed: boolean;
-      colours: Required<RoundelColours>;
+      colours: Required<Omit<RoundelColours, 'pair'>>;
       /** Tiles under the letters, and the rim's form. */
       fieldTiles?: IznikSpec & { wash?: number };
       rimStyle?: 'single' | 'double';
@@ -82,6 +82,8 @@ export interface RoundelDrawing {
   ink: string;
   tints: { colour: string; d: string }[];
   counters: string;
+  /** Eyes coloured by the letter they belong to (a two-name scheme), drawn instead of counters. */
+  counterTints?: { colour: string; d: string }[];
   /** Marks placed / missing, and ornaments, for the meta. */
   marks: number;
   missing: number;

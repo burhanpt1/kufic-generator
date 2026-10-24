@@ -302,7 +302,11 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
               (it.rimStyle === 'single' ? '' : e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08))
             : '',
           letters =
-            (c.counters && it.counters ? `<path fill="${c.counters}" d="${it.counters}"/>` : '') +
+            (it.counterTints
+              ? it.counterTints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('')
+              : c.counters && it.counters
+                ? `<path fill="${c.counters}" d="${it.counters}"/>`
+                : '') +
             `<path fill="url(#${gd})" d="${it.ink}"/>` +
             it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('');
         if (it.fieldTiles) {

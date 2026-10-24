@@ -239,6 +239,9 @@ export interface RoundelColours {
   rim?: string;
   line?: string;
   counters?: string;
+  /** Two names and a conjunction: the first name's letters in one primary with its eyes in the other, the second
+   *  name the other way round, and the conjunction (the tinted tweak, or a waw opening a word) in the accent. */
+  pair?: { first: string; second: string; accent: string };
 }
 
 export interface FeatureSet {
@@ -533,7 +536,15 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
       fieldTiles: iznik.extend({ wash: z.number().min(0).max(1).optional() }).optional(),
       rim: z.enum(['single', 'double']).optional(),
       colours: z
-        .object({ field: colour, letters: colour, sheen: colour, rim: colour, line: colour, counters: colour })
+        .object({
+          field: colour,
+          letters: colour,
+          sheen: colour,
+          rim: colour,
+          line: colour,
+          counters: colour,
+          pair: z.object({ first: colour, second: colour, accent: colour }),
+        })
         .partial()
         .optional(),
     }),

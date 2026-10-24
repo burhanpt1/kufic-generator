@@ -270,3 +270,35 @@ describe('clashes', () => {
     expect(clashes(th, b.r)).toBe(0);
   }, 60000);
 });
+
+describe('a two-name colour scheme', () => {
+  it("draws each name in its colour with its eyes in the other's, and the waw in the accent", () => {
+    const pair = { first: '#112233', second: '#445566', accent: '#778899' };
+    const c = {
+      version: 1,
+      seed: 21,
+      canvas: { shape: 'landscape', margin: 3 },
+      style: structuredClone(DEFAULT_STYLE),
+      texts: { names: { text: NAMES, repeat: 'once', wordGap: 2 } },
+      root: {
+        type: 'frame',
+        child: {
+          type: 'region',
+          outline: { kind: 'circle' },
+          borders: [],
+          fill: { type: 'roundel', text: 'names', colours: { pair }, recipe: { tries: 2, oval: 1.45, nest: true, tweaks: [{ at: 'و', scale: 0.62, tint: '#000000' }], bowl: { clear: 5.6 } } }, // prettier-ignore
+        },
+      },
+    } as Composition;
+    expect(isValidComposition(c)).toBe(true);
+    const it = resolve(c).items.find(i => i.type === 'roundel') as Extract<ReturnType<typeof resolve>['items'][number], { type: 'roundel' }>; // prettier-ignore
+    const tints = new Map(it.tints.map(t => [t.colour, t.d.length]));
+    for (const k of [pair.first, pair.second, pair.accent]) expect(tints.get(k)).toBeGreaterThan(0);
+    expect(tints.has('#000000')).toBe(false);
+    // burhan's heh has eyes (in the second name's colour), shamira's ta marbuta one (in the first's)
+    const eyes = new Map(it.counterTints!.map(t => [t.colour, t.d]));
+    expect(eyes.get(pair.second)).toBeTruthy();
+    expect(eyes.get(pair.first)).toBeTruthy();
+    expect(renderPlaced(resolve(c), { idPrefix: 'p' })).toContain(`fill="${pair.accent}"`);
+  }, 60000);
+});

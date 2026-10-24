@@ -41,6 +41,10 @@ export interface RoundelSpec {
   bowl?: BowlOptions | false;
   /** Fit the frame to everything drawn (false: finish inside the composed disc). */
   frame?: FrameOptions | false;
+  /** Each word's letters (and so its marks) in its own colour, by word in turn; groups tinted by a tweak, or a waw
+   *  opening a word, take the accent instead. */
+  wordTints?: string[];
+  accent?: string;
   /** A short companion text set small in the space left (only without `frame`). */
   companion?: string;
 }
@@ -59,6 +63,12 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
       placeUnder(r, gi, t.under.group, t.under.gap ?? 1, t.under.dx ?? 0);
     if (t.move) r.st[gi] = { x: r.st[gi].x + t.move[0], y: r.st[gi].y + t.move[1] };
   }
+  const wt = spec.wordTints;
+  if (wt?.length)
+    r.groups.forEach((g, i) => {
+      const conj = !!g.tint || (g.s === 'و' && (i === 0 || r.groups[i - 1].word !== g.word));
+      g.tint = conj && spec.accent ? spec.accent : (g.tint ?? wt[g.word % wt.length]);
+    });
   if (spec.tails) extendTails(th, r, { bowl: spec.bowl || undefined, ...spec.tails });
   if (spec.bowl) shapeBowl(th, r, spec.bowl);
   if (spec.rise) riseStems(th, r, spec.rise);
