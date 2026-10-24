@@ -21,6 +21,10 @@ export interface RoundelPaint {
   /** Frame radius as a share of the disc's (fitFrame sets 1). */
   discScale?: number;
   noOutline?: boolean;
+  /** Hairline piercing (Kazasker Mustafa İzzet's practice): the letters drawn group by group in reading order, each
+   *  edged in the field's colour this wide (pen units), so where one passes through another a fine gap shows which is
+   *  on top. For a single text; mirrored work combines instead. */
+  hairline?: number;
   /** Colour for the counters, if they are filled. */
   counters?: string;
 }
@@ -36,7 +40,7 @@ export interface RoundelArt {
   rim: number;
   Rout: number;
   /** One list of polygons per unit, in writing order, with its tint. */
-  units: { polys: Poly[]; tint?: string; mark: boolean }[];
+  units: { polys: Poly[]; tint?: string; mark: boolean; gi?: number }[];
   counters: Poly[][];
   /** A shaped field (fields.ts) instead of the oval: Rf and Rout are then its half-heights. */
   field?: FieldName;
@@ -59,6 +63,7 @@ export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint
       : th.strokePolys({ ang: u.ang!, nib: u.nib, s: u.s! }),
     tint: u.tint,
     mark: !!u.mark || !!u.dot,
+    gi: u.gi,
   }));
   // counters of the letters only, not the marks
   const ls = units.filter(u => u.s && !u.mark && (u.nib || nib) > nib * 0.6).map(u => ({ ang: u.ang!, nib: u.nib, s: u.s! })); // prettier-ignore
@@ -88,16 +93,33 @@ export function renderRoundel(th: Thuluth, r: Roundel, f: Finished, o: RoundelPa
   const holes = o.counters
     ? `<path d="${art.counters.flatMap(rs => rs.map(([[a, b], [c], [, e]]) => `M${X(a).toFixed(1)} ${Y(b).toFixed(1)}H${X(c).toFixed(1)}V${Y(e).toFixed(1)}H${X(a).toFixed(1)}Z`)).join('')}" fill="${o.counters}"/>` // prettier-ignore
     : '';
-  const all = art.units
-      .filter(u => !u.tint)
-      .map(u => path(u.polys))
-      .join(''),
-    tints = new Map<string, string>();
-  art.units.forEach(u => u.tint && tints.set(u.tint, (tints.get(u.tint) || '') + path(u.polys)));
-  const body =
-    (o.noOutline ? '' : `<g fill="${outline}" stroke="${outline}" stroke-width="${(0.22 * U).toFixed(1)}" stroke-linejoin="round"><path d="${all}"/></g>`) + // prettier-ignore
-    `<g fill="url(#gd${id})"><path d="${all}"/></g>` +
-    [...tints].map(([t, d2]) => `<path fill="${t}" d="${d2}"/>`).join('');
+  const bodyOf = (pf: (ps: Poly[]) => string) => {
+    const all = art.units
+        .filter(u => !u.tint)
+        .map(u => pf(u.polys))
+        .join(''),
+      tints = new Map<string, string>();
+    art.units.forEach(u => u.tint && tints.set(u.tint, (tints.get(u.tint) || '') + pf(u.polys)));
+    const tinted = [...tints].map(([t, d2]) => `<path fill="${t}" d="${d2}"/>`).join('');
+    if (o.hairline) {
+      // each group in reading order, edged in the field's colour; the marks and dots after, plain
+      const groups = [...new Set(art.units.filter(u => !u.tint && !u.mark && u.gi != null).map(u => u.gi!))].sort((a, b) => a - b); // prettier-ignore
+      return (
+        groups.map(g => `<path fill="url(#gd${id})" stroke="${field}" stroke-width="${(o.hairline! * U).toFixed(2)}" stroke-linejoin="round" paint-order="stroke" d="${art.units.filter(u => u.gi === g && !u.tint && !u.mark).map(u => pf(u.polys)).join('')}"/>`).join('') + // prettier-ignore
+        `<path fill="url(#gd${id})" d="${art.units
+          .filter(u => !u.tint && (u.mark || u.gi == null))
+          .map(u => pf(u.polys))
+          .join('')}"/>` + // prettier-ignore
+        tinted
+      );
+    }
+    return (
+      (o.noOutline ? '' : `<g fill="${outline}" stroke="${outline}" stroke-width="${(0.22 * U).toFixed(1)}" stroke-linejoin="round"><path d="${all}"/></g>`) + // prettier-ignore
+      `<g fill="url(#gd${id})"><path d="${all}"/></g>` +
+      tinted
+    );
+  };
+  const body = bodyOf(path);
   if (art.field) {
     // a shaped field: the rim and field as its outline, a finial at a pointed tip
     const fin = finialPath(art.field, Rout, rim * 1.8),
@@ -109,18 +131,12 @@ export function renderRoundel(th: Thuluth, r: Roundel, f: Finished, o: RoundelPa
     const X2 = (x: number) => Wd / 2 + (x - art.cx) * U,
       Y2 = (y: number) => cyp - (y - art.cy) * U,
       path2 = (ps: Poly[]) => ps.map(q => 'M' + q.map(([x, y]) => X2(x).toFixed(1) + ' ' + Y2(y).toFixed(1)).join('L') + 'Z').join(''); // prettier-ignore
-    const all2 = art.units
-        .filter(u => !u.tint)
-        .map(u => path2(u.polys))
-        .join(''),
-      tints2 = new Map<string, string>();
-    art.units.forEach(u => u.tint && tints2.set(u.tint, (tints2.get(u.tint) || '') + path2(u.polys)));
     const at = `transform="translate(${(Wd / 2).toFixed(1)} ${cyp.toFixed(1)}) scale(${U})"`;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wd.toFixed(0)} ${Ht.toFixed(0)}" width="${Wd.toFixed(0)}" height="${Ht.toFixed(0)}">
 <defs><linearGradient id="gd${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gold}"/><stop offset="0.5" stop-color="#f0d07a"/><stop offset="1" stop-color="${gold}"/></linearGradient></defs>
 <rect width="100%" height="100%" fill="${bg}"/>
 <g ${at}><path d="${fieldPath(art.field, Rout)}" fill="url(#gd${id})" stroke="${goldDark}" stroke-width="0.12"/><path d="${fieldPath(art.field, Rf)}" fill="${field}" stroke="${goldDark}" stroke-width="0.1"/>${fin ? `<path d="${fin}" fill="url(#gd${id})" stroke="${goldDark}" stroke-width="0.06"/>` : ''}</g>
-${o.noOutline ? '' : `<g fill="${outline}" stroke="${outline}" stroke-width="${(0.22 * U).toFixed(1)}" stroke-linejoin="round"><path d="${all2}"/></g>`}<g fill="url(#gd${id})"><path d="${all2}"/></g>${[...tints2].map(([t, d2]) => `<path fill="${t}" d="${d2}"/>`).join('')}
+${bodyOf(path2)}
 </svg>`;
   }
   const wide = (Rout * OV - Rout) * U;

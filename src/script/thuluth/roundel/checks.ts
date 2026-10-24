@@ -136,3 +136,72 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
     }
   return { wordSpace, strayMarks, strayDots, doubled };
 }
+
+/** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */
+const EYED = new Set(['ف', 'ق', 'و', 'م', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ه', 'ة']);
+/** Letters with a tall stem. */
+const TALL = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
+export interface Crossings {
+  /** A stem passing through a horizontal: the crossing girift seeks. */
+  stemHorizontal: number;
+  /** Crossings touching a curve or an elbow, and those through a letter's eye (Derman: crossings only on straight
+   *  runs, never at the heads of eyed letters). */
+  curve: number;
+  eye: number;
+}
+/** Crossings between the strokes of different words, found exactly (segment against segment) and classed by the
+ *  letter each segment belongs to and its direction. */
+export function crossings(r: Roundel): Crossings {
+  type Seg = { ax: number; ay: number; bx: number; by: number; word: number; kind: 'stem' | 'horizontal' | 'curve' | 'eye' }; // prettier-ignore
+  const segs: Seg[] = [];
+  r.shapes.forEach((S, g) => {
+    const letter = new Map(S.b.placed.flatMap(p => ('g' in p ? [[p.li, p.c] as [number, string]] : [])));
+    S.b.strokes.forEach(st => {
+      if (st.mark) return;
+      for (let k = 0; k + 1 < st.s.length; k += 2) {
+        const p = st.s[k],
+          q = st.s[Math.min(st.s.length - 1, k + 2)],
+          c = letter.get(st.own?.[k] ?? -1) ?? '',
+          a = Math.abs(Math.atan2(q.y - p.y, q.x - p.x)),
+          horiz = a < 0.38 || a > Math.PI - 0.38,
+          upright = Math.abs(a - Math.PI / 2) < 0.45,
+          kind = upright && TALL.has(c) ? 'stem' : horiz ? 'horizontal' : EYED.has(c) ? 'eye' : 'curve';
+        segs.push({ ax: p.x + r.st[g].x, ay: p.y + r.st[g].y, bx: q.x + r.st[g].x, by: q.y + r.st[g].y, word: r.groups[g].word, kind }); // prettier-ignore
+      }
+    });
+  });
+  const cross = (s: Seg, t: Seg) => {
+    const d = (t.by - t.ay) * (s.bx - s.ax) - (t.bx - t.ax) * (s.by - s.ay);
+    if (!d) return false;
+    const u = ((t.bx - t.ax) * (s.ay - t.ay) - (t.by - t.ay) * (s.ax - t.ax)) / d,
+      v = ((s.bx - s.ax) * (s.ay - t.ay) - (s.by - s.ay) * (s.ax - t.ax)) / d;
+    return u >= 0 && u <= 1 && v >= 0 && v <= 1;
+  };
+  const out: Crossings = { stemHorizontal: 0, curve: 0, eye: 0 };
+  // a grid of cells, so only nearby segments are compared
+  const cell = 3,
+    grid = new Map<string, number[]>();
+  segs.forEach((s, i) => {
+    for (let x = Math.floor(Math.min(s.ax, s.bx) / cell); x <= Math.floor(Math.max(s.ax, s.bx) / cell); x++)
+      for (let y = Math.floor(Math.min(s.ay, s.by) / cell); y <= Math.floor(Math.max(s.ay, s.by) / cell); y++) {
+        const k = x + ',' + y;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k)!.push(i);
+      }
+  });
+  const seen = new Set<string>();
+  for (const ids of grid.values())
+    for (let a = 0; a < ids.length; a++)
+      for (let b = a + 1; b < ids.length; b++) {
+        const [i, j] = ids[a] < ids[b] ? [ids[a], ids[b]] : [ids[b], ids[a]],
+          s = segs[i],
+          t = segs[j];
+        if (s.word === t.word || seen.has(i + ':' + j) || !cross(s, t)) continue;
+        seen.add(i + ':' + j);
+        const kinds = [s.kind, t.kind];
+        if (kinds.includes('eye')) out.eye++;
+        else if (kinds.includes('curve')) out.curve++;
+        else if (kinds.includes('stem') && kinds.includes('horizontal')) out.stemHorizontal++;
+      }
+  return out;
+}

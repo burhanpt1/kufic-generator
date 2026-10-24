@@ -3,6 +3,7 @@
 import type { Thuluth } from '../engine';
 import type { BowlOptions, FrameOptions, RiseOptions, TailOptions } from './bowl';
 import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
+import { crossings } from './checks';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel, roundelOrderFault } from './compose';
 import type { DecoFeatures } from './deco';
@@ -162,6 +163,14 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
 }
 
 function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+  // girift, judged as drawn: each exact stem-through-horizontal crossing earns in proportion to the dial, each crossing
+  // at a curve costs, and one through an eye costs double (Derman)
+  const g = spec.compose?.girift ?? 0,
+    giriftScore = (r: Roundel) => {
+      if (!g) return 0;
+      const c = crossings(r);
+      return 10 * g * c.stemHorizontal - 0.5 * c.curve - c.eye;
+    };
   const all = composeRoundel(th, spec.text, spec.compose);
   if (!all.length) return null;
   const finish = (r: Roundel) =>
@@ -185,7 +194,7 @@ function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
       ...d,
       // a bowl that had to widen much to clear the letters ran into them as composed
       bowlOk: (d.r.bowlGrow ?? 0) <= 0.08,
-      score: taste[i] - 3 * d.f.missing - clashes(th, d.r) / 6 - roundelOrderFault(d.r),
+      score: taste[i] - 3 * d.f.missing - clashes(th, d.r) / 6 - roundelOrderFault(d.r) + giriftScore(d.r),
     }));
   const pool = judged.some(d => d.bowlOk)
     ? judged.filter(d => d.bowlOk)

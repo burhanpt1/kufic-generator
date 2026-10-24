@@ -20,6 +20,7 @@ const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelR
   stackAt: { text: 'شمير', set: { stackAt: ['شمير'] } },
   learnedStack: { text: 'حسين', set: { learnedStack: true } },
   girift: { text: BASMALA, set: { girift: 0.12 } },
+  hairline: { text: BASMALA, set: { hairline: 0.3 } },
   towers: { text: 'محمد', set: { towers: true }, with: { learnedStack: true, towerPull: 3, iters: 1500 } },
   towerPull: { text: 'محمد', set: { towerPull: 3 }, with: { learnedStack: true, towers: true, iters: 1500 } },
   rise: { text: 'الله', set: { rise: { most: 3, oval: 1 } }, with: { oval: 1.6 } },

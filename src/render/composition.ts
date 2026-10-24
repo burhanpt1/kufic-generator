@@ -309,6 +309,12 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
             : '',
           letters =
             (c.counters && it.counters ? `<path fill="${c.counters}" d="${it.counters}"/>` : '') +
+            (it.layers ?? [])
+              .map(
+                d =>
+                  `<path fill="url(#${gd})" stroke="${c.field}" stroke-width="${f2(it.hairline ?? 0.3)}" stroke-linejoin="round" paint-order="stroke" d="${d}"/>`,
+              )
+              .join('') + // prettier-ignore
             `<path fill="url(#${gd})" d="${it.ink}"/>` +
             it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('');
         if (it.fieldTiles) {

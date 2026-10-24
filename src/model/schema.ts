@@ -190,6 +190,9 @@ export interface RoundelRecipe {
   /** Stack the joins masters stack (learned from 70 Calliar thuluth compositions: before ra, zay, dal, hah, mim, final
    *  nun, waw, final ya), pulled by how often they do; off, only before hah and mim. */
   learnedStack?: boolean;
+  /** Hairline piercing for a single text: each group drawn in reading order, edged in the field's colour this wide
+   *  (pen units), so where one letter passes through another a fine gap shows which is on top. */
+  hairline?: number;
   /** Towers: three stacked joins in one letter group, on long connected runs (محمد, الحمد, العالمين). */
   towers?: boolean;
   /** How strongly towers are pulled for, against single stacks (1; the lab saw them win only when pulled hard). */
@@ -361,6 +364,7 @@ const roundelRecipe = z
     learnedStack: z.boolean(),
     girift: z.number().min(0).max(0.3),
     towers: z.boolean(),
+    hairline: z.number().min(0.05).max(1),
     towerPull: z.number().min(0).max(5),
     rise: z
       .object({ margin: z.number().min(0).max(10), most: z.number().min(1).max(4), oval: z.number().min(1).max(3) })

@@ -270,6 +270,8 @@ export interface Unit {
   mark?: boolean;
   orn?: boolean;
   dot?: Dot;
+  /** The group a letter stroke belongs to (its place in reading order). */
+  gi?: number;
 }
 /** Everything to draw, in writing order: the letters, their dots and marks, then the companion. */
 export function roundelParts(
@@ -280,7 +282,7 @@ export function roundelParts(
   r.shapes.forEach((S, i) => {
     const { x, y } = r.st[i],
       tint = r.groups[i]?.tint;
-    S.b.strokes.forEach(s => units.push({ ...s, tint, s: s.s.map(q => ({ x: q.x + x, y: q.y + y, w: q.w })) }));
+    S.b.strokes.forEach(s => units.push({ ...s, tint, gi: i, s: s.s.map(q => ({ x: q.x + x, y: q.y + y, w: q.w })) }));
     if (!o.solved) S.b.dots.forEach(([a, b, sc]) => units.push({ dot: [a + x, b + y, sc || 1, 0] }));
   });
   if (o.solved) o.solved.dots.forEach(d => units.push({ dot: d, tint: d[4] }));

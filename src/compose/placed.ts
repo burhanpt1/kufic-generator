@@ -78,6 +78,10 @@ export interface RoundelDrawing {
   oval: number;
   /** A shaped field (thuluth roundel fields.ts) instead of the oval: Rf is then its half-height. */
   field?: FieldName;
+  /** Hairline piercing: the letters of each group as a layer, in reading order, edged in the field's colour this
+   *  wide; ink then holds the marks and dots. */
+  hairline?: number;
+  layers?: string[];
   /** Field radius (vertical) and rim width. */
   Rf: number;
   rim: number;
@@ -101,7 +105,7 @@ export interface RoundelDrawing {
   deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number; taste: number };
   /** Reported checks (roundel/checks.ts): pen units of too-wide gaps inside words, vowels and dot groups nearer
    *  another word's or letter's ink than their own, length of ink drawn twice. */
-  checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number };
+  checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number; stemHorizontal?: number; curve?: number; eye?: number }; // prettier-ignore
 }
 
 /** Draw order, back to front. */

@@ -2,7 +2,7 @@
 // dots, ink drawn twice. Reported, not scored.
 import { describe, expect, it } from 'vitest';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { buildRoundel, roundelChecks } from '../src/script/thuluth/roundel';
+import { buildRoundel, composeRoundel, crossings, roundelChecks } from '../src/script/thuluth/roundel';
 
 const th = thuluth(ROUNDEL_PEN),
   build = () => buildRoundel(th, { text: 'حَسَن رَسُول عَلِيّ', compose: { elongate: true, cross: true, kern: true, tries: 1, iters: 1500, seed: 5 } })!; // prettier-ignore
@@ -44,5 +44,16 @@ describe('roundel checks', () => {
     // the first group's stroke laid again as the second group's, on the same ink
     b.r.shapes[1].b.strokes.push({ ...s, s: s.s.map(q => ({ ...q, x: q.x + d0.x - d1.x, y: q.y + d0.y - d1.y })), own: s.own?.slice() }); // prettier-ignore
     expect(roundelChecks(th, b.r, b.f).doubled).toBeGreaterThan(3);
+  });
+});
+
+describe('crossings', () => {
+  const th2 = thuluth(ROUNDEL_PEN),
+    at = (wp: { x: number; y: number }[]) => composeRoundel(th2, 'ا ببب', { fixed: { lv: [0, 0], wp }, tries: 1 })[0];
+  it('count a stem through a horizontal of another word, exactly', () => {
+    const crossed = at([{ x: 0, y: 0 }, { x: 5, y: 5 }]), // prettier-ignore
+      apart = at([{ x: 0, y: 0 }, { x: -8, y: 0 }]); // prettier-ignore
+    expect(crossings(crossed).stemHorizontal).toBeGreaterThanOrEqual(1);
+    expect(crossings(apart)).toEqual({ stemHorizontal: 0, curve: 0, eye: 0 });
   });
 });

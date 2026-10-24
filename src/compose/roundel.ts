@@ -12,6 +12,7 @@ import type { FinishOptions, RoundelOptions } from '../script/thuluth/roundel';
 import {
   buildRoundel,
   clashes,
+  crossings,
   musenna,
   musennaArt,
   refusesMirror,
@@ -103,12 +104,16 @@ export function drawRoundel(
     const art = roundelArt(th, b.r, b.f, { discScale: 1, counters: counters ? '#000000' : undefined }),
       tints = new Map<string, string>();
     let ink = '';
+    // with hairline piercing, each group's letters are a layer of their own, in reading order
+    const layers: string[] = [];
     for (const u of art.units) {
       const d = pathOf(u.polys, art.cx, art.cy);
       if (u.tint) tints.set(u.tint, (tints.get(u.tint) || '') + d);
+      else if (recipe.hairline && !u.mark && u.gi != null) layers[u.gi] = (layers[u.gi] || '') + d;
       else ink += d;
     }
     out = {
+      ...(recipe.hairline && { hairline: recipe.hairline, layers: layers.filter(Boolean) }),
       oval: art.oval,
       Rf: art.Rf,
       rim: art.rim,
@@ -125,7 +130,7 @@ export function drawRoundel(
       order: roundelOrderFault(b.r),
       clash: clashes(th, b.r),
       deco: (f => ({ texture: f.texture, knots: f.knots, unity: f.unity, span: f.span, fill: f.fill, noise: f.noise, taste: tasteScore(f, genreOf(text)) }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
-      checks: roundelChecks(th, b.r, b.f),
+      checks: { ...roundelChecks(th, b.r, b.f), ...crossings(b.r) },
     };
   }
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
