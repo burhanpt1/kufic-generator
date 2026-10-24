@@ -2,7 +2,7 @@
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
 import { LETTER_FIXES } from './fixes';
-import { dotPolys, nibPolys, polyPath, sampleStroke } from './pen';
+import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import { DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
@@ -215,7 +215,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       placed = setLine(text, o),
       strokes: Stroke[] = [],
       dots: Dot[] = [];
-    type Raw = { ang: number; pts: [number, number, number, number?][] };
+    type Raw = { ang: number; pts: [number, number, number, number?][]; own: number[]; wi: number };
     const raws: Raw[] = [];
     let open: Raw | null = null;
     const near = (a: readonly (number | undefined)[], b: readonly (number | undefined)[]) =>
@@ -230,9 +230,12 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           [p.ox - p.len * 0.5, p.oy - (o.sag ?? 0.3) * Math.min(1, p.len / 3), 1],
           [p.ox - p.len, p.oy, 1],
         ];
-        if (open) open.pts.push(...k);
-        else {
-          open = { ang, pts: [[p.ox, p.oy, 1], ...k] };
+        if (open) {
+          open.own[open.own.length - 1] = -1;
+          open.pts.push(...k);
+          open.own.push(...k.map(() => -1));
+        } else {
+          open = { ang, pts: [[p.ox, p.oy, 1], ...k], own: [-1, ...k.map(() => -1)], wi: -1 };
           raws.push(open);
         }
         return;
@@ -249,9 +252,12 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
                 [bx - 0.15, by + 0.25, 1],
                 [bx, by, 1],
               ];
-        if (open) open.pts.push(...k);
-        else {
-          open = { ang, pts: [[ax, ay, 1], ...k] };
+        if (open) {
+          open.own[open.own.length - 1] = -1;
+          open.pts.push(...k);
+          open.own.push(...k.map(() => -1));
+        } else {
+          open = { ang, pts: [[ax, ay, 1], ...k], own: [-1, ...k.map(() => -1)], wi: -1 };
           raws.push(open);
         }
         return;
@@ -276,25 +282,31 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             q[3],
           ]);
         let target: Raw;
+        const mine = pts.map(() => p.li);
         if (si === 0 && connects && open && near(pts[0], [p.ox, oy]) && (sd.ang ?? ang) === open.ang) {
+          // the span from the shared point onward is this letter's
+          open.own[open.own.length - 1] = p.li;
           open.pts.push(...pts.slice(1));
+          open.own.push(...mine.slice(1));
+          open.wi = p.wi;
           target = open;
         } else if (si === 0 && connects && open && near(pts[0], [p.ox, oy])) {
           // a letter written at its own pen angle (the heh's) hands over here: the pen turns where this letter begins
           const last = open.pts[open.pts.length - 1];
-          target = { ang: sd.ang ?? ang, pts: [[last[0], last[1], last[2]], ...pts.slice(1)] };
+          target = { ang: sd.ang ?? ang, pts: [[last[0], last[1], last[2]], ...pts.slice(1)], own: mine, wi: p.wi };
           raws.push(target);
         } else {
-          target = { ang: sd.ang ?? ang, pts };
+          target = { ang: sd.ang ?? ang, pts, own: mine, wi: p.wi };
           raws.push(target);
         }
         if (exitPt && near(target.pts[target.pts.length - 1], exitPt)) nextOpen = target;
       });
       open = nextOpen;
     });
-    raws.forEach(r =>
-      strokes.push({ ang: r.ang, s: sampleStroke(r.pts, st.tension), raw: r.pts.map(q => [q[0], q[1]]) }),
-    );
+    raws.forEach(r => {
+      const spans = sampleSpans(r.pts);
+      strokes.push({ ang: r.ang, s: sampleStroke(r.pts, st.tension), raw: r.pts.map(q => [q[0], q[1]]), own: spans.map(k => r.own[k]), wi: r.wi }); // prettier-ignore
+    });
     // the name of God: shadda and a small upright alif above the second lam
     if (!o.noAuto && (o.allah || /^ٱ?[اأ]?لله$/.test(text.trim()) || /(^|\s)الله(\s|$)/.test(text)))
       placed.forEach((p, i) => {

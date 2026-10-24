@@ -35,6 +35,7 @@
           <option value="plot">Plotter SVG (single line)</option>
           <option value="laser">Laser / CNC SVG (layers)</option>
           <option value="relief">Relief depth map (PNG)</option>
+          <option value="stl">3D print (STL)…</option>
         </select>
       </div>
     </header>
@@ -253,6 +254,55 @@
         </div>
       </section>
     </main>
+    <dialog id="print3d" class="print3d" aria-labelledby="p3Title">
+      <form method="dialog">
+        <h2 id="p3Title">3D print</h2>
+        <p class="note">
+          Turns a height map into a closed solid: white is high, black is low. Use the current design (its relief map:
+          letters highest, then bands, patterns and ground), or any image, such as a drawing, a logo or an exported PNG.
+        </p>
+        <div class="fields">
+          <label
+            >Source<select id="p3Source">
+              <option value="design">Current design</option>
+              <option value="image">Image file…</option>
+            </select></label
+          >
+          <label id="p3FileLabel" class="hidden"
+            >Image<input id="p3File" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          /></label>
+          <label>Width (mm)<input id="p3Width" type="number" min="10" max="1000" step="1" value="120" /></label>
+          <label>Base (mm)<input id="p3Base" type="number" min="0.2" max="50" step="0.2" value="2" /></label>
+          <label>Relief (mm)<input id="p3Relief" type="number" min="0" max="50" step="0.2" value="3" /></label>
+          <label
+            >Detail<select id="p3Res">
+              <option value="256">Draft (256)</option>
+              <option value="512" selected>Fine (512)</option>
+              <option value="1024">Very fine (1024)</option>
+            </select></label
+          >
+          <label
+            >Heights<select id="p3Levels">
+              <option value="0">Every grey</option>
+              <option value="2">Two levels (stamp)</option>
+              <option value="3">Three levels</option>
+              <option value="5">Five levels</option>
+            </select></label
+          >
+          <label
+            >Cut away below (%)<input id="p3Cut" type="number" min="0" max="99" step="1" value="5"
+          /></label>
+          <label>Smooth (px)<input id="p3Blur" type="number" min="0" max="10" step="1" value="0" /></label>
+          <label class="check"><input id="p3Invert" type="checkbox" /> Dark is high</label>
+        </div>
+        <canvas id="p3Preview" class="p3preview" width="0" height="0"></canvas>
+        <p id="p3Info" class="note"></p>
+        <div class="actions">
+          <button id="p3Make" class="primary" value="" type="button">Make STL</button>
+          <button value="close">Close</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="./src/studio/ui/main.ts"></script>
   </body>
 </html>

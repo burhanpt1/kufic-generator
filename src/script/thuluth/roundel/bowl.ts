@@ -2,6 +2,8 @@
 // drawn, and the small adjustments a calligrapher makes by hand (a smaller conjunction set under a letter).
 import type { PlacedLetter, Thuluth } from '../engine';
 import { isLetter } from '../engine';
+import { redraw } from '../drawn';
+import { FIELDS, fitField } from './fields';
 import { sampleStroke } from '../pen';
 import type { SkelPt } from '../types';
 import type { Roundel } from './compose';
@@ -147,8 +149,8 @@ export function shapeBowl(th: Thuluth, r: Roundel, o: BowlOptions = {}): Roundel
   // a free bowl is the whole letter: its head, a short tooth turning in at the top, then the bowl, as one stroke
   if (free) {
     const head: SkelPt[] = [[J.x + 1.7, J.y + 0.2, 0.45], [J.x + 1.0, J.y + 0.95, 1], [J.x + 0.2, J.y + 0.45, 1]];
-    st.s = sampleStroke([...head, ...pts.slice(1)].map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension); // prettier-ignore
-  } else st.s = st.s.slice(0, at.qi + 1).concat(sampleStroke(pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), th.style.tension)); // prettier-ignore
+    redraw(st, 0, [...head, ...pts.slice(1)].map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), B.li, th.style.tension); // prettier-ignore
+  } else redraw(st, at.qi + 1, pts.slice(1).map(([x, y, w]) => [x - G.x, y - G.y, w] as SkelPt), B.li, th.style.tension); // prettier-ignore
   // the letter's vowels sit at its start; its dots inside the bowl, low and to the left
   B.g = {
     s: [
@@ -224,9 +226,19 @@ export function fitFrame(th: Thuluth, r: Roundel, o: FrameOptions = {}): Finishe
     const units = roundelParts(r, { solved: f.solved, companion: f.companion }),
       pts: [number, number, number][] = [];
     units.forEach(u => {
+      // a shaped field holds the letters, dots and vowels; the ornaments then fill what it leaves
+      if (r.disc.field && u.orn) return;
       if (u.s) u.s.forEach((q, i) => i % 2 === 0 && pts.push([q.x, q.y, (u.nib || nib) * 0.7]));
       if (u.dot) pts.push([u.dot[0], u.dot[1], nib * 0.8]);
     });
+    if (r.disc.field) {
+      // a shaped field: the smallest of its shape that holds everything drawn
+      const F = fitField(r.disc.field, pts);
+      r.disc = { ...r.disc, cx: F.cx, cy: F.cy, r: F.k / 1.02, oval: FIELDS[r.disc.field].aspect };
+      f = finishRoundel(th, r, '', o);
+      f.discScale = 1.0;
+      continue;
+    }
     const xs = pts.map(q => q[0]),
       ys = pts.map(q => q[1]),
       mx = (Math.min(...xs) + Math.max(...xs)) / 2,
@@ -500,7 +512,7 @@ export function extendTails(th: Thuluth, r: Roundel, o: TailOptions = {}): Round
     );
     const st = S.b.strokes[best.si];
     r.tailsDrawn = (r.tailsDrawn ?? 0) + 1;
-    st.s = st.s.slice(0, best.qi).concat(sampleStroke(tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), th.style.tension)); // prettier-ignore
+    redraw(st, best.qi, tail.map(([x, y, w]) => [P.ox + x * sc, (P.oy || 0) + y * sc, w] as SkelPt), P.li, th.style.tension); // prettier-ignore
   }
   return r;
 }

@@ -67,6 +67,13 @@ export interface Stroke {
   raw?: [number, number][];
   tint?: string;
   mark?: boolean;
+  /** An ornament set in a gap (not a vowel or a sign): it fills what space is left, and does not size the field. */
+  orn?: boolean;
+  /** Which letter drew each sample: its index in the word (-1 for a join, a kashida or a stacked join's descent), so
+   *  checks and crossings can tell letters apart within one continuous stroke. Absent on marks. */
+  own?: number[];
+  /** The word the stroke belongs to (its index in the line). */
+  wi?: number;
 }
 /** A polygon, as a flat list of points. */
 export type Poly = [number, number][];

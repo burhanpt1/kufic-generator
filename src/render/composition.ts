@@ -1,6 +1,7 @@
 // Placed -> SVG (COMPOSITION_ENGINE.md §6). One SVG per composition, built from layers in z-order (ground,
 // patterns, spandrels, letters, separators, features). Every id (clip paths, patterns, gradients) carries a
 // per-render prefix, so several compositions can be inlined on one page.
+import { fieldPath, finialPath } from '../script/thuluth/roundel/fields';
 import type { Area, Placed, PlacedItem, StripPlace } from '../compose/placed';
 import { LAYER_ORDER, layerOf } from '../compose/placed';
 import { placeMap } from '../compose/textBorder';
@@ -283,8 +284,11 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
           OV = it.oval,
           Rout = it.Rf + it.rim,
           wide = Rout * OV - Rout,
+          // an oval of half-axes (rx, ry), or a shaped field at half-height ry (its own width)
           e = (rx: number, ry: number, fill: string, w: number) =>
-            `<ellipse cx="0" cy="0" rx="${f2(rx)}" ry="${f2(ry)}" fill="${fill}" stroke="${c.line}" stroke-width="${w}"/>`;
+            it.field
+              ? `<path d="${fieldPath(it.field, ry)}" fill="${fill}" stroke="${c.line}" stroke-width="${w}"/>`
+              : `<ellipse cx="0" cy="0" rx="${f2(rx)}" ry="${f2(ry)}" fill="${fill}" stroke="${c.line}" stroke-width="${w}"/>`; // prettier-ignore
         defs +=
           `<linearGradient id="${gd}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.letters}"/><stop offset="0.5" stop-color="${c.sheen}"/><stop offset="1" stop-color="${c.letters}"/></linearGradient>` +
           `<radialGradient id="${fd}" cx="0.5" cy="0.45" r="0.6"><stop offset="0" stop-color="${c.field}" stop-opacity="0.85"/><stop offset="1" stop-color="${c.field}"/></radialGradient>`;
@@ -297,9 +301,11 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
                 return `url(#${rd})`;
               })();
         const at = `<g transform="translate(${f2(px)} ${f2(py)}) scale(${f2(it.s * U)})">`,
+          fin = it.field && it.framed ? finialPath(it.field, Rout, it.rim * 1.8) : '',
           frame = it.framed
             ? e(Rout + it.rim * (OV - 1) + wide, Rout, rim, 0.12) +
-              (it.rimStyle === 'single' ? '' : e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08))
+              (it.rimStyle === 'single' ? '' : e(Rout - it.rim * 0.32 + wide, Rout - it.rim * 0.32, 'none', 0.08)) +
+              (fin ? `<path d="${fin}" fill="${rim}" stroke="${c.line}" stroke-width="0.06"/>` : '')
             : '',
           letters =
             (it.counterTints
@@ -307,6 +313,12 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
               : c.counters && it.counters
                 ? `<path fill="${c.counters}" d="${it.counters}"/>`
                 : '') +
+            (it.layers ?? [])
+              .map(
+                d =>
+                  `<path fill="url(#${gd})" stroke="${c.field}" stroke-width="${f2(it.hairline ?? 0.3)}" stroke-linejoin="round" paint-order="stroke" d="${d}"/>`,
+              )
+              .join('') + // prettier-ignore
             `<path fill="url(#${gd})" d="${it.ink}"/>` +
             it.tints.map(t => `<path fill="${t.colour}" d="${t.d}"/>`).join('');
         if (it.fieldTiles) {
@@ -317,12 +329,14 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
             ry = it.Rf * it.s * U,
             edge = ft.scale * U,
             all = it.ink + it.tints.map(t => t.d).join('');
-          defs += `<clipPath id="${cid}"><ellipse cx="${f2(px)}" cy="${f2(py)}" rx="${f2(rx)}" ry="${f2(ry)}"/></clipPath>`;
+          defs += it.field
+            ? `<clipPath id="${cid}"><path transform="translate(${f2(px)} ${f2(py)}) scale(${f2(it.s * U)})" d="${fieldPath(it.field, it.Rf)}"/></clipPath>` // prettier-ignore
+            : `<clipPath id="${cid}"><ellipse cx="${f2(px)}" cy="${f2(py)}" rx="${f2(rx)}" ry="${f2(ry)}"/></clipPath>`;
           out =
             at +
             frame +
             '</g>' +
-            `<g clip-path="url(#${cid})"><rect x="${f2(px - rx)}" y="${f2(py - ry)}" width="${f2(rx * 2)}" height="${f2(ry * 2)}" fill="${o.paper}"/>` + // prettier-ignore
+            `<g clip-path="url(#${cid})"><rect x="${f2(px - 2 * Math.max(rx, ry))}" y="${f2(py - 2 * ry)}" width="${f2(4 * Math.max(rx, ry))}" height="${f2(4 * ry)}" fill="${o.paper}"/>` + // prettier-ignore
             iznikField(Math.max(W, H), {
               fold: ft.fold,
               edge,
@@ -337,7 +351,8 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
               turq: o.ink2,
               red: o.mark,
             }) + // prettier-ignore
-            `<ellipse cx="${f2(px)}" cy="${f2(py)}" rx="${f2(rx)}" ry="${f2(ry)}" fill="${c.field}" fill-opacity="${f2(ft.wash ?? 0.5)}"/></g>` + // prettier-ignore
+            // the wash, clipped to the field (a shaped field can be wider than the oval's box)
+            `<rect x="${f2(px - 2 * Math.max(rx, ry))}" y="${f2(py - 2 * ry)}" width="${f2(4 * Math.max(rx, ry))}" height="${f2(4 * ry)}" fill="${c.field}" fill-opacity="${f2(ft.wash ?? 0.5)}"/></g>` + // prettier-ignore
             at +
             e(it.Rf + wide, it.Rf, 'none', it.framed ? 0.1 : 0) +
             `<path fill="${c.field}" stroke="${c.field}" stroke-width="1.1" stroke-linejoin="round" d="${all}"/>` +

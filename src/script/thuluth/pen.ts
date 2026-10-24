@@ -50,6 +50,26 @@ export function sampleStroke(pts: readonly SkelPt[], tension = 0.5, per = 14): S
   return out;
 }
 
+/** For each sample sampleStroke(pts, ·, per) gives, the index of the skeleton point its span starts from (the last
+ *  point for the final sample of each piece): how a sample is traced back to the letter that drew it. */
+export function sampleSpans(pts: readonly SkelPt[], per = 14): number[] {
+  const out: number[] = [];
+  let start = 0;
+  const ends: number[] = [];
+  for (let i = 1; i < pts.length; i++) if (pts[i][3] && i < pts.length - 1) ends.push(i);
+  ends.push(pts.length - 1);
+  ends.forEach((end, pi) => {
+    if (end === start) {
+      out.push(start);
+      return;
+    }
+    for (let i = start; i < end; i++) for (let k = i === start && pi > 0 ? 1 : 0; k < per; k++) out.push(i);
+    out.push(end);
+    start = end;
+  });
+  return out;
+}
+
 const ccw = (q: Poly): Poly => {
   let ar = 0;
   for (let k = 0; k < 4; k++) {

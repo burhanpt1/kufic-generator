@@ -1,0 +1,407 @@
+[
+{
+"id": "c00",
+"tag": "basmala storeys girift0.04 seed29",
+"noise": null
+},
+{
+"id": "c01",
+"tag": "basmala storeys girift0.04 seed11",
+"noise": null
+},
+{
+"id": "c02",
+"tag": "basmala girift0.12 seed11",
+"noise": null
+},
+{
+"id": "c03",
+"tag": "basmala girift0.12 seed29",
+"noise": null
+},
+{
+"id": "c04",
+"tag": "light-verse fromTop seed29",
+"noise": null
+},
+{
+"id": "c05",
+"tag": "light-verse fromTop seed47",
+"noise": null
+},
+{
+"id": "c06",
+"tag": "hamd plain seed11",
+"noise": null
+},
+{
+"id": "c07",
+"tag": "hamd plain seed47",
+"noise": null
+},
+{
+"id": "c08",
+"tag": "hamd plain seed29",
+"noise": null
+},
+{
+"id": "c09",
+"tag": "hamd girift seed29",
+"noise": null
+},
+{
+"id": "c10",
+"tag": "hamd girift seed47",
+"noise": null
+},
+{
+"id": "c11",
+"tag": "hamd girift seed11",
+"noise": null
+},
+{
+"id": "c12",
+"tag": "basmala old-marks",
+"noise": null
+},
+{
+"id": "c13",
+"tag": "basmala new-marks",
+"noise": null
+},
+{
+"id": "c14",
+"tag": "light-verse old-marks",
+"noise": null
+},
+{
+"id": "c15",
+"tag": "light-verse new-marks",
+"noise": null
+},
+{
+"id": "c16",
+"tag": "basmala pear seed29",
+"noise": null
+},
+{
+"id": "c17",
+"tag": "basmala pear seed47",
+"noise": null
+},
+{
+"id": "c18",
+"tag": "ali musenna wide",
+"noise": null
+},
+{
+"id": "c19",
+"tag": "ali musenna tall greatya v0",
+"noise": null
+},
+{
+"id": "c20",
+"tag": "ali musenna tall greatya v2",
+"noise": null
+},
+{
+"id": "c21",
+"tag": "ali musenna tall greatya v4",
+"noise": null
+},
+{
+"id": "c22",
+"tag": "ali musenna heavy ornaments v0",
+"noise": null
+},
+{
+"id": "c23",
+"tag": "ali musenna heavy ornaments v1",
+"noise": null
+},
+{
+"id": "c24",
+"tag": "ali musenna heavy ornaments v2",
+"noise": null
+},
+{
+"id": "c25",
+"tag": "ali musenna heavy ornaments v3",
+"noise": null
+},
+{
+"id": "c26",
+"tag": "ali lamp hairline",
+"noise": null
+},
+{
+"id": "c27",
+"tag": "ali knot double-symmetric",
+"noise": null
+},
+{
+"id": "c28",
+"tag": "ali cup hairline",
+"noise": null
+},
+{
+"id": "c29",
+"tag": "ali lamp in drop",
+"noise": null
+},
+{
+"id": "c30",
+"tag": "muhammad musenna v0",
+"noise": null
+},
+{
+"id": "c31",
+"tag": "muhammad musenna v1",
+"noise": null
+},
+{
+"id": "c32",
+"tag": "ali cup COMBINED shared stem",
+"noise": null
+},
+{
+"id": "c33",
+"tag": "ali lamp COMBINED",
+"noise": null
+},
+{
+"id": "c34",
+"tag": "ali knot COMBINED shared stem",
+"noise": null
+},
+{
+"id": "c35",
+"tag": "muhammad COMBINED v0",
+"noise": -1.199062777611669
+},
+{
+"id": "c36",
+"tag": "muhammad COMBINED v1",
+"noise": -1.1665883164727142
+},
+{
+"id": "c37",
+"tag": "hu COMBINED v0",
+"noise": -1.1517541801722024
+},
+{
+"id": "c38",
+"tag": "hu COMBINED v1",
+"noise": -1.0983443022584334
+},
+{
+"id": "c40",
+"tag": "basmala MAXIMAL stacking",
+"noise": 0.36243716047437013
+},
+{
+"id": "c41",
+"tag": "hamd-rab moderate stacking",
+"noise": 1.7999941239395922
+},
+{
+"id": "c42",
+"tag": "hamd-rab MAXIMAL stacking",
+"noise": -0.17486996223546203
+},
+{
+"id": "c43",
+"tag": "salawat moderate stacking",
+"noise": 2.673790714429874
+},
+{
+"id": "c44",
+"tag": "salawat MAXIMAL stacking",
+"noise": 2.569151597043879
+},
+{
+"id": "c45",
+"tag": "salawat TOP-DOWN balanced interlocked moderate",
+"noise": 1.6499426581756769
+},
+{
+"id": "c46",
+"tag": "salawat TOP-DOWN balanced interlocked maximal",
+"noise": 1.9346461935082857
+},
+{
+"id": "c47",
+"tag": "basmala TOP-DOWN balanced interlocked moderate",
+"noise": 0.5899595482863716
+},
+{
+"id": "c48",
+"tag": "basmala PATH line",
+"noise": 2.9972170603504367
+},
+{
+"id": "c49",
+"tag": "basmala PATH zigzag",
+"noise": 1.6028800497780393
+},
+{
+"id": "c50",
+"tag": "basmala PATH bolt",
+"noise": 4.78792831494351
+},
+{
+"id": "c51",
+"tag": "basmala PATH cup",
+"noise": 2.5667983898008937
+},
+{
+"id": "c52",
+"tag": "basmala PATH calliar3",
+"noise": 0.6525714274220757
+},
+{
+"id": "c53",
+"tag": "basmala PATH calliar6",
+"noise": 1.374248524274293
+},
+{
+"id": "c54",
+"tag": "salawat PATH zigzag",
+"noise": 3.282632216182096
+},
+{
+"id": "c55",
+"tag": "salawat PATH bolt",
+"noise": 5.697511984030759
+},
+{
+"id": "c56",
+"tag": "salawat PATH diagonal",
+"noise": 6.348794362167535
+},
+{
+"id": "c57",
+"tag": "salawat PATH calliar4",
+"noise": 4.135091229714448
+},
+{
+"id": "c58",
+"tag": "salawat PATH calliar3",
+"noise": 2.6076453998108358
+},
+{
+"id": "c59",
+"tag": "hamd-rab PATH line",
+"noise": 3.1035068194566464
+},
+{
+"id": "c60",
+"tag": "hamd-rab PATH diagonal",
+"noise": 4.403542839773122
+},
+{
+"id": "c61",
+"tag": "hamd-rab PATH cup",
+"noise": 4.416697108031157
+},
+{
+"id": "c62",
+"tag": "hamd-rab PATH calliar1",
+"noise": 4.709172322829033
+},
+{
+"id": "c63",
+"tag": "hamd-rab PATH calliar3",
+"noise": 1.1281719381317319
+},
+{
+"id": "c64",
+"tag": "basmala LANES diag2",
+"noise": 1.5756985503780936
+},
+{
+"id": "c65",
+"tag": "basmala LANES diag3",
+"noise": 0.18418318704907816
+},
+{
+"id": "c66",
+"tag": "basmala LANES rows2",
+"noise": 0.6509100115966889
+},
+{
+"id": "c67",
+"tag": "basmala LANES rows3",
+"noise": 0.6613257950312051
+},
+{
+"id": "c68",
+"tag": "basmala LANES steep2",
+"noise": 0.937960241431604
+},
+{
+"id": "c69",
+"tag": "basmala LANES stag2",
+"noise": 1.03629209445138
+},
+{
+"id": "c70",
+"tag": "basmala LANES stag3",
+"noise": 0.11965410116736558
+},
+{
+"id": "c71",
+"tag": "salawat LANES rows3",
+"noise": 1.3124155509808315
+},
+{
+"id": "c72",
+"tag": "salawat LANES stag3",
+"noise": 0.9950835071659216
+},
+{
+"id": "c73",
+"tag": "hamd-rab LANES rows2",
+"noise": 2.2399593007901357
+},
+{
+"id": "c74",
+"tag": "hamd-rab LANES stag2",
+"noise": 1.633891969093047
+},
+{
+"id": "c75",
+"tag": "basmala FITTED lanes:180",
+"noise": 0.9705956830241385
+},
+{
+"id": "c76",
+"tag": "basmala FITTED lanes:225",
+"noise": 1.5756985503780936
+},
+{
+"id": "c77",
+"tag": "basmala FITTED lanes:240",
+"noise": 0.5870221386549928
+},
+{
+"id": "c78",
+"tag": "basmala FITTED lanes:250",
+"noise": 1.0562574526901263
+},
+{
+"id": "c79",
+"tag": "basmala FITTED lanes:240 +reading rules",
+"noise": 0.9166238679022786
+},
+{
+"id": "c80",
+"tag": "basmala FITTED lanes:250 +reading rules",
+"noise": 0.4909256367327639
+},
+{
+"id": "c81",
+"tag": "basmala FITTED lanes:180 +reading rules",
+"noise": 1.2123891301169287
+}
+]

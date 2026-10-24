@@ -2,6 +2,7 @@
 // in cells, centred on the region's outline; canvas.origin is where that centre sits on the canvas.
 import type { Pt } from '../geometry/types';
 import type { IznikSpec, PatternSpec, RoundelColours, SeparatorKind, Style } from '../model/schema';
+import type { FieldName } from '../script/thuluth/roundel/fields';
 import type { CellStrip, Strip } from '../script/types';
 
 /** Where a strip goes: strip (x, y) in cells -> canvas. y runs from the band's outer edge inward. */
@@ -75,6 +76,12 @@ export type PlacedItem =
 /** A roundel's drawing in its own units (pen units, y down, centred on the oval), ready to scale onto the canvas. */
 export interface RoundelDrawing {
   oval: number;
+  /** A shaped field (thuluth roundel fields.ts) instead of the oval: Rf is then its half-height. */
+  field?: FieldName;
+  /** Hairline piercing: the letters of each group as a layer, in reading order, edged in the field's colour this
+   *  wide; ink then holds the marks and dots. */
+  hairline?: number;
+  layers?: string[];
   /** Field radius (vertical) and rim width. */
   Rf: number;
   rim: number;
@@ -95,6 +102,12 @@ export interface RoundelDrawing {
   /** Stacked pieces out of reading order (0: none); stroke points of different letters touching (0: none). */
   order: number;
   clash: number;
+  /** The decorative critic's features (roundel/deco.ts): texture, knots, unity, span and fill of the letters, and
+   *  noise (unresolved contact; lower is quieter). */
+  deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number; taste: number };
+  /** Reported checks (roundel/checks.ts): pen units of too-wide gaps inside words, vowels and dot groups nearer
+   *  another word's or letter's ink than their own, length of ink drawn twice. */
+  checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number; stemHorizontal?: number; curve?: number; eye?: number }; // prettier-ignore
 }
 
 /** Draw order, back to front. */
