@@ -10,7 +10,7 @@ import type { Stroke } from '../src/script/thuluth/types';
 const th = thuluth(ROUNDEL_PEN),
   nib = th.style.nib;
 const build = (text: string, frame: FrameOptions = {}) => {
-  const spec: RoundelSpec = { text, compose: { elongate: true, cross: true, kern: true, tries: 2, iters: 1500 }, frame: { ornaments: true, density: 0.4, ...frame } }; // prettier-ignore
+  const spec: RoundelSpec = { text, compose: { elongate: true, cross: true, kern: true, tries: 2, iters: 1500 }, frame: { ornaments: true, density: 0.4, ...frame }, judge: 1 }; // prettier-ignore
   return buildRoundel(th, spec)!.f.solved!;
 };
 const box = (s: Stroke) => {
@@ -60,7 +60,7 @@ describe('mark rules', () => {
   });
 });
 
-describe('marks, second generation', () => {
+describe('marks, second generation', { timeout: 180_000 }, () => {
   const text = 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ';
   it('thin from Sâmi to Râkım: fathas go first, the shadda and dagger alif stay', () => {
     const dense = build(text, { markDensity: 1 }),

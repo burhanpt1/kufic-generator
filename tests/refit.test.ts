@@ -39,10 +39,19 @@ function labSet() {
   return { votes, feats, genre, checks: {} as Record<string, Record<string, number>> };
 }
 /** A newer round from the published rating page: its candidates (items.json: features, checks, genre, from the
- *  sweep) and the votes read back from the page's store (votes.json). */
+ *  sweep), the votes read back from the page's store (votes.json) and the compositions set aside as disliked
+ *  (dislikes.json, from its "dislikes" collection). */
 function roundSet(d: string) {
   const man: { id: string; features: DecoFeatures; checks: Record<string, number> | null; genre: Genre }[] = JSON.parse(readFileSync(join(d, 'items.json'), 'utf8')).items, // prettier-ignore
-    votes: Vote[] = JSON.parse(readFileSync(join(d, 'votes.json'), 'utf8'));
+    rated: Vote[] = JSON.parse(readFileSync(join(d, 'votes.json'), 'utf8')),
+    // compositions set aside as disliked (dislikes.json, ids): each loses to up to five of its genre that won a vote
+    disliked: string[] = existsSync(join(d, 'dislikes.json')) ? JSON.parse(readFileSync(join(d, 'dislikes.json'), 'utf8')) : [], // prettier-ignore
+    genreOf = Object.fromEntries(man.map(m => [m.id, m.genre])),
+    winners = [...new Set(rated.flatMap(v => (v.w === 'a' ? [v.a] : v.w === 'b' ? [v.b] : [])))].filter(id => !disliked.includes(id)), // prettier-ignore
+    votes = [
+      ...rated,
+      ...disliked.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 5).map(w => ({ a: w, b: id, w: 'a' as const }))), // prettier-ignore
+    ];
   return {
     votes,
     feats: Object.fromEntries(man.map(m => [m.id, m.features])),

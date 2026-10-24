@@ -11,9 +11,11 @@ What the critic is fitted to (`npm run refit`, tests/refit.test.ts, writing `src
   t, by}).
 
 To refit after a batch of votes: read the page's `votes` collection back (Claude: ArtifactData list on the page's URL),
-save it as `rounds/<date>/votes.json` (an array of {a, b, w, t}), and run `npm run refit`. It reports each genre's
+save it as `rounds/<date>/votes.json` (an array of {a, b, w, t}); save the `dislikes` collection's ids as
+`rounds/<date>/dislikes.json` (each disliked composition counts as losing to up to five of its genre that won a vote);
+and run `npm run refit`. It reports each genre's
 leave-one-out accuracy, and for each reported check whether adding it would raise that accuracy: a check is promoted
 into the score only when it does.
 
-A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
+The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
