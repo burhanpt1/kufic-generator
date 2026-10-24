@@ -9,6 +9,10 @@ export const TEXTS = {
   ayatKursi:
     'الله لا اله الا هو الحي القيوم لا تأخذه سنة ولا نوم له ما في السماوات وما في الأرض من ذا الذي يشفع عنده الا بإذنه يعلم ما بين أيديهم وما خلفهم ولا يحيطون بشيء من علمه الا بما شاء وسع كرسيه السماوات والأرض ولا يئوده حفظهما وهو العلي العظيم',
   yaAli: 'يا علي مدد',
+  /** Al-Ahzab 33:33, the verse of purification. */
+  tathir: 'انما يريد الله ليذهب عنكم الرجس اهل البيت ويطهركم تطهيرا',
+  salawat: 'اللهم صل على محمد وآل محمد',
+  panjatan: 'محمد علي فاطمة الحسن الحسين',
   muhammad: 'محمد',
 };
 
@@ -216,6 +220,31 @@ export const PRESETS: { id: string; name: string; comp: Composition }[] = [
         fill: { type: 'monogram', text: 'mono', method: 'pinwheel', params: { H: 9, stretch: 2, nest: true } },
       },
       { type: 'pattern', pattern: { tiling: 'hex', angle: 60, scale: 4 } },
+    ),
+  },
+  {
+    // Kufic rings round a thuluth centre, as on the Ahl al-Bayt sheet (PLAN-2 §9): the verse of purification in a
+    // Kufic ring, the salawat in a second, the five names in thuluth on fitted lanes in the centre
+    id: 'ahl-al-bayt',
+    name: 'Ahl al-Bayt: Kufic rings round a thuluth centre',
+    comp: comp(
+      3333,
+      style({ palette: PALETTES.cobalt }),
+      { verse: slot(TEXTS.tathir), salawat: slot(TEXTS.salawat), names: slot(TEXTS.panjatan, { repeat: 'once' }) },
+      {
+        type: 'region',
+        outline: { kind: 'circle' },
+        borders: [
+          { type: 'textBorder', text: 'verse', separator: { kind: 'braid', width: 3 } },
+          { type: 'textBorder', text: 'salawat', separator: { kind: 'pearls', width: 2 } },
+        ],
+        fill: {
+          type: 'roundel',
+          text: 'names',
+          recipe: { elongate: true, cross: true, kern: true, lanes: {}, ornaments: true, density: 0.4, tries: 3 },
+          colours: { field: '#1F3F8C', letters: '#F1EFE8', sheen: '#F1EFE8', rim: '#1F3F8C', line: '#1F3F8C' },
+        },
+      },
     ),
   },
 ];
