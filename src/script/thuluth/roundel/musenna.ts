@@ -148,6 +148,9 @@ export interface MusennaArt {
   shared: { dots: number; marks: number; strokes: number; dropped: number };
 }
 
+/** Letters with a stem that can stand on the axis. */
+const STEMS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
+
 const mirrorPoly = (q: Poly, ax: number): Poly => q.map(([x, y]) => [2 * ax - x, y] as [number, number]).reverse();
 
 /** Draw a candidate as one design (renderMusennaCombined), with `shareStrokes` (on by default) fusing narrow letter
@@ -207,13 +210,23 @@ export function musennaArt(th: Thuluth, c: MusennaCandidate, o: { shareStrokes?:
       shared.marks++;
       both(strokeOf(u, s)); // its own mirror image covers it: drawn once, and exactly symmetric
     });
-  // letters: the original and its mirror image; a narrow stroke on the axis is shared, centred on it
+  // letters: the original and its mirror image; a tall stroke standing on the axis is shared, centred on it. Tall:
+  // drawn mostly by a letter with a stem (alif, lam, kaf, ta, za, known from the stroke's owners), and upright
+  const tall = (u: Unit) => {
+    const S = u.gi != null ? c.r.shapes[u.gi] : null;
+    if (!S || !u.own) return false;
+    const letter = new Map(S.b.placed.flatMap(p => ('g' in p ? [[p.li, p.c] as [number, string]] : []))),
+      mine = u.own.filter(li => STEMS.has(letter.get(li) ?? '')).length,
+      ys = u.s!.map(q => q.y),
+      xs = u.s!.map(q => q.x);
+    return mine > u.own.length / 2 && Math.max(...ys) - Math.min(...ys) > 2 * (Math.max(...xs) - Math.min(...xs));
+  };
   c.units.filter(isLetter).forEach(u => {
     const xs = u.s!.map(q => q.x),
       x0 = Math.min(...xs),
       x1 = Math.max(...xs),
       cx = (x0 + x1) / 2;
-    if (o.shareStrokes !== false && Math.abs(cx - ax) < nib * 1.1 && (x1 - x0) / 2 < nib * 2.2) {
+    if (o.shareStrokes !== false && Math.abs(cx - ax) < nib * 1.1 && (x1 - x0) / 2 < nib * 2.2 && tall(u)) {
       shared.strokes++;
       both(
         strokeOf(

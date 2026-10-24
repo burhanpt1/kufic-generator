@@ -64,7 +64,8 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
         if (family.startsWith('path:')) recipe.path = family.slice(5);
         const tag = `${o.prefix ?? 's'}${String(id++).padStart(3, '0')}`;
         if (family === 'mirror') {
-          const c = mirrored.filter((q, i) => !mirrored.slice(0, i).some(p => nearSame(p.features, q.features)))[k];
+          // only designs with a tall stroke shared on the axis
+          const c = mirrored.filter((q, i) => (q.shared ?? 0) > 0 && !mirrored.slice(0, i).some(p => nearSame(p.features, q.features)))[k]; // prettier-ignore
           if (!c) continue;
           const art = musennaArt(th, c);
           add({ id: tag, text, family, seed, recipe, features: featuresIn(th, c.units, { cx: c.axis, cy: c.cy, rx: c.rad, ry: c.rad }, 480, c.axis), checks: null, svg: musennaSVG(art, { U: o.U ?? 8 }) }); // prettier-ignore

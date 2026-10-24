@@ -77,6 +77,10 @@ describe('the mirrored roundel filler', () => {
     expect(p.meta.fill).toMatchObject({ type: 'roundel', ok: true });
     expect(p.items.some(i => i.type === 'roundel')).toBe(true);
   });
+  it('offers mirroring only where a tall stroke can be shared on the axis', () => {
+    const p = resolve(comp('محمد'));
+    expect(p.meta.fill).toMatchObject({ type: 'roundel', ok: false, note: 'no tall stroke to share on the axis: not mirrored' }); // prettier-ignore
+  });
   it('refuses to mirror الله, and says so', () => {
     const p = resolve(comp('الله'));
     expect(p.meta.fill).toMatchObject({ type: 'roundel', ok: false, note: 'الله is not mirrored' });

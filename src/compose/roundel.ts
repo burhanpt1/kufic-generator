@@ -151,7 +151,9 @@ function drawMusenna(
     { tries, iters, seed } = compose,
     // only what the recipe sets overrides the mirrored composer's own defaults (a pinned layout does not apply)
     rest = Object.fromEntries(Object.entries(compose).filter(([k, v]) => v !== undefined && !['fixed', 'tries', 'iters', 'seed'].includes(k))) as RoundelOptions; // prettier-ignore
-  const c = musenna(th, text, { compose: rest, finish: frame, tries, iters, seeds: seed != null ? [seed] : undefined })[0]; // prettier-ignore
+  // mirroring is offered only where a tall stroke can stand on the axis, shared by both halves (علي's lam); where the
+  // halves only face each other (محمد) it reads as a mask
+  const c = musenna(th, text, { compose: rest, finish: frame, tries, iters, seeds: seed != null ? [seed] : undefined }).find(q => (q.shared ?? 0) > 0); // prettier-ignore
   if (!c) return null;
   const art = musennaArt(th, c, { shareStrokes: m.shareStrokes }),
     Rf = art.rad * 1.036,
@@ -202,7 +204,7 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
   }
   const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters);
   if (!art) {
-    ctx.fill = { type: 'roundel', ok: false, note: 'no letters' };
+    ctx.fill = { type: 'roundel', ok: false, note: f.recipe?.mirror ? 'no tall stroke to share on the axis: not mirrored' : 'no letters' }; // prettier-ignore
     return;
   }
   const framed = f.frame !== false,

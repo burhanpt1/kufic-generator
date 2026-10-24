@@ -270,8 +270,9 @@ export interface Unit {
   mark?: boolean;
   orn?: boolean;
   dot?: Dot;
-  /** The group a letter stroke belongs to (its place in reading order). */
+  /** The group a letter stroke belongs to (its place in reading order), and the letter of each sample. */
   gi?: number;
+  own?: number[];
 }
 /** Everything to draw, in writing order: the letters, their dots and marks, then the companion. */
 export function roundelParts(
