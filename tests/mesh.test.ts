@@ -2,9 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
 import { resolve } from '../src/compose';
-import { reliefSVG } from '../src/fabricate';
+import { RELIEF_LEVELS, reliefSVG } from '../src/fabricate';
 import { heightmapFromPixels, heightmapToMesh, meshStats, meshToSTL } from '../src/fabricate/mesh';
 import type { Mesh, Pixels } from '../src/fabricate/mesh';
+import { contours, findLevels, terraceMesh } from '../src/fabricate/terrace';
 import { preset } from '../src/model/presets';
 import { toPNG } from '../scripts/raster.mjs';
 
@@ -113,4 +114,86 @@ describe('relief of a composition', () => {
     expect(s.max[0] - s.min[0]).toBeGreaterThan(110);
     expect(s.max[2]).toBeCloseTo(5, 1);
   });
+});
+
+describe('outlines between pixels', () => {
+  const W = 60,
+    disc = Float32Array.from({ length: W * W }, (_, i) => 20 - Math.hypot((i % W) - 30, Math.floor(i / W) - 30));
+  it('trace a disc as one smooth closed ring', () => {
+    const rs = contours(disc, W, W, 0);
+    expect(rs.length).toBe(1);
+    for (const [x, y] of rs[0]) expect(Math.abs(Math.hypot(x - 30, y - 30) - 20)).toBeLessThan(0.01);
+  });
+  it('wind a ring and its hole opposite ways', () => {
+    const ring = Float32Array.from(disc, v => 8 - Math.abs(v - 10)),
+      area = (r: [number, number][]) =>
+        r.reduce((s, [x, y], i) => s + x * r[(i + 1) % r.length][1] - y * r[(i + 1) % r.length][0], 0);
+    const rs = contours(ring, W, W, 0);
+    expect(rs.length).toBe(2);
+    expect(Math.sign(area(rs[0]))).toBe(-Math.sign(area(rs[1])));
+  });
+  it('close at the edge of the grid, and where samples sit exactly on the threshold', () => {
+    for (const f of [new Float32Array(W * W).fill(0.5), Float32Array.from(disc, v => Math.round(v))]) {
+      const rs = contours(f, W, W, f === disc ? 0 : 0.5);
+      expect(rs.length).toBeGreaterThan(0);
+      for (const r of rs) for (const p of r) expect(p.every(Number.isFinite)).toBe(true);
+    }
+    expect(
+      contours(
+        Float32Array.from(disc, v => Math.round(v)),
+        W,
+        W,
+        0,
+      )[0].length,
+    ).toBeGreaterThan(8);
+  });
+});
+
+describe('flat levels', () => {
+  const hm = heightmapFromPixels(image(200, 100)),
+    m = terraceMesh(hm, { widthMM: 100, baseMM: 2, reliefMM: 3 });
+  it('finds the plateaus', () => {
+    expect(findLevels(hm).map(l => Math.round(l * 255))).toEqual([100, 255]);
+  });
+  it('is a closed solid with outward normals and every face triangulated', () => {
+    expect(closed(m)).toBe(true);
+    expect(volume(m)).toBeGreaterThan(0);
+    expect(m.failedFaces).toBe(0);
+  });
+  it('has flat tops at the plateau heights and upright walls', () => {
+    const P = m.positions,
+      T = m.triangles,
+      heights = new Set<string>();
+    for (let t = 0; t < T.length; t += 3) {
+      const [a, b, c] = [T[t] * 3, T[t + 1] * 3, T[t + 2] * 3],
+        ux = P[b] - P[a],
+        uy = P[b + 1] - P[a + 1],
+        vx = P[c] - P[a],
+        vy = P[c + 1] - P[a + 1],
+        flat = P[a + 2] === P[b + 2] && P[b + 2] === P[c + 2];
+      // a sloping face would have both a horizontal footprint and a rise
+      if (!flat) expect(Math.abs(ux * vy - uy * vx)).toBeLessThan(1e-6);
+      else heights.add(P[a + 2].toFixed(3));
+    }
+    expect([...heights].sort()).toEqual(['0.000', (2 + (3 * 100) / 255).toFixed(3), '5.000']);
+  });
+  it('spends triangles on outlines, not area', () => {
+    expect(meshStats(m).triangles).toBeLessThan(4000);
+  });
+});
+
+describe('flat levels of a composition', () => {
+  it('give a closed medallion with smooth outlines and few triangles', async () => {
+    const png = PNG.sync.read(await toPNG(reliefSVG(resolve(preset('teardrop-gold'))), 1024)),
+      L = RELIEF_LEVELS,
+      m = terraceMesh(heightmapFromPixels(png, { cutBelow: 0.05 }), {
+        widthMM: 200,
+        levels: [L.ground, L.pattern, L.bands, L.letters],
+      });
+    expect(closed(m)).toBe(true);
+    expect(volume(m)).toBeGreaterThan(0);
+    expect(m.failedFaces).toBe(0);
+    // a surface over every pixel of this raster would take about two million
+    expect(meshStats(m).triangles).toBeLessThan(300000);
+  }, 60000);
 });

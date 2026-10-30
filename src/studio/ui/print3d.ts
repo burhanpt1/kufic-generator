@@ -1,8 +1,9 @@
 // The 3D print dialog: the current design's relief map, or an image the user picks, becomes a binary STL.
 import { resolve } from '../../compose';
 import { saveSTL } from '../../app/export';
-import { reliefSVG } from '../../fabricate';
+import { RELIEF_LEVELS, reliefSVG } from '../../fabricate';
 import { heightmapFromPixels, heightmapToMesh, meshToSTL } from '../../fabricate/mesh';
+import { findLevels, terraceMesh } from '../../fabricate/terrace';
 import type { Heightmap, Pixels } from '../../fabricate/mesh';
 import type { App } from './main';
 import { $ } from './main';
@@ -35,10 +36,22 @@ export function wirePrint3d(app: App) {
   let image: HTMLImageElement | null = null,
     pixels: Pixels | null = null,
     key = '';
+  const surface = () => $<HTMLSelectElement>('p3Levels').value === 'surface';
+  /** The plateaus for flat levels: the relief map's own for the design, else found in the image or evenly spaced. */
+  function levelsOf(hm: Heightmap): number[] {
+    const v = $<HTMLSelectElement>('p3Levels').value;
+    if (v !== 'auto') return Array.from({ length: Number(v) }, (_, k) => k / (Number(v) - 1));
+    if (source.value === 'design') {
+      const L = RELIEF_LEVELS;
+      return [L.ground, L.pattern, L.bands, L.letters];
+    }
+    return findLevels(hm);
+  }
 
   /** The pixels to mesh, cached while the source and detail stay the same. */
   async function source2pixels(): Promise<Pixels | null> {
-    const size = num('p3Res') + 1,
+    // flat levels trace outlines between pixels, so more pixels cost little; a shaded surface meshes every sample
+    const size = surface() ? num('p3Res') / 4 + 1 : num('p3Res'),
       k = source.value + size + (source.value === 'design' ? JSON.stringify(app.comp) : file.value);
     if (k === key && pixels) return pixels;
     let img: HTMLImageElement | null;
@@ -55,7 +68,6 @@ export function wirePrint3d(app: App) {
     const cut = num('p3Cut');
     return heightmapFromPixels(px, {
       invert: $<HTMLInputElement>('p3Invert').checked,
-      levels: num('p3Levels'),
       cutBelow: cut > 0 ? cut / 100 : -1,
       blur: num('p3Blur'),
     });
@@ -65,9 +77,17 @@ export function wirePrint3d(app: App) {
     c.width = hm.width;
     c.height = hm.height;
     const ctx = c.getContext('2d')!,
-      d = ctx.createImageData(hm.width, hm.height);
+      d = ctx.createImageData(hm.width, hm.height),
+      ls = surface() ? null : levelsOf(hm),
+      // flat levels: each sample shows the plateau it lands on
+      snap = (v: number) => {
+        if (!ls) return v;
+        let k = 0;
+        while (k + 1 < ls.length && v >= (ls[k] + ls[k + 1]) / 2) k++;
+        return ls[k];
+      };
     for (let i = 0; i < hm.h.length; i++) {
-      const g = Math.round(hm.h[i] * 255);
+      const g = Math.round(snap(hm.h[i]) * 255);
       // cut-away parts show red
       d.data.set(hm.mask[i] ? [g, g, g, 255] : [120, 20, 20, 255], i * 4);
     }
@@ -80,9 +100,13 @@ export function wirePrint3d(app: App) {
         info.textContent = 'Pick an image.';
         return;
       }
-      const w = num('p3Width');
-      preview(heightmap(px));
-      info.textContent = `${w} × ${Math.round((w * px.height) / px.width)} mm, ${num('p3Base') + num('p3Relief')} mm high at most. Red is cut away.`;
+      const w = num('p3Width'),
+        hm = heightmap(px);
+      preview(hm);
+      info.textContent =
+        `${w} × ${Math.round((w * px.height) / px.width)} mm, ${num('p3Base') + num('p3Relief')} mm high at most` +
+        (surface() ? '' : `, ${levelsOf(hm).length} levels`) +
+        '. Red is cut away.';
     } catch (e) {
       info.textContent = String((e as Error).message ?? e);
     }
@@ -114,12 +138,11 @@ export function wirePrint3d(app: App) {
     if (!px) return void (info.textContent = 'Pick an image.');
     info.textContent = 'Meshing…';
     await new Promise(r => setTimeout(r, 20));
-    const mesh = heightmapToMesh(heightmap(px), {
-        widthMM: num('p3Width'),
-        baseMM: num('p3Base'),
-        reliefMM: num('p3Relief'),
-        resolution: num('p3Res'),
-      }),
+    const hm = heightmap(px),
+      size = { widthMM: num('p3Width'), baseMM: num('p3Base'), reliefMM: num('p3Relief') },
+      mesh = surface()
+        ? heightmapToMesh(hm, { ...size, resolution: num('p3Res') / 4 })
+        : terraceMesh(hm, { ...size, levels: levelsOf(hm) }),
       stl = meshToSTL(mesh),
       tris = mesh.triangles.length / 3;
     if (!tris) return void (info.textContent = 'Nothing left to print: everything is cut away.');
