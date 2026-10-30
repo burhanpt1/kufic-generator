@@ -28,6 +28,8 @@ export interface Layout {
   wp: { x: number; y: number }[];
   /** The stacked pieces (by index), if any. */
   up?: number[];
+  /** Pieces moved from where their word puts them (pen units, y up): a hand adjustment, as the tuning page makes. */
+  nudge?: { i: number; x: number; y: number }[];
 }
 export interface RoundelOptions extends StackOptions {
   tries?: number;
@@ -197,14 +199,18 @@ export function twoLevels(ys: readonly number[]): number {
   return best;
 }
 
-export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
-  const tries = o.tries ?? 18,
-    iters = o.iters ?? 6000,
-    K = o.K ?? 1.6,
-    seed = o.seed ?? 7;
+/** The pieces of a phrase (its groups, with their marks) and every variant of each that the composer chooses among;
+ *  a layout's `lv` indexes these. Null when the text has no letters. */
+export function roundelPieces(
+  th: Thuluth,
+  text: string,
+  o: RoundelOptions = {},
+): { groups: RGroup[]; shapes: GroupShape[][] } | null {
+  // prettier-ignore
+  const K = o.K ?? 1.6;
   const { bare, marks } = parseVowels(text);
   const groups: RGroup[] = splitGroups(bare);
-  if (!groups.length) return [];
+  if (!groups.length) return null;
   // companion text joins the arrangement as extra, smaller words
   if (o.companion && o.companion.trim()) {
     const pc = parseVowels(o.companion),
@@ -235,13 +241,24 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
   });
-  // a shaped field sets the proportion
-  const OVAL = o.field ? FIELDS[o.field].aspect : o.oval || 1;
   const shapes = groups.map(g => {
     const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
       st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
     return st.length ? st : vs;
   });
+  return { groups, shapes };
+}
+
+export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
+  const tries = o.tries ?? 18,
+    iters = o.iters ?? 6000,
+    K = o.K ?? 1.6,
+    seed = o.seed ?? 7;
+  const pieces = roundelPieces(th, text, o);
+  if (!pieces) return [];
+  const { groups, shapes } = pieces;
+  // a shaped field sets the proportion
+  const OVAL = o.field ? FIELDS[o.field].aspect : o.oval || 1;
   const words: number[][] = [];
   groups.forEach((g, i) => (words[g.word] ??= []).push(i));
   const W = words.length,
@@ -828,6 +845,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       o.fixed.wp.forEach((p, w) => w < W && (wp[w] = { ...p }));
       (o.fixed.up || []).forEach(i => i < n && (up[i] = 1));
       for (let w = 0; w < W; w++) layoutWord(w);
+      for (const q of o.fixed.nudge || []) if (q.i < n) gpos[q.i] = { x: gpos[q.i].x + q.x, y: gpos[q.i].y + q.y };
       for (let a = 0; a < W; a++) recompute(a);
       E = energy();
     }

@@ -32,22 +32,29 @@ What is already done is listed at the end only as milestones; the commit history
      pair whose sides are both scattered says nothing about the option. Towers changed nothing in two of its four
      pairs, which were dropped.
    - **Who does what:** I sweep and publish the round; you vote. The loop is in `tests/ratings/README.md`.
-2. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
+2. **[~] Legibility first: one basmala roundel set by hand until it reads, then its rules.** An outside judge could
+   read none of round 2's dense roundels (30 October): some letters were clear, the order was not. The owner's plan:
+   - pin one basmala (circle) by hand on the tuning page (https://claude.ai/artifact/Nq3Ynm7NjHrfdKrkeRrKz7,
+     `demos/tune.html`), until it is right;
+   - reverse-engineer it: measure its word spacing, line steps, stacking and marks, and turn them into a reading check
+     that every roundel must pass before taste scores it;
+   - then train the critic on legibility as well as taste, and refit with round 2's held votes.
+3. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
    composition).
-3. **[ ] Roundel composition in the worker, with a time cap.** A roundel takes 20–60 s (lab HANDOVER §6). The roundel
+4. **[ ] Roundel composition in the worker, with a time cap.** A roundel takes 20–60 s (lab HANDOVER §6). The roundel
    tests take 30–70 s each, and CI went from about 2 to 6½ minutes with them (run 172).
-4. **[ ] The inscription ring and illumination from the lab's `ring.js`:** rays, panel and Iznik panel round a
+5. **[ ] The inscription ring and illumination from the lab's `ring.js`:** rays, panel and Iznik panel round a
    roundel. They are not ported; the roundel renderer says so (`src/script/thuluth/roundel/render.ts:1`).
-5. **[~] Finish the istif write-up** (`docs/writeup/thuluth-istif.md`):
+6. **[~] Finish the istif write-up** (`docs/writeup/thuluth-istif.md`):
    - rebuild its showpieces on the finished engine;
    - report the critic's accuracy on the second rating round;
    - compare against masters' istif with the same critic.
 
    Candidate venues: Bridges, Nexus Network Journal, the Eurographics expressive track.
 
-6. **[ ] Housekeeping:**
+7. **[ ] Housekeeping:**
    - Bring CLAUDE.md up to date. Its migration plan is finished, and its roadmap now points here.
 
 ---
