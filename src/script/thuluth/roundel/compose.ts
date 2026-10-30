@@ -239,7 +239,9 @@ export function roundelPieces(
     for (let j = wordStart[g.word]; j < i; j++) off += [...groups[j].s].length;
     g.marks = (marks[g.word] || [])
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
-      .map(m => ({ k: m.li - off, m: m.m }));
+      .map(m => ({ k: m.li - off, m: m.m }))
+      // the ligature of the name of God sets its own shadda and small alif over the heh, in place of the second lam's
+      .filter(m => !(th.style.allah && g.allah && m.k === [...g.s].length - 2));
   });
   const shapes = groups.map(g => {
     const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
