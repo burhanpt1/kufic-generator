@@ -305,13 +305,16 @@ export function laserSVG(placed: Placed, o: SizeOptions & { cutMM?: number } = {
     .replace(/<\/svg>$/, cut + '</svg>');
 }
 
+/** The relief map's heights (0..1). */
+export const RELIEF_LEVELS = { floor: 0, ground: 0.25, pattern: 0.4, bands: 0.65, letters: 1 };
+
 /** Relief depth map: white is high. Letters stand highest, bands and ornaments below them, patterns in low relief on
  *  the ground; outside the outline is the floor (black). Rasterise to a greyscale PNG for 3D printing or carving. */
 export function reliefSVG(
   placed: Placed,
   o: { levels?: Partial<Record<'floor' | 'ground' | 'pattern' | 'bands' | 'letters', number>> } = {},
 ): string {
-  const L = { floor: 0, ground: 0.25, pattern: 0.4, bands: 0.65, letters: 1, ...o.levels },
+  const L = { ...RELIEF_LEVELS, ...o.levels },
     grey = (v: number) => {
       const h = Math.round(Math.max(0, Math.min(1, v)) * 255)
         .toString(16)

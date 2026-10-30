@@ -260,6 +260,8 @@
         <p class="note">
           Turns a height map into a closed solid: white is high, black is low. Use the current design (its relief map:
           letters highest, then bands, patterns and ground), or any image, such as a drawing, a logo or an exported PNG.
+          Flat levels trace each plateau's outline between pixels, for smooth curves and straight walls; every grey
+          follows the image's shading, for photographs.
         </p>
         <div class="fields">
           <label
@@ -276,17 +278,18 @@
           <label>Relief (mm)<input id="p3Relief" type="number" min="0" max="50" step="0.2" value="3" /></label>
           <label
             >Detail<select id="p3Res">
-              <option value="256">Draft (256)</option>
-              <option value="512" selected>Fine (512)</option>
-              <option value="1024">Very fine (1024)</option>
+              <option value="1024">Draft</option>
+              <option value="2048" selected>Fine</option>
+              <option value="4096">Very fine</option>
             </select></label
           >
           <label
             >Heights<select id="p3Levels">
-              <option value="0">Every grey</option>
+              <option value="auto" selected>Flat levels, smooth edges</option>
               <option value="2">Two levels (stamp)</option>
               <option value="3">Three levels</option>
               <option value="5">Five levels</option>
+              <option value="surface">Every grey (shaded surface)</option>
             </select></label
           >
           <label

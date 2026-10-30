@@ -19,6 +19,8 @@ export interface Heightmap {
   h: Float32Array;
   /** 1 where the object is; 0 is cut away. */
   mask: Uint8Array;
+  /** The same as a continuous field, positive inside, so outlines can be traced between samples. */
+  solid?: Float32Array;
 }
 
 export interface HeightmapOptions {
@@ -39,17 +41,19 @@ export function heightmapFromPixels(px: Pixels, o: HeightmapOptions = {}): Heigh
   let h = new Float32Array(n);
   const mask = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
-    const a = data[i * 4 + 3] / 255,
-      lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
+    const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
     h[i] = o.invert ? 1 - lum : lum;
-    mask[i] = a >= 0.5 ? 1 : 0;
   }
   if (o.blur && o.blur > 0) h = boxBlur(h, width, height, Math.round(o.blur));
   const L = o.levels ?? 0;
   if (L >= 2) for (let i = 0; i < n; i++) h[i] = Math.round(h[i] * (L - 1)) / (L - 1);
-  const cut = o.cutBelow ?? -1;
-  if (cut >= 0) for (let i = 0; i < n; i++) if (h[i] <= cut) mask[i] = 0;
-  return { width, height, h, mask };
+  const cut = o.cutBelow ?? -1,
+    solid = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    solid[i] = Math.min(data[i * 4 + 3] / 255 - 0.5, cut >= 0 ? h[i] - cut : 1);
+    mask[i] = solid[i] > 0 ? 1 : 0;
+  }
+  return { width, height, h, mask, solid };
 }
 
 function boxBlur(src: Float32Array, w: number, h: number, r: number): Float32Array<ArrayBuffer> {

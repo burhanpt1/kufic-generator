@@ -196,7 +196,7 @@ The `Strip` stays a cell grid for Kufi. A future cursive engine would return vec
 - One SVG per composition, built from layers in z-order: ground, patterns, spandrels, letters (per colour key), dots, vowels, separators, features.
 - **Namespace all `id`s** (`clipPath`, `pattern`, gradients) per composition and node. The prototypes collide when several compositions are inlined on one page.
 - The letter drawer is generic over a map function from cell to canvas (prototype `letterShapes`), with three stroke modes: blocks, curved and pen. Over-under at crossings; banded style.
-- Exports: SVG, high-resolution PNG, single-line plotter SVG, laser/CNC layers, a relief depth map, and a 3D-printable STL (`src/fabricate/mesh.ts`: the relief map or any image → a watertight solid; adaptive RTIN surface, cut to the mask, walls and a flat bottom).
+- Exports: SVG, high-resolution PNG, single-line plotter SVG, laser/CNC layers, a relief depth map, and a 3D-printable STL from the relief map or any image: flat levels (`src/fabricate/terrace.ts`: each plateau's outline traced between pixels, terraces with upright walls, the default) or every grey (`src/fabricate/mesh.ts`: an adaptive RTIN surface, for photographs); both watertight.
 
 ---
 
