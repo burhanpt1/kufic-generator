@@ -20,13 +20,17 @@ What is already done is listed at the end only as milestones; the commit history
 
 ## Next up
 
-1. **[ ] A second round of ratings, on today's engine.** Most of the open composition work is a built option waiting
+1. **[~] A second round of ratings, on today's engine.** Published 30 October (`tests/ratings/rounds/2026-10-30`);
+   waiting on votes. Most of the open composition work is a built option waiting
    on ratings, and the critic is not yet good enough to stand in for them. Dense roundels fit at 78%, mirrored at 75%
    and single names at 87%; the target is 85% (`10f7d0f`, `719cd4a`).
    - **Contents (owner, 30 October):**
      - ruled roundels, against free and lanes, on the same texts;
      - each built option as an on/off pair: girift, learned stacking, towers, mark spacing, nesting.
    - **Refit:** offer the reported checks as candidates, and promote any that earn their weight.
+   - **Option pairs** are built on fitted lanes, not free composition: free composition scatters (see below), and a
+     pair whose sides are both scattered says nothing about the option. Towers changed nothing in two of its four
+     pairs, which were dropped.
    - **Who does what:** I sweep and publish the round; you vote. The loop is in `tests/ratings/README.md`.
 2. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
@@ -75,6 +79,10 @@ What is already done is listed at the end only as milestones; the commit history
       monogram (owner, 16 October). This builds on stacking (istif), girift and the band composer above.
 - [ ] **Companion text (blessings) in its own ring, at one pen.** It is currently set smaller inside the roundel. Jali
       convention is one pen throughout (lab HANDOVER §11; `companion` in `roundel/compose.ts`).
+- [!] **Free composition scatters the words.** Without lanes, a path or ruling, a dense roundel nearly always ends
+  as small words strewn across a large field (fill under 0.05, against 0.08–0.14 for lanes and ruled). In round 1,
+  every free dense roundel but one was disliked. Find out why the composer does not pull the words together, or
+  stop offering free composition for dense texts.
 - [!] **Great bowls need an oval:** in a circle the bowl and the circle fight (lab HANDOVER §11). Either guard against
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`

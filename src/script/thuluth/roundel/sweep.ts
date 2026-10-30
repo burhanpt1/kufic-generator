@@ -1,6 +1,7 @@
 // The sweep: many roundels per text, across reading-path families, seeds and sampled recipes, each with its critic
 // features, genre and fitted taste score, and checks, ready to look at and to rate (scripts: `npm run sweep`).
 import type { Thuluth } from '../engine';
+import type { FrameOptions } from './bowl';
 import type { RoundelOptions } from './compose';
 import type { RoundelChecks } from './checks';
 import { roundelChecks } from './checks';
@@ -39,6 +40,12 @@ export interface SweepItem {
   genre: Genre;
   score: number;
   svg: string;
+  /** In an on/off pair: the option toggled, which side this is, and the other side's id. */
+  option?: string;
+  /** Frame (marks) settings beyond the sweep's, if the pair toggles them. */
+  frame?: FrameOptions;
+  variant?: 'off' | 'on';
+  pairOf?: string;
 }
 
 export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {}): SweepItem[] {
@@ -83,5 +90,51 @@ export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {
       out.push({ ...m, genre, score: tasteScore(m.features, genre) });
     });
   });
+  return out;
+}
+
+/** One option as an on/off pair: the same text, seed and recipe, differing only in the option (its compose or frame
+ *  settings), so a vote between the two is a vote on the option alone. */
+export interface OptionPair {
+  /** What is toggled: girift, learnedStack, towers, nest, marks. */
+  option: string;
+  text: string;
+  seed: number;
+  /** What both sides share; the toggled settings must not be left to sampleRecipe. */
+  base?: RoundelOptions;
+  off: { compose?: RoundelOptions; frame?: FrameOptions };
+  on: { compose?: RoundelOptions; frame?: FrameOptions };
+}
+
+/** Build each pair's two sides. A pair whose sides came out the same (nearSame) is dropped: there is nothing to
+ *  choose between. Ids are the prefix and a count, the off side first. */
+export function sweepPairs(
+  th: Thuluth,
+  pairs: readonly OptionPair[],
+  o: Omit<SweepOptions, 'families' | 'n' | 'base'> = {},
+): SweepItem[] {
+  // prettier-ignore
+  const out: SweepItem[] = [];
+  let id = 0;
+  for (const p of pairs) {
+    const words = p.text.trim().split(/\s+/).length,
+      given = { ...p.base, ...p.off.compose, ...p.on.compose },
+      shared: RoundelOptions = { elongate: true, cross: true, kern: true, ...sampleRecipe(given, words, p.seed), ...p.base, tries: o.tries ?? 3, iters: o.iters ?? 3000, seed: p.seed }; // prettier-ignore
+    const side = (v: 'off' | 'on') => {
+      const recipe: RoundelOptions = { ...shared, ...p[v].compose },
+        b = buildRoundel(th, { text: p.text, compose: recipe, frame: { ornaments: true, density: 0.35, ...p[v].frame } }); // prettier-ignore
+      if (!b) return null;
+      const family: SweepFamily = recipe.ruled ? 'ruled' : recipe.lanes ? 'lanes' : 'free',
+        features = roundelFeatures(th, b.r, b.f),
+        genre = genreOf(p.text);
+      return { text: p.text, family, seed: p.seed, recipe, frame: p[v].frame, features, checks: roundelChecks(th, b.r, b.f), genre, score: tasteScore(features, genre), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }), option: p.option, variant: v }; // prettier-ignore
+    };
+    const a = side('off'),
+      b = side('on');
+    if (!a || !b || nearSame(a.features, b.features)) continue;
+    const ia = `${o.prefix ?? 'p'}${String(id++).padStart(3, '0')}`,
+      ib = `${o.prefix ?? 'p'}${String(id++).padStart(3, '0')}`;
+    out.push({ ...a, id: ia, pairOf: ib }, { ...b, id: ib, pairOf: ia });
+  }
   return out;
 }
