@@ -58,13 +58,9 @@ The engine (`glyphs`, `shaping`, `layout`, `abjad`) must not touch the DOM, so i
 
 Only after step 5: performance (move compose to a Web Worker if needed) and the roadmap.
 
-## Roadmap after migration
-- Letters as centreline strokes (graph per glyph) so interlace can do true over/under across letters, curved floriation along strokes, variable stroke width.
-- Real letter alternates (separately designed variants chosen by the solver), stacked ligatures.
-- A proper Fatimid letter set (Rana Kufi by Khaled Hosny follows the Fatimid measurements of Mohammad Abdul Qadir — use as reference, check its AGPL licence before copying anything).
-- Material rendering (carved relief, gold on lapis, banna'i brick), fabrication export (plotter single-line paths, laser/CNC, 3D relief).
-- Abjad breakdown and chronogram (ta'rikh) search.
-- Generative search: render many variations, rank by stem rhythm / density evenness / kashida balance, pick from a gallery.
+## Roadmap
+Open work is listed in `ROADMAP.md`, by area, with sources and status. The migration plan above is finished; it is kept
+as the history of how `src/` came to be.
 
 ## Conventions
 - Strip coordinates: x left→right (text reads right to left, so the first glyph is at the right), y up with row 0 at the bottom of the band; `base` = baseline row.
