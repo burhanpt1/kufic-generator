@@ -159,7 +159,7 @@ describe('confusable letters stay apart', () => {
 const counters = (th: Thuluth, c: string, form: Form) => findCounters(th, strokesOf(th, c, form), { max: 1e9 }).length;
 describe('counters', () => {
   // the loop letters that show an open counter at the roundel pen today; mim, waw, initial heh and initial ta have
-  // solid heads at this weight, as jali often writes them
+  // solid heads at this weight, as jali writes them, and that is accepted (owner, 30 October 2026): not a defect
   const OPEN: [string, Form][] = [
     ['ف', 'ini'], ['ف', 'med'], ['ف', 'fin'], ['ق', 'ini'], ['ق', 'med'], ['ق', 'fin'], ['ق', 'iso'], ['ص', 'ini'],
     ['ص', 'med'], ['ص', 'fin'], ['ص', 'iso'], ['ط', 'med'], ['ط', 'fin'], ['ط', 'iso'], ['م', 'fin'], ['م', 'iso'],

@@ -74,14 +74,21 @@ textarea {
   color: var(--ink);
 }
 button,
-select {
+select,
+a.button {
   padding: 5px 10px;
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: 4px;
   cursor: pointer;
 }
-button:hover {
+a.button {
+  display: inline-block;
+  color: var(--ink);
+  text-decoration: none;
+}
+button:hover,
+a.button:hover {
   border-color: var(--accent);
 }
 button.primary {
