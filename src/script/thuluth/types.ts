@@ -47,9 +47,9 @@ export interface ThuluthStyle {
   slant: number | 'left' | 'right' | 'none';
   /** The lab's letters exactly, without the later legibility fixes (fixes.ts), to compare with the lab. */
   labLetters?: boolean;
-  /** The name of God as one ligature (unset: its letters as anywhere else): the two lams close and joined smoothly
-   *  at the foot, the final heh in the given design, the shadda and small alif over the heh, clear of the lam. */
-  allah?: { heh: 'round' | 'almond' | 'eye' | 'tear' | 'tall' };
+  /** The name of God as one ligature (unset: its letters as anywhere else): the lams shortened and joined in bowls, the
+   *  heh a tall arch, the shadda on the second lam level with the alif's top; `alif` adds the small alif on the heh. */
+  allah?: { alif: boolean };
   /** Great roundel gestures (lab useGreat): the Husayn bowl as final nun or a returning ya, the long-headed hah. */
   great?: { nun?: boolean; hah?: boolean; ya?: boolean; yaWide?: number; yaDeep?: number };
 }

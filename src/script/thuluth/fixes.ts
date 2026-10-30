@@ -44,44 +44,28 @@ const LAM_MED: LetterForm = {
   ],
 };
 
-/** The name of God as a ligature (style.allah): the second lam stands close to the first, its foot meeting the baseline
- *  without the step of the ordinary medial lam, and runs straight on into the heh. */
-export const ALLAH_LAM: LetterForm = {
-  src: 'hand',
-  exit: -2.4,
-  s: [
-    // the baseline runs unbroken under the stem and on into the heh; the stem stops on it, so the turned nib makes no step
-    { pts: [[0, 0], [-1.2, 0], [-2.4, 0]] },
-    { ang: 38, lean: true, pts: [[-0.05, 10.0, 0.2], [-0.45, 9.7, 0.8], [-0.7, 9.05, 1], [-0.7, 5.5, 1], [-0.72, 1.8, 0.95], [-0.76, 0.5, 0.9]] },
-  ],
-}; // prettier-ignore
-/** Its first lam: the ordinary initial stem, standing on a baseline drawn under its foot, as the second lam does. */
+/** The name of God as one ligature (style.allah), after the classic form (owner, 30 October): the two lams shorter
+ *  than the alif, each rounding at its foot into a bowl, the first up into the second and the second up into the heh;
+ *  the heh a tall arch as high as the lams; the shadda sitting on the second lam, its top level with the alif's. */
+const ALLAH_TOP = 7.5;
 export const ALLAH_LAM_INI: LetterForm = {
-  src: 'hand',
-  exit: -1.8,
-  s: [
-    { ang: 38, lean: true, pts: [[0.65, 10.0, 0.2], [0.25, 9.7, 0.8], [0.0, 9.05, 1], [0.0, 5.5, 1], [-0.05, 1.8, 0.95], [-0.12, 0.5, 0.9]] },
-    { pts: [[0.05, 0], [-0.9, 0], [-1.8, 0]] },
-  ],
-}; // prettier-ignore
-/** The lams of the tall form (style.allah.heh 'tall'): each stem rounds at its foot into a bowl, the first into the
- *  second and the second up into the heh. */
-export const ALLAH_LAM_INI_ROUND: LetterForm = {
   src: 'hand',
   exit: -3.9,
   // down the stem, round the bowl and up into the second lam's stem (which stands at the exit)
-  s: [{ ang: 38, lean: true, pts: [[0.65, 10.0, 0.2], [0.25, 9.7, 0.8], [0.0, 9.05, 1], [0.0, 5.5, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.1], [-3.55, 0.7], [-3.85, 1.8], [-3.9, 2.6, 0.8]] }],
+  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.1], [-3.55, 0.7], [-3.85, 1.8], [-3.9, 2.6, 0.8]] }],
 }; // prettier-ignore
-export const ALLAH_LAM_ROUND: LetterForm = {
+export const ALLAH_LAM: LetterForm = {
   src: 'hand',
   exit: -2.9,
-  s: [{ ang: 38, lean: true, pts: [[0.65, 10.0, 0.2], [0.25, 9.7, 0.8], [0.0, 9.05, 1], [0.0, 5.5, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.0]] }],
+  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.0]] }],
 }; // prettier-ignore
-/** Its final heh: the ordinary designs; a teardrop rising to a point on the left, wide enough to stay open; or the tall
- *  arch of the classic ligature, up from the second lam's bowl to two thirds of its height and down to a small foot. */
-export const ALLAH_HEH: Record<'tear' | 'tall', LetterForm> = {
-  tall: { src: 'hand', exit: null, s: [{ ang: 38, pts: [[0, 0], [-0.5, 0.35], [-0.85, 1.1], [-1.05, 2.3], [-1.25, 3.4], [-1.65, 4.1], [-2.25, 4.25], [-2.85, 3.8], [-3.15, 2.8], [-3.25, 1.5], [-3.35, 0.45], [-3.65, 0.0, 0.6], [-4.0, 0.1, 0.25]] }] },
-  tear: { src: 'hand', exit: null, s: [{ pts: [[0, 0], [-0.9, 0.3], [-1.9, 1.15], [-2.5, 2.4], [-2.55, 3.55, 0.5, 1], [-1.75, 2.75], [-0.95, 1.7], [-0.7, 0.75], [-1.3, 0.12], [-2.6, 0.02, 0.6], [-3.1, 0.3, 0.2]] }] },
+/** Its heh, scaled with the body like any heh: up from the second lam's bowl, over the arch and down to a small foot;
+ *  its top as high as the lams at the roundel body (1.45). */
+const H = ALLAH_TOP / 1.45 / 4.25;
+export const ALLAH_HEH: LetterForm = {
+  src: 'hand',
+  exit: null,
+  s: [{ ang: 38, pts: ([[0, 0], [-0.5, 0.35], [-0.85, 1.1], [-1.05, 2.3], [-1.25, 3.4], [-1.65, 4.1], [-2.25, 4.25], [-2.85, 3.8], [-3.15, 2.8], [-3.25, 1.5], [-3.35, 0.45], [-3.65, 0.0, 0.6], [-4.0, 0.1, 0.25]] as SkelPt[]).map(([x, y, w]) => [x, y * H, w] as SkelPt) }],
 }; // prettier-ignore
 
 /** Isolated ba, ta, tha: the lab's hand-drawn long flat boat on the baseline. The learned form, a final misfiled in

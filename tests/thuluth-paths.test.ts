@@ -64,14 +64,13 @@ describe('roundels on fitted lanes', () => {
 });
 
 describe('girift', () => {
-  it('seeks stems through horizontals, so words interpenetrate more', () => {
+  it('seeks stems through horizontals, so words interpenetrate', () => {
     const th = thuluth(ROUNDEL_PEN),
-      run = (girift?: number) => composeRoundel(th, 'بسم الله الرحمن الرحيم', { elongate: true, cross: true, merge: true, fillTarget: 0.5, tries: 2, iters: 4500, seed: 11, girift })[0]; // prettier-ignore
-    const plain = run(),
-      knot = run(0.12);
-    // crossings earn their keep (overlap below nothing), and the text draws in tighter
-    expect(knot.overlap).toBeLessThan(0);
-    expect(knot.disc.r).toBeLessThan(plain.disc.r);
+      run = (girift?: number) => composeRoundel(th, 'الحمد لله رب العالمين', { elongate: true, cross: true, merge: true, fillTarget: 0.5, tries: 2, iters: 4500, seed: 21, girift })[0]; // prettier-ignore
+    // crossings earn their keep (overlap below nothing), where none are made without it. The text no longer draws in
+    // tighter: that held for the basmala only while الله's lams stood as tall as its alif (ROADMAP)
+    expect(run().overlap).toBe(0);
+    expect(run(0.12).overlap).toBeLessThan(0);
   });
 });
 
