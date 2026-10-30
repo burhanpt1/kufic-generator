@@ -100,12 +100,13 @@ h1 { font: 600 22px/1.2 var(--display); margin: 0; text-wrap: balance; }
 // The rating loop (PLAN-2 §1). Candidates come from the engine's sweep (items.json: each composition's critic features,
 // checks and genre, plus the fits in force). Votes are saved to this page's database (collection "votes"), so they
 // outlive any browser. Pairs are chosen where the critic is least sure, among the least-rated compositions, with some
-// chosen to test a reported check; the page refits each genre on the votes so far and reports leave-one-out accuracy.
+// chosen to test a reported check; a round's designed pairs (items.json "pairs": the same composition with one option
+// off and on) come first, in random order, until each has a vote; the page refits each genre on the votes so far and reports leave-one-out accuracy.
 const FEATURES = ['texture', 'knots', 'looseTop', 'unity', 'span', 'fill', 'noise'];
 const CHECKS = ['wordSpace', 'strayMarks', 'strayDots', 'doubled'];
 const $ = id => document.getElementById(id);
 // mine: what this view saved, newest last ({col, id}), so Undo removes it; disliked: compositions not to show again
-const state = { items: [], byId: {}, fits: {}, votes: [], disliked: new Set(), mine: [], pair: null, db: null, uid: null, writable: true, busy: false };
+const state = { items: [], byId: {}, fits: {}, pairs: [], votes: [], disliked: new Set(), mine: [], pair: null, db: null, uid: null, writable: true, busy: false };
 
 const sig = x => 1 / (1 + Math.exp(-x));
 const score = (it, fit) => fit.features.reduce((a, k, j) => a + fit.w[j] * (it.features[k] - fit.mean[j]) / fit.sd[j], 0);
@@ -115,6 +116,11 @@ const key = (a, b) => [a, b].sort().join('|');
 function choosePair() {
   const seen = new Set(state.votes.map(v => key(v.a, v.b))), cnt = {};
   state.votes.forEach(v => { cnt[v.a] = (cnt[v.a] || 0) + 1; cnt[v.b] = (cnt[v.b] || 0) + 1; });
+  const open = state.pairs.filter(([a, b]) => state.byId[a] && state.byId[b] && !seen.has(key(a, b)) && !state.disliked.has(a) && !state.disliked.has(b)); // prettier-ignore
+  if (open.length) {
+    const [a, b] = open[Math.floor(Math.random() * open.length)];
+    return Math.random() < 0.5 ? [state.byId[a], state.byId[b]] : [state.byId[b], state.byId[a]];
+  }
   const testCheck = Math.random() < 0.25;
   let best = null;
   const its = state.items;
@@ -197,7 +203,8 @@ function fitLoo(rows) {
 
 function status() {
   const vs = state.votes.filter(v => v.w !== 'tie' && state.byId[v.a] && state.byId[v.b]);
-  $('count').textContent = `${state.votes.length} votes · ${state.items.length - state.disliked.size} compositions` + (state.disliked.size ? ` · ${state.disliked.size} set aside` : '');
+  const aside = state.items.filter(it => state.disliked.has(it.id)).length;
+  $('count').textContent = `${state.votes.filter(v => state.byId[v.a] && state.byId[v.b]).length} votes · ${state.items.length - aside} compositions` + (aside ? ` · ${aside} set aside` : '');
   const lines = [];
   // how often the critic in force already agreed: its prediction against each choice
   if (vs.length) {
@@ -220,7 +227,7 @@ function status() {
 async function start() {
   try {
     const data = await (await fetch('items.json')).json();
-    state.items = data.items; state.fits = data.fits;
+    state.items = data.items; state.fits = data.fits; state.pairs = data.pairs || [];
     state.items.forEach(it => state.byId[it.id] = it);
   } catch (e) { $('count').textContent = 'The compositions could not be loaded.'; return; }
   show();

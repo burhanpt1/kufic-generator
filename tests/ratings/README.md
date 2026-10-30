@@ -18,5 +18,15 @@ counts as losing to up to two of its genre that did. It reports each genre's
 leave-one-out accuracy, and for each reported check whether adding it would raise that accuracy: a check is promoted
 into the score only when it does.
 
+A round can also hold designed pairs: one option off and on, with the same text, seed and recipe
+(`rounds/<date>/pairs.json`, swept with `SWEEP_PAIRS=<that file> npm run sweep`; SWEEP_OPTIONS keeps some of its
+options). Each side's item carries `option`, `variant` ('off' | 'on') and `pairOf`, and the round's `items.json` lists
+the pairs as `pairs` ([off id, on id]); the page offers those, in random order, before any pair it chooses itself.
+A vote on a pair counts towards the refit like any other; read per option, it says whether the option helps.
+
+Round 2 (`rounds/2026-10-30`): the ruled mode against free and lanes on the three dense texts (ids `r…`), and on/off
+pairs for girift, learned stacking, towers, nesting and mark spacing (`clearance` 0.5 with `fathaGap`, on vocalised
+texts) (ids `pa…` to `pd…`).
+
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.

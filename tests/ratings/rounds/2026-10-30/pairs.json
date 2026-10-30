@@ -1,0 +1,22 @@
+[
+  {"option": "girift", "text": "بسم الله الرحمن الرحيم", "seed": 23, "off": {"compose": {"girift": 0}}, "on": {"compose": {"girift": 0.04}}, "base": {"lanes": {}}},
+  {"option": "girift", "text": "بسم الله الرحمن الرحيم", "seed": 131, "off": {"compose": {"girift": 0}}, "on": {"compose": {"girift": 0.04}}, "base": {"lanes": {}}},
+  {"option": "girift", "text": "الحمد لله رب العالمين", "seed": 23, "off": {"compose": {"girift": 0}}, "on": {"compose": {"girift": 0.04}}, "base": {"lanes": {}}},
+  {"option": "girift", "text": "الحمد لله رب العالمين", "seed": 131, "off": {"compose": {"girift": 0}}, "on": {"compose": {"girift": 0.04}}, "base": {"lanes": {}}},
+  {"option": "learnedStack", "text": "بسم الله الرحمن الرحيم", "seed": 23, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"learnedStack": false}}, "on": {"compose": {"learnedStack": true}}},
+  {"option": "learnedStack", "text": "بسم الله الرحمن الرحيم", "seed": 131, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"learnedStack": false}}, "on": {"compose": {"learnedStack": true}}},
+  {"option": "learnedStack", "text": "اللهم صل على محمد وآل محمد", "seed": 23, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"learnedStack": false}}, "on": {"compose": {"learnedStack": true}}},
+  {"option": "learnedStack", "text": "اللهم صل على محمد وآل محمد", "seed": 131, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"learnedStack": false}}, "on": {"compose": {"learnedStack": true}}},
+  {"option": "towers", "text": "اللهم صل على محمد وآل محمد", "seed": 23, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"towers": false}}, "on": {"compose": {"towers": true}}},
+  {"option": "towers", "text": "اللهم صل على محمد وآل محمد", "seed": 131, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"towers": false}}, "on": {"compose": {"towers": true}}},
+  {"option": "towers", "text": "الحمد لله رب العالمين", "seed": 23, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"towers": false}}, "on": {"compose": {"towers": true}}},
+  {"option": "towers", "text": "الحمد لله رب العالمين", "seed": 131, "base": {"stack": true, "lanes": {}}, "off": {"compose": {"towers": false}}, "on": {"compose": {"towers": true}}},
+  {"option": "nest", "text": "بسم الله الرحمن الرحيم", "seed": 23, "off": {"compose": {"nest": false}}, "on": {"compose": {"nest": true}}, "base": {"lanes": {}}},
+  {"option": "nest", "text": "بسم الله الرحمن الرحيم", "seed": 131, "off": {"compose": {"nest": false}}, "on": {"compose": {"nest": true}}, "base": {"lanes": {}}},
+  {"option": "nest", "text": "الحمد لله رب العالمين", "seed": 23, "off": {"compose": {"nest": false}}, "on": {"compose": {"nest": true}}, "base": {"lanes": {}}},
+  {"option": "nest", "text": "الحمد لله رب العالمين", "seed": 131, "off": {"compose": {"nest": false}}, "on": {"compose": {"nest": true}}, "base": {"lanes": {}}},
+  {"option": "marks", "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "seed": 23, "off": {}, "on": {"frame": {"clearance": 0.5, "fathaGap": true}}, "base": {"lanes": {}}},
+  {"option": "marks", "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "seed": 131, "off": {}, "on": {"frame": {"clearance": 0.5, "fathaGap": true}}, "base": {"lanes": {}}},
+  {"option": "marks", "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", "seed": 23, "off": {}, "on": {"frame": {"clearance": 0.5, "fathaGap": true}}, "base": {"lanes": {}}},
+  {"option": "marks", "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", "seed": 131, "off": {}, "on": {"frame": {"clearance": 0.5, "fathaGap": true}}, "base": {"lanes": {}}}
+]

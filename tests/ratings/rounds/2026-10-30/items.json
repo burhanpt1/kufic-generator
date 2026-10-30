@@ -1,0 +1,2664 @@
+{
+ "round": "2026-10-30",
+ "page": "https://claude.ai/artifact/UcCKG5Zx84ZZEvmoTWSHuj",
+ "items": [
+  {
+   "id": "r000",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0,
+    "knots": 0.23776223776223776,
+    "looseTop": -0.07624113475177308,
+    "unity": 0.3382352941176471,
+    "span": 0.8872651356993737,
+    "fill": 0.027431476569407604,
+    "noise": 4.969917218164824
+   },
+   "checks": {
+    "wordSpace": 2.153847206217458,
+    "strayMarks": 0,
+    "strayDots": 2,
+    "doubled": 0.805639493658248,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 7.153177489812001
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 11
+   },
+   "seed": 11
+  },
+  {
+   "id": "r001",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.0706828347970152,
+    "knots": 0.13286713286713286,
+    "looseTop": 0.23936170212765956,
+    "unity": 0.34263105835806135,
+    "span": 0.906054279749478,
+    "fill": 0.027934350132625994,
+    "noise": 5.914095174425771
+   },
+   "checks": {
+    "wordSpace": 4.199999999999999,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912236,
+    "baselines": 3,
+    "stemRhythm": 0.7142857142857106,
+    "topLevels": 1.3181703122832371
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 112
+   },
+   "seed": 112
+  },
+  {
+   "id": "r002",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0,
+    "knots": 0.23076923076923078,
+    "looseTop": 0.01713947990543735,
+    "unity": 0.33726003490401396,
+    "span": 0.8736951983298539,
+    "fill": 0.0126657824933687,
+    "noise": 10.091154595017098
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873677,
+    "baselines": 3,
+    "stemRhythm": 0.7142857142857152,
+    "topLevels": 7.757223760394361
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 213
+   },
+   "seed": 213
+  },
+  {
+   "id": "r003",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.38587726944998235,
+    "knots": 0.07692307692307693,
+    "looseTop": -0.32328605200945626,
+    "unity": 0.9782397276926817,
+    "span": 0.9018789144050103,
+    "fill": 0.13637267904509284,
+    "noise": 0.9109845561163175
+   },
+   "checks": {
+    "wordSpace": 0.8850411975601524,
+    "strayMarks": 0,
+    "strayDots": 1,
+    "doubled": 0.8056394936582454,
+    "baselines": 3,
+    "stemRhythm": 0.7142857142857146,
+    "topLevels": 1.8286372675841451
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 11,
+    "lanes": {}
+   },
+   "seed": 11
+  },
+  {
+   "id": "r004",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.584368195640597,
+    "knots": 0,
+    "looseTop": -0.06678486997635935,
+    "unity": 0.9818181818181818,
+    "span": 0.8830897703549061,
+    "fill": 0.11883841732979664,
+    "noise": 1.575296419468082
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.3658437180323815
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 112,
+    "lanes": {}
+   },
+   "seed": 112
+  },
+  {
+   "id": "r005",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3804902592668664,
+    "knots": 0.055944055944055944,
+    "looseTop": 0.08215130023640663,
+    "unity": 0.9712303980699638,
+    "span": 0.9018789144050104,
+    "fill": 0.09162245800176835,
+    "noise": 2.737078853688571
+   },
+   "checks": {
+    "wordSpace": 0.8850411975601524,
+    "strayMarks": 0,
+    "strayDots": 1,
+    "doubled": 0.4028197468291232,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.196829481784525
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 213,
+    "lanes": {}
+   },
+   "seed": 213
+  },
+  {
+   "id": "r006",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4342482572341513,
+    "knots": 0.04195804195804196,
+    "looseTop": 0.11465721040189125,
+    "unity": 0.9735628650476483,
+    "span": 0.8778705636743216,
+    "fill": 0.07190539345711759,
+    "noise": 3.6605877643489015
+   },
+   "checks": {
+    "wordSpace": 0.4235875665438389,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582454,
+    "baselines": 0,
+    "stemRhythm": 0,
+    "topLevels": 0
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 11,
+    "ruled": true
+   },
+   "seed": 11
+  },
+  {
+   "id": "r007",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5974405948725889,
+    "knots": 0,
+    "looseTop": -0.004728132387706849,
+    "unity": 0.9791750422127523,
+    "span": 0.8914405010438413,
+    "fill": 0.1374557913351017,
+    "noise": 1.3202256739724147
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582454,
+    "baselines": 1.5,
+    "stemRhythm": 0,
+    "topLevels": 2.749485279437381
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 112,
+    "ruled": true
+   },
+   "seed": 112
+  },
+  {
+   "id": "r008",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.30666804540020376,
+    "knots": 0.06293706293706294,
+    "looseTop": 0.14775413711583923,
+    "unity": 0.6527088835920891,
+    "span": 0.8768267223382046,
+    "fill": 0.08578138815207781,
+    "noise": 2.754641769866441
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912414,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.9603926896956314
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 213,
+    "ruled": true
+   },
+   "seed": 213
+  },
+  {
+   "id": "r009",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.2217835967319508,
+    "knots": 0.11764705882352941,
+    "looseTop": 0.11309523809523808,
+    "unity": 0.8519495196835563,
+    "span": 0.8514491121090602,
+    "fill": 0.033742214312952844,
+    "noise": 6.209953592275166
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 2.947306792361862,
+    "stemRhythm": 0,
+    "topLevels": 5.387218237597899
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 18
+   },
+   "seed": 18
+  },
+  {
+   "id": "r010",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.24125650032371104,
+    "knots": 0.08411214953271028,
+    "looseTop": -0.021428571428571436,
+    "unity": 0.27446692181519955,
+    "span": 0.9335647323070309,
+    "fill": 0.013141255927575802,
+    "noise": 7.555364832425399
+   },
+   "checks": {
+    "wordSpace": 2.223269731325378,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912236,
+    "baselines": 2.2213143118581784,
+    "stemRhythm": 0.8345979140845116,
+    "topLevels": 6.192442090196708
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.5,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 119
+   },
+   "seed": 119
+  },
+  {
+   "id": "r011",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.17751308264016386,
+    "knots": 0.17482517482517482,
+    "looseTop": 0.12647754137115835,
+    "unity": 0.504541811381245,
+    "span": 0.906054279749478,
+    "fill": 0.041368258178603005,
+    "noise": 4.635763237488457
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 2.3462624137621626,
+    "stemRhythm": 0.9298038925642592,
+    "topLevels": 4.698147550287546
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 220
+   },
+   "seed": 220
+  },
+  {
+   "id": "r012",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5482504329447753,
+    "knots": 0,
+    "looseTop": -0.0654761904761905,
+    "unity": 0.9843418944757377,
+    "span": 0.9002919361135157,
+    "fill": 0.13903578100301767,
+    "noise": 2.7499222700438044
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 0.6027879105806474,
+    "stemRhythm": 0.7826280541026922,
+    "topLevels": 2.4128815652181843
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 18,
+    "lanes": {}
+   },
+   "seed": 18
+  },
+  {
+   "id": "r013",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3788870060866101,
+    "knots": 0.06542056074766354,
+    "looseTop": 0.18928571428571428,
+    "unity": 0.9847841901066925,
+    "span": 0.9273922071162257,
+    "fill": 0.11852277626095703,
+    "noise": 3.5765620426226254
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.4347723964238632,
+    "stemRhythm": 0.6143570978946082,
+    "topLevels": 2.704591499765815
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.5,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 119,
+    "lanes": {}
+   },
+   "seed": 119
+  },
+  {
+   "id": "r014",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.48912746163093945,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.40425531914893614,
+    "unity": 0.9856465748524414,
+    "span": 0.9091858037578289,
+    "fill": 0.12358532272325376,
+    "noise": 2.5557320638004004
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.09217772219038167,
+    "baselines": 1.1223223035702972,
+    "stemRhythm": 0.4551281823751887,
+    "topLevels": 3.2374478592864273
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 220,
+    "lanes": {}
+   },
+   "seed": 220
+  },
+  {
+   "id": "r015",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.29051979407904505,
+    "knots": 0.12149532710280374,
+    "looseTop": -0.016666666666666663,
+    "unity": 0.9806389157792836,
+    "span": 0.8847842445021528,
+    "fill": 0.08164247736743785,
+    "noise": 3.7043840146423883
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912325,
+    "baselines": 1.5,
+    "stemRhythm": 0,
+    "topLevels": 2.7766516325786204
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 18,
+    "ruled": true
+   },
+   "seed": 18
+  },
+  {
+   "id": "r016",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.37609054751780224,
+    "knots": 0.04672897196261682,
+    "looseTop": -0.15952380952380957,
+    "unity": 0.9845391088785961,
+    "span": 0.9058223150081187,
+    "fill": 0.11013795085500791,
+    "noise": 3.9963108930616564
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912325,
+    "baselines": 1,
+    "stemRhythm": 0,
+    "topLevels": 2.577312709857185
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.5,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0.04,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 119,
+    "ruled": true
+   },
+   "seed": 119
+  },
+  {
+   "id": "r017",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5090435751484192,
+    "knots": 0,
+    "looseTop": 0.15248226950354613,
+    "unity": 0.9862231844125172,
+    "span": 0.8966597077244258,
+    "fill": 0.14039014146772769,
+    "noise": 2.001503611861526
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912325,
+    "baselines": 1,
+    "stemRhythm": 0,
+    "topLevels": 2.7401844752679
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.36,
+    "stack": true,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 220,
+    "ruled": true
+   },
+   "seed": 220
+  },
+  {
+   "id": "r018",
+   "text": "الحمد لله رب العالمين",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.1589200186296118,
+    "knots": 0.17482517482517482,
+    "looseTop": -0.05673758865248224,
+    "unity": 0.48098196696469164,
+    "span": 0.8914405010438413,
+    "fill": 0.07293324491600353,
+    "noise": 3.9138743055598417
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955707,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.5881178273821037
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 25
+   },
+   "seed": 25
+  },
+  {
+   "id": "r019",
+   "text": "الحمد لله رب العالمين",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0.0898849411753273,
+    "knots": 0.2184873949579832,
+    "looseTop": 0.09523809523809523,
+    "unity": 0.9508397480755774,
+    "span": 0.9148831248153877,
+    "fill": 0.03632896911147833,
+    "noise": 5.759810894573437
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955778,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912236,
+    "baselines": 2.211357305823822,
+    "stemRhythm": 0.71428571428571,
+    "topLevels": 4.316100951606603
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 126
+   },
+   "seed": 126
+  },
+  {
+   "id": "r020",
+   "text": "الحمد لله رب العالمين",
+   "family": "free",
+   "genre": "dense",
+   "features": {
+    "texture": 0,
+    "knots": 0.2336448598130841,
+    "looseTop": -0.2404761904761905,
+    "unity": 0.4571041948579161,
+    "span": 0.9297910620024781,
+    "fill": 0.026548354648656416,
+    "noise": 5.763180003138413
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955644,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.7135631482209117,
+    "stemRhythm": 1.059552613214874,
+    "topLevels": 3.9376304880176027
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 227
+   },
+   "seed": 227
+  },
+  {
+   "id": "r021",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.34443628023832373,
+    "knots": 0.07692307692307693,
+    "looseTop": -0.1631205673758865,
+    "unity": 0.9593368112627743,
+    "span": 0.8872651356993737,
+    "fill": 0.07732648099027409,
+    "noise": 3.3693535914430157
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955795,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.40281974682912275,
+    "baselines": 2.4700929072609217,
+    "stemRhythm": 0.7503152434182668,
+    "topLevels": 0.7084556909100989
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 25,
+    "lanes": {}
+   },
+   "seed": 25
+  },
+  {
+   "id": "r022",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.44625649033708137,
+    "knots": 0.025210084033613446,
+    "looseTop": 0.32976190476190476,
+    "unity": 0.9694828389501475,
+    "span": 0.8738629138442899,
+    "fill": 0.08184822677005212,
+    "noise": 3.720520530016016
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.9117865991742835,
+    "stemRhythm": 0,
+    "topLevels": 3.2961301844799586
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 126,
+    "lanes": {}
+   },
+   "seed": 126
+  },
+  {
+   "id": "r023",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.35640091347956027,
+    "knots": 0.07476635514018691,
+    "looseTop": -0.021428571428571436,
+    "unity": 0.9612253829321663,
+    "span": 0.8517434130499969,
+    "fill": 0.08208794367006754,
+    "noise": 3.747849044377868
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955795,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291232,
+    "baselines": 0.9940164831649505,
+    "stemRhythm": 1.1477929008142387,
+    "topLevels": 0.3012290410689904
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 227,
+    "lanes": {}
+   },
+   "seed": 227
+  },
+  {
+   "id": "r024",
+   "text": "الحمد لله رب العالمين",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.30541646225035746,
+    "knots": 0.09090909090909091,
+    "looseTop": 0.06264775413711582,
+    "unity": 0.9674217907227616,
+    "span": 0.8956158663883089,
+    "fill": 0.07684018567639257,
+    "noise": 3.1826190200025426
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955795,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 0.75,
+    "stemRhythm": 0.06689038420235777,
+    "topLevels": 0
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 25,
+    "ruled": true
+   },
+   "seed": 25
+  },
+  {
+   "id": "r025",
+   "text": "الحمد لله رب العالمين",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3421245458301265,
+    "knots": 0.06722689075630252,
+    "looseTop": -0.19285714285714287,
+    "unity": 0.966918854769322,
+    "span": 0.8697851739485238,
+    "fill": 0.08568704715901869,
+    "noise": 4.01878312031662
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955778,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.5,
+    "stemRhythm": 0.12536553092948785,
+    "topLevels": 1.7199501139797033e-15
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.36,
+    "stack": false,
+    "learnedStack": true,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 126,
+    "ruled": true
+   },
+   "seed": 126
+  },
+  {
+   "id": "r026",
+   "text": "الحمد لله رب العالمين",
+   "family": "ruled",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4712248806777155,
+    "knots": 0.04672897196261682,
+    "looseTop": -0.010714285714285718,
+    "unity": 0.9651131098391933,
+    "span": 0.9288575453604222,
+    "fill": 0.07908463859749965,
+    "noise": 4.041650407805131
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955795,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 0.75,
+    "stemRhythm": 0.0711144988920709,
+    "topLevels": 0
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.3,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "tries": 3,
+    "iters": 3000,
+    "seed": 227,
+    "ruled": true
+   },
+   "seed": 227
+  },
+  {
+   "id": "pa000",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5623563047015654,
+    "knots": 0,
+    "looseTop": 0.24404761904761904,
+    "unity": 0.9795907048971216,
+    "span": 0.8818606909879194,
+    "fill": 0.11459895767128511,
+    "noise": 2.0888999704748183
+   },
+   "checks": {
+    "wordSpace": 0.8850411975601524,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582445,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.380694324976307
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "girift": 0
+   },
+   "seed": 23,
+   "option": "girift",
+   "variant": "off",
+   "pairOf": "pa001"
+  },
+  {
+   "id": "pa001",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.6042433925398615,
+    "knots": 0,
+    "looseTop": 0.07261904761904761,
+    "unity": 0.9809518611505295,
+    "span": 0.9247858498170148,
+    "fill": 0.11644845557391637,
+    "noise": 2.210444003285547
+   },
+   "checks": {
+    "wordSpace": 1.7700823951203049,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582445,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.259761364865467
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "girift": 0.04
+   },
+   "seed": 23,
+   "option": "girift",
+   "variant": "on",
+   "pairOf": "pa000"
+  },
+  {
+   "id": "pa002",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4142739839676458,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.17375886524822695,
+    "unity": 0.9690644800596347,
+    "span": 0.8956158663883089,
+    "fill": 0.10378536693191866,
+    "noise": 2.247019337123822
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873697,
+    "baselines": 1.868127041352608,
+    "stemRhythm": 0.7435686084607147,
+    "topLevels": 0.30057447061144427
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "girift": 0
+   },
+   "seed": 131,
+   "option": "girift",
+   "variant": "off",
+   "pairOf": "pa003"
+  },
+  {
+   "id": "pa003",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5239162816298306,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.19976359338061464,
+    "unity": 0.9801117838844899,
+    "span": 0.9008350730688935,
+    "fill": 0.11864500442086649,
+    "noise": 1.4962080641088522
+   },
+   "checks": {
+    "wordSpace": 1.308628764103994,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.805639493658248,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.439134062842526
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "girift": 0.04
+   },
+   "seed": 131,
+   "option": "girift",
+   "variant": "on",
+   "pairOf": "pa002"
+  },
+  {
+   "id": "pa004",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.451007564390284,
+    "knots": 0.01680672268907563,
+    "looseTop": 0.20238095238095238,
+    "unity": 0.9789240155296728,
+    "span": 0.8919887054865502,
+    "fill": 0.09167408160671157,
+    "noise": 3.653552155367051
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.897328252141044,
+    "stemRhythm": 0,
+    "topLevels": 3.1321021221897554
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "girift": 0
+   },
+   "seed": 23,
+   "option": "girift",
+   "variant": "off",
+   "pairOf": "pa005"
+  },
+  {
+   "id": "pa005",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.2540728486321109,
+    "knots": 0.0979020979020979,
+    "looseTop": 0.42080378250591016,
+    "unity": 0.9655713165585573,
+    "span": 0.8987473903966596,
+    "fill": 0.07752541998231653,
+    "noise": 3.7796664833500695
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.890358965950712,
+    "stemRhythm": 0,
+    "topLevels": 3.6361892168794463
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "girift": 0.04
+   },
+   "seed": 23,
+   "option": "girift",
+   "variant": "on",
+   "pairOf": "pa004"
+  },
+  {
+   "id": "pa006",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.2570285943555828,
+    "knots": 0.11188811188811189,
+    "looseTop": 0.4828605200945626,
+    "unity": 0.9672106146103401,
+    "span": 0.9331941544885178,
+    "fill": 0.07246905393457118,
+    "noise": 3.7928599434712638
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.910066333076017,
+    "stemRhythm": 0,
+    "topLevels": 3.7739639598253887
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "girift": 0
+   },
+   "seed": 131,
+   "option": "girift",
+   "variant": "off",
+   "pairOf": "pa007"
+  },
+  {
+   "id": "pa007",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.45814395882541015,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.3617021276595745,
+    "unity": 0.969333193541623,
+    "span": 0.8517745302713988,
+    "fill": 0.10541556145004422,
+    "noise": 2.456939876499583
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955778,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.9005731108733794,
+    "stemRhythm": 0,
+    "topLevels": 2.840205782645807
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "girift": 0.04
+   },
+   "seed": 131,
+   "option": "girift",
+   "variant": "on",
+   "pairOf": "pa006"
+  },
+  {
+   "id": "pa008",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.6042433925398615,
+    "knots": 0,
+    "looseTop": 0.07261904761904761,
+    "unity": 0.9809518611505295,
+    "span": 0.9247858498170148,
+    "fill": 0.11644845557391637,
+    "noise": 2.210444003285547
+   },
+   "checks": {
+    "wordSpace": 1.7700823951203049,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582445,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.259761364865467
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "nest": false
+   },
+   "seed": 23,
+   "option": "nest",
+   "variant": "off",
+   "pairOf": "pa009"
+  },
+  {
+   "id": "pa009",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5394543952251944,
+    "knots": 0,
+    "looseTop": 0.1607142857142857,
+    "unity": 0.9723349317594984,
+    "span": 0.8677125105760903,
+    "fill": 0.12061141477056057,
+    "noise": 1.7023927015681983
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291241,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 1.9573572457247714
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "nest": true
+   },
+   "seed": 23,
+   "option": "nest",
+   "variant": "on",
+   "pairOf": "pa008"
+  },
+  {
+   "id": "pa010",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4142739839676458,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.17375886524822695,
+    "unity": 0.9690644800596347,
+    "span": 0.8956158663883089,
+    "fill": 0.10378536693191866,
+    "noise": 2.247019337123822
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873697,
+    "baselines": 1.868127041352608,
+    "stemRhythm": 0.7435686084607147,
+    "topLevels": 0.30057447061144427
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "nest": false
+   },
+   "seed": 131,
+   "option": "nest",
+   "variant": "off",
+   "pairOf": "pa011"
+  },
+  {
+   "id": "pa011",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4320358765127147,
+    "knots": 0.04895104895104895,
+    "looseTop": 0.08037825059101655,
+    "unity": 0.9716464442197505,
+    "span": 0.9164926931106472,
+    "fill": 0.13116710875331564,
+    "noise": 1.4809790242439314
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 1,
+    "doubled": 0.8056394936582472,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.11564408528807
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "nest": true
+   },
+   "seed": 131,
+   "option": "nest",
+   "variant": "on",
+   "pairOf": "pa010"
+  },
+  {
+   "id": "pa012",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.2540728486321109,
+    "knots": 0.0979020979020979,
+    "looseTop": 0.42080378250591016,
+    "unity": 0.9655713165585573,
+    "span": 0.8987473903966596,
+    "fill": 0.07752541998231653,
+    "noise": 3.7796664833500695
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.890358965950712,
+    "stemRhythm": 0,
+    "topLevels": 3.6361892168794463
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "nest": false
+   },
+   "seed": 23,
+   "option": "nest",
+   "variant": "off",
+   "pairOf": "pa013"
+  },
+  {
+   "id": "pa013",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4220935342045683,
+    "knots": 0.01680672268907563,
+    "looseTop": 0.37142857142857144,
+    "unity": 0.9675494672754946,
+    "span": 0.9076888802110712,
+    "fill": 0.10439176306088725,
+    "noise": 2.5530151381840795
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.9067653099251451,
+    "stemRhythm": 0.7142857142857154,
+    "topLevels": 2.805344178408039
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "nest": true
+   },
+   "seed": 23,
+   "option": "nest",
+   "variant": "on",
+   "pairOf": "pa012"
+  },
+  {
+   "id": "pa014",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.2570285943555828,
+    "knots": 0.11188811188811189,
+    "looseTop": 0.4828605200945626,
+    "unity": 0.9672106146103401,
+    "span": 0.9331941544885178,
+    "fill": 0.07246905393457118,
+    "noise": 3.7928599434712638
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.910066333076017,
+    "stemRhythm": 0,
+    "topLevels": 3.7739639598253887
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "nest": false
+   },
+   "seed": 131,
+   "option": "nest",
+   "variant": "off",
+   "pairOf": "pa015"
+  },
+  {
+   "id": "pa015",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.30920300098768194,
+    "knots": 0.07692307692307693,
+    "looseTop": 0.32092198581560283,
+    "unity": 0.9714979152405252,
+    "span": 0.8768267223382046,
+    "fill": 0.08879862953138815,
+    "noise": 2.7674072267443584
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.8957241489781183,
+    "stemRhythm": 0,
+    "topLevels": 3.098551462536041
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "nest": true
+   },
+   "seed": 131,
+   "option": "nest",
+   "variant": "on",
+   "pairOf": "pa014"
+  },
+  {
+   "id": "pb000",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5841538082339919,
+    "knots": 0,
+    "looseTop": 0.1869047619047619,
+    "unity": 0.9797363547227367,
+    "span": 0.8987173517970592,
+    "fill": 0.1166772594381594,
+    "noise": 2.560837410624073
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.081072941403894
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "girift": 0.04,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "learnedStack": false
+   },
+   "seed": 23,
+   "option": "learnedStack",
+   "variant": "off",
+   "pairOf": "pb001"
+  },
+  {
+   "id": "pb001",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4572401788496677,
+    "knots": 0.025210084033613446,
+    "looseTop": 0.20238095238095238,
+    "unity": 0.8039544470062181,
+    "span": 0.8957410272199777,
+    "fill": 0.09096860302529554,
+    "noise": 2.511516597365987
+   },
+   "checks": {
+    "wordSpace": 0.42358756654384067,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582463,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 1.7924073546970694
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "girift": 0.04,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "learnedStack": true
+   },
+   "seed": 23,
+   "option": "learnedStack",
+   "variant": "on",
+   "pairOf": "pb000"
+  },
+  {
+   "id": "pb002",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4142739839676458,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.17375886524822695,
+    "unity": 0.9690644800596347,
+    "span": 0.8956158663883089,
+    "fill": 0.10378536693191866,
+    "noise": 2.247019337123822
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873697,
+    "baselines": 1.868127041352608,
+    "stemRhythm": 0.7435686084607147,
+    "topLevels": 0.30057447061144427
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "learnedStack": false
+   },
+   "seed": 131,
+   "option": "learnedStack",
+   "variant": "off",
+   "pairOf": "pb003"
+  },
+  {
+   "id": "pb003",
+   "text": "بسم الله الرحمن الرحيم",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5581025313448521,
+    "knots": 0,
+    "looseTop": 0.1738095238095238,
+    "unity": 0.8128345498783455,
+    "span": 0.8748642004976395,
+    "fill": 0.10448709800432185,
+    "noise": 2.0009131522603925
+   },
+   "checks": {
+    "wordSpace": 0.46672671444706726,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582454,
+    "baselines": 1.7711707625570194,
+    "stemRhythm": 0.7433528635826708,
+    "topLevels": 0.2214100004753704
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "learnedStack": true
+   },
+   "seed": 131,
+   "option": "learnedStack",
+   "variant": "on",
+   "pairOf": "pb002"
+  },
+  {
+   "id": "pb004",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.5242347940446013,
+    "knots": 0,
+    "looseTop": 0.11666666666666668,
+    "unity": 0.9847845601436266,
+    "span": 0.922162478785239,
+    "fill": 0.14160416931485953,
+    "noise": 1.993507772651415
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 0.771099746236116,
+    "stemRhythm": 0.7830809734704562,
+    "topLevels": 2.5338081616711765
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "girift": 0.04,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "learnedStack": false
+   },
+   "seed": 23,
+   "option": "learnedStack",
+   "variant": "off",
+   "pairOf": "pb005"
+  },
+  {
+   "id": "pb005",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4949678965404414,
+    "knots": 0.008403361344537815,
+    "looseTop": 0.32976190476190476,
+    "unity": 0.9855832839089375,
+    "span": 0.9075762354625694,
+    "fill": 0.13930977500953348,
+    "noise": 2.3238317149544407
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 0.884388104474136,
+    "stemRhythm": 0.8455017931708714,
+    "topLevels": 2.7381154098837945
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "girift": 0.04,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23,
+    "learnedStack": true
+   },
+   "seed": 23,
+   "option": "learnedStack",
+   "variant": "on",
+   "pairOf": "pb004"
+  },
+  {
+   "id": "pb006",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3370908421361112,
+    "knots": 0.06293706293706294,
+    "looseTop": 0.3865248226950355,
+    "unity": 0.986251972053189,
+    "span": 0.9237995824634655,
+    "fill": 0.09807692307692308,
+    "noise": 2.7788123567902874
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 0.8705265868538714,
+    "stemRhythm": 0.8522678871724589,
+    "topLevels": 2.656349725341928
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "learnedStack": false
+   },
+   "seed": 131,
+   "option": "learnedStack",
+   "variant": "off",
+   "pairOf": "pb007"
+  },
+  {
+   "id": "pb007",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.48894763936478136,
+    "knots": 0.027972027972027972,
+    "looseTop": 0.37647754137115835,
+    "unity": 0.9861694677871149,
+    "span": 0.9331941544885178,
+    "fill": 0.12625994694960213,
+    "noise": 2.4806892180691817
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.0555120204458173,
+    "stemRhythm": 0.8440335236444508,
+    "topLevels": 2.6789424124831354
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "learnedStack": true
+   },
+   "seed": 131,
+   "option": "learnedStack",
+   "variant": "on",
+   "pairOf": "pb006"
+  },
+  {
+   "id": "pd000",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.48894763936478136,
+    "knots": 0.027972027972027972,
+    "looseTop": 0.37647754137115835,
+    "unity": 0.9861694677871149,
+    "span": 0.9331941544885178,
+    "fill": 0.12625994694960213,
+    "noise": 2.4806892180691817
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.0555120204458173,
+    "stemRhythm": 0.8440335236444508,
+    "topLevels": 2.6789424124831354
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "learnedStack": true,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "towers": false
+   },
+   "seed": 131,
+   "option": "towers",
+   "variant": "off",
+   "pairOf": "pd001"
+  },
+  {
+   "id": "pd001",
+   "text": "اللهم صل على محمد وآل محمد",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.515612437299934,
+    "knots": 0,
+    "looseTop": 0.19976359338061464,
+    "unity": 0.9851975917794576,
+    "span": 0.87160751565762,
+    "fill": 0.12207670203359859,
+    "noise": 2.348616169339106
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.2464347259818607,
+    "stemRhythm": 0.5320803691563066,
+    "topLevels": 3.4062569356690395
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "learnedStack": true,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "towers": true
+   },
+   "seed": 131,
+   "option": "towers",
+   "variant": "on",
+   "pairOf": "pd000"
+  },
+  {
+   "id": "pd002",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.35655646138397534,
+    "knots": 0.055944055944055944,
+    "looseTop": 0.3144208037825059,
+    "unity": 0.964082020640956,
+    "span": 0.8997912317327765,
+    "fill": 0.08138815207780725,
+    "noise": 2.3321885967957745
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.9042674721836894,
+    "stemRhythm": 0,
+    "topLevels": 3.9616135867288436
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "learnedStack": true,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "towers": false
+   },
+   "seed": 131,
+   "option": "towers",
+   "variant": "off",
+   "pairOf": "pd003"
+  },
+  {
+   "id": "pd003",
+   "text": "الحمد لله رب العالمين",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.41730584329310993,
+    "knots": 0.013986013986013986,
+    "looseTop": 0.1442080378250591,
+    "unity": 0.9710785619174435,
+    "span": 0.908141962421712,
+    "fill": 0.10375221043324491,
+    "noise": 2.2095208254844865
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.4028197468291223,
+    "baselines": 1.875969677042202,
+    "stemRhythm": 0.7142857142857154,
+    "topLevels": 2.4930401524126387
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "learnedStack": true,
+    "girift": 0,
+    "stack": true,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131,
+    "towers": true
+   },
+   "seed": 131,
+   "option": "towers",
+   "variant": "on",
+   "pairOf": "pd002"
+  },
+  {
+   "id": "pc000",
+   "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.589796138167518,
+    "knots": 0,
+    "looseTop": 0.2,
+    "unity": 0.9819315637991686,
+    "span": 0.9177468046439675,
+    "fill": 0.11924494724799796,
+    "noise": 1.9276974911809512
+   },
+   "checks": {
+    "wordSpace": 1.7700823951203049,
+    "strayMarks": 2,
+    "strayDots": 0,
+    "doubled": 0.8056394936582445,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.259761364865467
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23
+   },
+   "seed": 23,
+   "option": "marks",
+   "variant": "off",
+   "pairOf": "pc001"
+  },
+  {
+   "id": "pc001",
+   "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.6204719389185045,
+    "knots": 0,
+    "looseTop": 0.14285714285714285,
+    "unity": 0.9820441288359117,
+    "span": 0.9131483956884596,
+    "fill": 0.1253018939875429,
+    "noise": 1.4236933597554409
+   },
+   "checks": {
+    "wordSpace": 1.7700823951203049,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 0.8056394936582445,
+    "baselines": 3,
+    "stemRhythm": 0,
+    "topLevels": 2.259761364865467
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23
+   },
+   "frame": {
+    "clearance": 0.5,
+    "fathaGap": true
+   },
+   "seed": 23,
+   "option": "marks",
+   "variant": "on",
+   "pairOf": "pc000"
+  },
+  {
+   "id": "pc002",
+   "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.41983936581820946,
+    "knots": 0.013986013986013986,
+    "looseTop": 0.12470449172576833,
+    "unity": 0.9727205337286879,
+    "span": 0.8778705636743216,
+    "fill": 0.11182029177718833,
+    "noise": 2.0512495472032644
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873697,
+    "baselines": 1.868127041352608,
+    "stemRhythm": 0.7435686084607147,
+    "topLevels": 0.30057447061144427
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131
+   },
+   "seed": 131,
+   "option": "marks",
+   "variant": "off",
+   "pairOf": "pc003"
+  },
+  {
+   "id": "pc003",
+   "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.4348310861992807,
+    "knots": 0.006993006993006993,
+    "looseTop": 0.10342789598108745,
+    "unity": 0.972760736196319,
+    "span": 0.894572025052192,
+    "fill": 0.11259394341290893,
+    "noise": 1.5909395560472797
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 0,
+    "strayDots": 0,
+    "doubled": 1.2084592404873697,
+    "baselines": 1.868127041352608,
+    "stemRhythm": 0.7435686084607147,
+    "topLevels": 0.30057447061144427
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131
+   },
+   "frame": {
+    "clearance": 0.5,
+    "fathaGap": true
+   },
+   "seed": 131,
+   "option": "marks",
+   "variant": "on",
+   "pairOf": "pc002"
+  },
+  {
+   "id": "pc004",
+   "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3814666619552477,
+    "knots": 0.08403361344537816,
+    "looseTop": 0.38690476190476186,
+    "unity": 0.9654259343319715,
+    "span": 0.8990002152766305,
+    "fill": 0.08400915215456972,
+    "noise": 3.4909826541525577
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 1,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.890358965950712,
+    "stemRhythm": 0,
+    "topLevels": 3.6361892168794463
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23
+   },
+   "seed": 23,
+   "option": "marks",
+   "variant": "off",
+   "pairOf": "pc005"
+  },
+  {
+   "id": "pc005",
+   "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.37775503397460763,
+    "knots": 0.09243697478991597,
+    "looseTop": 0.444047619047619,
+    "unity": 0.9725017282433367,
+    "span": 0.8864741192432275,
+    "fill": 0.08274437523833736,
+    "noise": 3.372596821160612
+   },
+   "checks": {
+    "wordSpace": 1.5000932937955769,
+    "strayMarks": 2,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.890358965950712,
+    "stemRhythm": 0,
+    "topLevels": 3.6361892168794463
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1.15,
+    "fillTarget": 0.45,
+    "stack": false,
+    "learnedStack": false,
+    "girift": 0.04,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 23
+   },
+   "frame": {
+    "clearance": 0.5,
+    "fathaGap": true
+   },
+   "seed": 23,
+   "option": "marks",
+   "variant": "on",
+   "pairOf": "pc004"
+  },
+  {
+   "id": "pc006",
+   "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3190407836942626,
+    "knots": 0.1048951048951049,
+    "looseTop": 0.43380614657210403,
+    "unity": 0.9240629880270692,
+    "span": 0.9144050104384134,
+    "fill": 0.08492484526967285,
+    "noise": 3.1659873343116818
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 1,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.910066333076017,
+    "stemRhythm": 0,
+    "topLevels": 3.7739639598253887
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131
+   },
+   "seed": 131,
+   "option": "marks",
+   "variant": "off",
+   "pairOf": "pc007"
+  },
+  {
+   "id": "pc007",
+   "text": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+   "family": "lanes",
+   "genre": "dense",
+   "features": {
+    "texture": 0.3316324585985154,
+    "knots": 0.0979020979020979,
+    "looseTop": 0.4828605200945626,
+    "unity": 0.9244272908366534,
+    "span": 0.9175365344467641,
+    "fill": 0.0887709991158267,
+    "noise": 2.8260114846593947
+   },
+   "checks": {
+    "wordSpace": 0,
+    "strayMarks": 2,
+    "strayDots": 0,
+    "doubled": 0,
+    "baselines": 1.910066333076017,
+    "stemRhythm": 0,
+    "topLevels": 3.7739639598253887
+   },
+   "recipe": {
+    "elongate": true,
+    "cross": true,
+    "kern": true,
+    "oval": 1,
+    "fillTarget": 0.45,
+    "stack": true,
+    "learnedStack": false,
+    "girift": 0,
+    "lanes": {},
+    "tries": 3,
+    "iters": 3000,
+    "seed": 131
+   },
+   "frame": {
+    "clearance": 0.5,
+    "fathaGap": true
+   },
+   "seed": 131,
+   "option": "marks",
+   "variant": "on",
+   "pairOf": "pc006"
+  }
+ ],
+ "pairs": [
+  [
+   "pa000",
+   "pa001"
+  ],
+  [
+   "pa002",
+   "pa003"
+  ],
+  [
+   "pa004",
+   "pa005"
+  ],
+  [
+   "pa006",
+   "pa007"
+  ],
+  [
+   "pa008",
+   "pa009"
+  ],
+  [
+   "pa010",
+   "pa011"
+  ],
+  [
+   "pa012",
+   "pa013"
+  ],
+  [
+   "pa014",
+   "pa015"
+  ],
+  [
+   "pb000",
+   "pb001"
+  ],
+  [
+   "pb002",
+   "pb003"
+  ],
+  [
+   "pb004",
+   "pb005"
+  ],
+  [
+   "pb006",
+   "pb007"
+  ],
+  [
+   "pd000",
+   "pd001"
+  ],
+  [
+   "pd002",
+   "pd003"
+  ],
+  [
+   "pc000",
+   "pc001"
+  ],
+  [
+   "pc002",
+   "pc003"
+  ],
+  [
+   "pc004",
+   "pc005"
+  ],
+  [
+   "pc006",
+   "pc007"
+  ]
+ ]
+}
