@@ -173,5 +173,7 @@ export const PATHS: Record<string, ReadingPath> = {
 }; // prettier-ignore
 
 /** The families path: 'auto' chooses among, by how the finished roundel is judged: fitted lanes, staggered lanes, the
- *  staircase, and the master routes that gave the densest, quietest compositions. */
-export const AUTO_PATHS = ['lanes', 'stag2', 'stag3', 'stairs3', 'calliar3', 'calliar4'] as const;
+ *  staircase, and the master route that gave the densest, quietest compositions. The sharp V (calliar3) is left out:
+ *  every dense composition on it was disliked in the 24 October round, so it stays selectable by name only (owner's
+ *  decision, 30 October). */
+export const AUTO_PATHS = ['lanes', 'stag2', 'stag3', 'stairs3', 'calliar4'] as const;
