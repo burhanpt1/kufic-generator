@@ -20,10 +20,14 @@ What is already done is listed at the end only as milestones; the commit history
 
 ## Next up
 
-1. **[?] A second round of ratings, on today's engine.** Most of the open composition work is a built option waiting
-   on ratings (ruled composition, the Timurid band, girift, mark spacing, learned stacking), and the critic is not yet
-   good enough to stand in for them. Dense roundels fit at 78%, mirrored at 75% and single names at 87%; the target
-   is 85% (`10f7d0f`, `719cd4a`). Owner action; the loop is in `tests/ratings/README.md`.
+1. **[ ] A second round of ratings, on today's engine.** Most of the open composition work is a built option waiting
+   on ratings, and the critic is not yet good enough to stand in for them. Dense roundels fit at 78%, mirrored at 75%
+   and single names at 87%; the target is 85% (`10f7d0f`, `719cd4a`).
+   - **Contents (owner, 30 October):**
+     - ruled roundels, against free and lanes, on the same texts;
+     - each built option as an on/off pair: girift, learned stacking, towers, mark spacing, nesting.
+   - **Refit:** offer the reported checks as candidates, and promote any that earn their weight.
+   - **Who does what:** I sweep and publish the round; you vote. The loop is in `tests/ratings/README.md`.
 2. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
@@ -41,7 +45,6 @@ What is already done is listed at the end only as milestones; the commit history
 
 6. **[ ] Housekeeping:**
    - Bring CLAUDE.md up to date. Its migration plan is finished, and its roadmap now points here.
-   - Commit PLAN-2. Commits cite its §1–§10, but the file is not in the repo.
 
 ---
 
@@ -54,16 +57,12 @@ What is already done is listed at the end only as milestones; the commit history
 - [!] **The dense loop heads sit under the 0.3 confusion threshold.** These are fa and qaf, heh and mim, in initial
   and medial position. The test holds each at its present distance, so they may move apart but never closer.
   Initial fa/heh is the closest pair, at 0.18 (`tests/thuluth-legibility.test.ts`, confusion matrix).
-- [?] **The final and isolated seen are a construction, not a master's form.** They are the seen's teeth followed by
-  the final nun's bowl (`65efddf`). The owner should review them.
 - [ ] **The final ya at ordinary size is still hand-drawn.** The only master instance is a great sweep (lab HANDOVER
       §11).
 - [ ] **The lab's "initial lam/tooth at 0.35" finding was never explained** (refresh/HANDOVER.md). The port has since
       redrawn the initial and medial lam. Check whether the finding still holds.
 - [~] **Mim, tah, lam-alif and the Allah ligature are hand-drawn and only "acceptable"** (lab HANDOVER §4). Each
   needs a master fit when photos allow.
-- [~] **Solid heads at the roundel pen:** mim (initial and medial), waw, initial heh and initial ta. This is a jali
-  convention, but the handover asks that loop letters keep open counters.
 - [ ] **Calibrate the port's rasm confusion matrix against the lab's `checker.js`.** That file is now vendored in
       `refresh/lab/`. The port's scale differs from the lab's: for example, isolated ba/ra and medial kaf/lam are not
       flagged.
@@ -80,8 +79,6 @@ What is already done is listed at the end only as milestones; the commit history
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`
   covers stacking itself (`c786fae`, `7380a89`).
-- [?] **The traced master route `calliar3` (the sharp V).** Every dense composition on it was disliked in the 24
-  October round (`844ad32`). Drop it, or fix it and rate it again.
 - [ ] **The pen-writing animation (`renderRoundel animate`)** has no port.
 - [r] **Built options, each waiting on ratings:**
   - ruled composition (`1519791`)
@@ -91,15 +88,14 @@ What is already done is listed at the end only as milestones; the commit history
   - hairline piercing (`e06c0d0`)
   - nesting, drawn-out tails, rising stems and `stackAt` (`d77fd76`, `1d7f561`, `8727be9`)
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
-- [?] **Mirrored work: the list of refused texts.** Mirrored الله is refused. The owner may add Hu and other divine
-  names (`fed534d`).
-- [?] **Should the Timurid band (Kufic over jali thuluth) become a preset?** It must be rated first (`bd147de`).
+- [r] **The Timurid band (Kufic over jali thuluth)** becomes a preset only once it rates well (`bd147de`). It is not
+  in round 2, so it stays a showpiece until a later round.
 
 ## Kufic engine
 
 - [~] **A full Fatimid letter set**, as vector stroke skeletons with an editor. There is a cell-based `fatimid` set
-  (`ae2d8bd`), but the letter editor is still cell-based (docs/letters.md; COMPOSITION_ENGINE.md 6.6).
-- [?] **Rana Kufi (Khaled Hosny, AGPL).** Use it as a reference only, or take outlines and relicense? (docs/letters.md)
+  (`ae2d8bd`), but the letter editor is still cell-based (docs/letters.md; COMPOSITION_ENGINE.md 6.6). Rana Kufi may
+  be used for proportions only.
 - [~] **Letters as authored centreline graphs**, for true over/under across letters. Curved strokes, variable width
   and leaves are done (`9951997`); per-glyph authored skeletons are not (CLAUDE.md).
 - [ ] **Stacked Kufic ligatures** (CLAUDE.md).
@@ -121,18 +117,14 @@ What is already done is listed at the end only as milestones; the commit history
 
 ## Studio and interface
 
-- [?] **The rating page lives outside the Studio.** The owner asked for it inside if possible (refresh/PORT-PLAN.md).
-  A static Studio has no shared store, so it is published as a page and its source is in `tests/ratings/page`
-  (`04ed956`).
 - [r] **Thuluth is never bred at random** (prior 0) until taste or a lock asks for it (`src/evolve/genes.ts`).
 
 ## Evolution, critic and ratings
 
 - [~] **The critic's accuracy on the current engine is below target:** dense 78%, mirrored 75%, single 87%, against
   85%. Dislikes flatter it (`844ad32`, `10f7d0f`).
-- [?] **Promote the reported checks into the score?** These are word space, stray marks and dots, doubled ink,
-  clashes, crossings and alignment. So far only word space moved a fit, by 1.3 points, "too little to promote"
-  (`src/evolve/critic.ts:130`, `844ad32`).
+- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment) are
+  candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`).
 - [~] **Single-name roundels are their own genre.** Per-genre fits exist (`18ca2a7`). Check the Husayn master now
   scores well.
 - [ ] **Check whether the monogram critic still over-rewards four-fold symmetry.** Its weights are fixed
@@ -146,8 +138,6 @@ What is already done is listed at the end only as milestones; the commit history
   - What's left is rendering (about 30%), garbage collection (about 15%) and strip layout (about 12%), with no single
     hotspot. A full C port was weighed and declined: the expected gain is small, and it would move every golden.
 - [ ] **Roundel composition in the worker with a time cap** (see Next up).
-- [?] **Print files are large:** the A1 sheet is 48 MB and the wedding sheet 12 MB. Coarser Iznik detail or coarser
-  coordinates would shrink them, but both change the image slightly.
 
 ## Fabrication and export
 
@@ -158,8 +148,25 @@ What is already done is listed at the end only as milestones; the commit history
 - [~] **Finish the istif write-up** (see Next up).
 - [ ] **Bring CLAUDE.md up to date.** Its migration plan is finished, and it still names retired paths such as
       `src/ui`.
-- [ ] **Add PLAN-2 to the repo** (see Next up).
 - [~] **Chronogram Hijri/CE conversion uses the lab's approximations** (`src/studio/chronogram.ts`).
+
+## Decisions
+
+Taken with the owner on 30 October 2026:
+
+- **Final and isolated seen:** keep the construction (teeth, then the final nun's bowl). Replace it if a master
+  example turns up.
+- **The route `calliar3` (the sharp V)** is out of the defaults (`path: 'auto'` and the sweep), and stays selectable
+  by name.
+- **Mirrored work** refuses الله only.
+- **Rana Kufi** is for proportions only. No outlines are copied, and the licence stays as it is.
+- **The Timurid band** is rated before it becomes a preset (not in round 2).
+- **The reported checks** wait for the round 2 refit.
+- **The rating page** stays a published page, linked from the Studio's Trainer tab.
+- **Print files** stay as they are, at full detail.
+- **Solid heads** (mim, waw, initial heh and initial ta at the roundel pen) are accepted as the jali convention, not a
+  defect.
+- **PLAN-2** is not needed in the repo; the commits record it.
 
 ## Decided: not doing
 

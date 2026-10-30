@@ -86,7 +86,8 @@ const HEH_INI: LetterForm = {
 
 /** Final and isolated seen, which neither the lab nor its data had (the initial teeth stood in, with no tail, so
  *  الناس read as الناسـ): the seen's teeth, then the final nun's bowl from where they leave the baseline, as the
- *  letter is built. The dots of shin stay over the teeth. */
+ *  letter is built. The dots of shin stay over the teeth. Reviewed and kept by the owner (30 October 2026); replace it
+ *  if a master example turns up. */
 const sinEnd = (teeth: LetterForm): LetterForm => {
   const bowl = LETTERS.nun.fin!,
     dx = teeth.exit!;

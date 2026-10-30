@@ -5,7 +5,8 @@
 // slanted (fatha, kasra), since vowels are optional in decorative work; a narrow letter stroke on the axis becomes one
 // shared stroke (the two lams of علي, one central stem). The mirrored half's pen is mirrored too, so thick and thin
 // mirror. Mirrored compositions work when a tall stroke can be shared (علي) and are weak when the halves only face each
-// other (محمد); the owner does not want الله mirrored, and it is refused. Double symmetry and hairline piercing lost
+// other (محمد); the owner does not want الله mirrored, and it is refused (and only it: other divine names stay allowed,
+// owner, 30 October 2026). Double symmetry and hairline piercing lost
 // every rating and are not ported.
 import type { Thuluth } from '../engine';
 import { dotPolys } from '../pen';

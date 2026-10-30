@@ -15,7 +15,8 @@ Rana Kufi by Khaled Hosny (github.com/aliftype/rana-kufi) follows the Fatimid Ku
 Qadir. It is licensed **AGPL-3.0** (checked October 2026; its sibling fonts Reem Kufi, Qahiri and Amiri are OFL).
 Copying its glyph outlines into this project would make the project a derivative work under the AGPL, which would
 apply to the whole app as served. Nothing has been copied. The alternates above are original designs; Rana Kufi may
-be looked at as a reference for proportions only. Adopting its outlines (or relicensing this project under the
-AGPL) is a decision for the project owner.
+be looked at as a reference for proportions only. **Decided (owner, 30 October 2026): reference only.** Its
+proportions may be studied; the letter set's skeletons are drawn here, no outlines are copied, and the project's
+licence stays as it is.
 
 A full Fatimid letter set (vector stroke skeletons with an editor) is still to do; see COMPOSITION_ENGINE.md §9.
