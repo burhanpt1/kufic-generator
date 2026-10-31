@@ -84,7 +84,10 @@ describe('marks, second generation', { timeout: 180_000 }, () => {
   it('write the long fatha only across a gap when asked', () => {
     const all = build(text),
       gap = build(text, { fathaGap: true }),
+      // (the rule is on by default now; off, the long fatha may stand beside the letters)
+      beside = build(text, { fathaGap: false }),
       longs = (f: number[]) => f.filter(x => x === FATHA_DOTS.long).length;
     expect(longs(gap.fathas)).toBeLessThanOrEqual(longs(all.fathas));
+    expect(longs(all.fathas)).toBeLessThanOrEqual(longs(beside.fathas));
   });
 });

@@ -28,6 +28,10 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   oval: 1.45,
   emph: 'ب',
   kern: true,
+  // the lab's variant list, with its stacked joins, so the recorded variant numbers keep their meaning, and its light
+  // touch between kerned pieces
+  stackPull: 1.6,
+  kernTouch: 3,
   fixed: {
     lv: [2, 5, 2, 0],
     wp: [
@@ -37,13 +41,15 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   },
   great: { ya: true, yaWide: 2.6, yaDeep: 1.3 },
   tweaks: [{ at: 'و', scale: 0.62, tint: '#2AA6A0', under: { group: 1, gap: 0.7 } }],
-  bowl: { clear: 5.6, autoOval: true, dotAt: 0.42 },
+  bowl: { clear: 5.6, autoOval: true, dotAt: 0.42, clearArms: false },
   markReach: 2.2,
   ornaments: true,
   density: 0.6,
-  // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only)
+  // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only), and the
+  // ornaments in the largest gaps, as the lab placed them
   fathaRule: false,
   allSigns: false,
+  pockets: false,
 };
 
 export type WeddingVariant = 'cobalt' | 'lapis';

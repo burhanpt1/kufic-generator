@@ -292,12 +292,17 @@ export function wireEditor(app: App) {
       bar.append(ss);
     }
     if (node.type === 'roundel') {
-      // the reading path: drawn on a pad, or named ('lanes' fits level lanes to the text)
+      // the reading path: drawn on a pad, or named ('ruled' sets the words on ruled lines, the default for three
+      // words or more; 'lanes' fits level lanes to the text; 'free' lets the words find their own places)
       const r = node as Extract<FillerNode, { type: 'roundel' }>,
         recipe = r.recipe ?? {};
       box.append(
         pathPad(recipe.path, p => {
-          const next = { ...recipe, path: p === 'lanes' ? undefined : p, lanes: p === 'lanes' ? {} : undefined };
+          const next: typeof recipe = { ...recipe, path: undefined, lanes: undefined, ruled: undefined };
+          if (p === 'lanes') next.lanes = {};
+          else if (p === 'ruled') next.ruled = true;
+          else if (p === 'free') next.ruled = false;
+          else next.path = p;
           apply(setAt(c, [...sel, 'recipe'], next));
         }),
       );

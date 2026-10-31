@@ -78,7 +78,8 @@ export function lanes(deg: number, n: number, gap: number, R = 0.95): ReadingPat
   return out.sort((p, q) => Math.max(q[0][1], q[1][1]) - Math.max(p[0][1], p[1][1]) || q[0][0] - p[0][0]);
 }
 
-/** Fitted lanes: the number of lanes (2–4, or `n`) and their spacing chosen so each band is about a word high
+/** Fitted lanes: the number of lanes (2 to 4, more for a long text: up to half the words, at most 7; or `n`) and their
+ *  spacing chosen so each band is about a word high
  *  (`bandFrac` of the mean word height), the lanes' total length about the text's (`fill`), and together they span
  *  the field (about 1.85 of its radius). */
 export function fitLanes(
@@ -90,7 +91,8 @@ export function fitLanes(
   make: (n: number, gap: number) => ReadingPath = (n, gap) => lanes(o.deg ?? 180, n, gap),
 ): { path: ReadingPath; n: number; gap: number } {
   let best: { cost: number; path: ReadingPath; n: number; gap: number } | null = null;
-  for (const n of o.n ? [o.n] : [2, 3, 4])
+  const most = Math.min(7, Math.max(4, Math.ceil(words / 2)));
+  for (const n of o.n ? [o.n] : Array.from({ length: most - 1 }, (_, k) => k + 2))
     for (let k = 0; k <= 15; k++) {
       const gap = 0.3 + k * 0.05,
         L = make(n, gap),
@@ -172,8 +174,8 @@ export const PATHS: Record<string, ReadingPath> = {
   ...Object.fromEntries(CALLIAR_ROUTES.map((r, i) => [`route:${i}`, downward(r.path)])),
 }; // prettier-ignore
 
-/** The families path: 'auto' chooses among, by how the finished roundel is judged: fitted lanes, staggered lanes, the
- *  staircase, and the master route that gave the densest, quietest compositions. The sharp V (calliar3) is left out:
+/** The families path: 'auto' chooses among, by how the finished roundel is judged: ruled lines, fitted lanes,
+ *  staggered lanes, the staircase, and the master route that gave the densest, quietest compositions. The sharp V (calliar3) is left out:
  *  every dense composition on it was disliked in the 24 October round, so it stays selectable by name only (owner's
  *  decision, 30 October). */
-export const AUTO_PATHS = ['lanes', 'stag2', 'stag3', 'stairs3', 'calliar4'] as const;
+export const AUTO_PATHS = ['ruled', 'lanes', 'stag2', 'stag3', 'stairs3', 'calliar4'] as const;

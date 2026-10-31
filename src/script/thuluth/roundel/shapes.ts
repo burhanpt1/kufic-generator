@@ -69,7 +69,9 @@ export interface StackOptions {
   /** Margin (pixels) kept round each group. */
   margin?: number;
   levels?: number[];
-  /** Stacks: how strongly to prefer them (0 = none); deep stacks too. */
+  /** Stacked joins: how strongly to prefer them (the lab's 1.6 earns each stacked join that much; 0 = none). Unset,
+   *  joins are stacked only where learned stacking, towers or stackAt ask for it: rewarded by default, stacking turned
+   *  every hah and mim join into a staircase and dropped letters into the next line (31 October). */
   stackPull?: number;
   /** Stack the joins masters stack (STACK_PRIOR): any join whose next letter is stacked at least stackMin (0.2) of
    *  the time may be, pulled in proportion to that rate (against mim's); off, only joins before hah and mim. */
@@ -82,6 +84,9 @@ export interface StackOptions {
   /** Towers: three stacked joins in one group, pulled at towerPull (1) times the stacks' own pull. */
   towers?: boolean;
   towerPull?: number;
+  /** Groups (by their letters) written only with a stacked join where they have one (the shin above the mim of
+   *  شمير), so a word gains height about that letter. */
+  stackAt?: string[];
   deep?: boolean;
   /** Final tails stretched (roundels). */
   tails?: boolean;
@@ -374,6 +379,7 @@ export function variantsKey(style: ThuluthStyle, g: RGroup, o: StackOptions, K: 
       emph: o.emph,
       towers: o.towers,
       towerPull: o.towerPull,
+      stackAt: o.stackAt,
       tails: o.tails,
       stackMin: o.stackMin,
       stackBowls: o.stackBowls,
@@ -481,9 +487,14 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
       v.cost = 0.3 * L;
       out.push(v);
     }
+    // stacked joins: asked for (a pull, learned stacking, towers, stackAt), they are rewarded by the pull, in pairs
+    // and at depth too; unasked, the single join at its two shallow offsets is on offer at a small cost, so a word
+    // stacks only where it buys the arrangement something (fit on a line, a rounder block); stackPull 0 forbids them
     if (o.stackPull === 0) return;
+    const asked = o.stackPull != null || !!o.learnedStack || !!o.towers || !!o.stackAt?.length,
+      pull = o.stackPull ?? 1.6;
     const pairOffs = o.deep ? DEEP_OFFSETS : STACK_OFFSETS.slice(0, 2);
-    if (joins.length >= 2)
+    if (asked && joins.length >= 2)
       for (let a = 0; a < joins.length; a++)
         for (let c = a + 1; c < joins.length; c++)
           for (const oa of pairOffs)
@@ -495,20 +506,21 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
               };
               const v3 = groupShape(th, g, L, o, K, stk, joins[c]);
               if (v3 && groupShapeOk(th, g, L, o, stk, joins[a])) {
-                v3.cost = 0.3 * L - 0.9 * (stackWeight(g.s, joins[a], o) + stackWeight(g.s, joins[c], o)) * (o.stackPull ?? 1.6); // prettier-ignore
+                v3.cost = 0.3 * L - 0.9 * (stackWeight(g.s, joins[a], o) + stackWeight(g.s, joins[c], o)) * pull; // prettier-ignore
                 v3.stacked = true;
                 out.push(v3);
               }
             }
     joins.forEach(j => {
-      const scaled = (o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS).map(off => ({ dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25, learned: false })), // prettier-ignore
+      const offs = !asked ? STACK_OFFSETS.slice(0, 2) : o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS,
+        scaled = offs.map(off => ({ dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25, learned: false })),
         depth = o.learnedStack ? stackDepth(th, g.s, j) : null;
       // learned: the depth masters use for this pair, at the two usual reaches, a little preferred
       if (depth) [0.9, 2.1].forEach(dx => scaled.push({ dx: (dx * BODY) / 1.25, dy: -depth, learned: true }));
       scaled.forEach(off => {
         const v2 = groupShape(th, g, L, o, K, { [j]: { dx: off.dx, dy: off.dy } }, j);
         if (v2) {
-          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * (o.stackPull ?? 1.6) - (off.learned ? 0.4 : 0);
+          v2.cost = asked ? 0.3 * L - stackWeight(g.s, j, o) * pull - (off.learned ? 0.4 : 0) : 0.3 * L + 0.3;
           v2.stacked = true;
           out.push(v2);
         }
@@ -532,7 +544,7 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
                   if (!groupShapeOk(th, g, L, o, stk, J[a]) || !groupShapeOk(th, g, L, o, stk, J[c])) continue;
                   const v4 = groupShape(th, g, L, o, K, stk, J[e]);
                   if (!v4) continue;
-                  v4.cost = 0.3 * L - (o.towerPull ?? 1.0) * (stackWeight(g.s, J[a], o) + stackWeight(g.s, J[c], o) + stackWeight(g.s, J[e], o)) * (o.stackPull ?? 1.6); // prettier-ignore
+                  v4.cost = 0.3 * L - (o.towerPull ?? 1.0) * (stackWeight(g.s, J[a], o) + stackWeight(g.s, J[c], o) + stackWeight(g.s, J[e], o)) * pull; // prettier-ignore
                   v4.stacked = true;
                   v4.tower = 3;
                   towers++;

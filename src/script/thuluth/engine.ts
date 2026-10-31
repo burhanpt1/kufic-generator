@@ -1,7 +1,7 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, LETTER_FIXES } from './fixes';
+import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, HEH_FIN_FIXES, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import { DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
@@ -115,7 +115,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     if (!st.labLetters)
       for (const [fam, fs] of Object.entries(LETTER_FIXES) as [Family, Partial<Record<Form, GlyphDef>>][])
         t[fam] = { ...t[fam], ...fs };
-    t.ha = { ...t.ha, fin: HEH_FIN[st.heh] || HEH_FIN.round };
+    t.ha = { ...t.ha, fin: (!st.labLetters && HEH_FIN_FIXES[st.heh]) || HEH_FIN[st.heh] || HEH_FIN.round };
     const gr = st.great;
     if (gr?.nun) t.nun = { ...t.nun, fin: clone(GREAT.nunFin) };
     if (gr?.hah) t.hah = { ...t.hah, ini: clone(GREAT.hahIni) };

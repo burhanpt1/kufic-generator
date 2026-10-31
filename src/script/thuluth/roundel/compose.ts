@@ -7,6 +7,7 @@ import type { Thuluth } from '../engine';
 import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
+import { letterBodies, readingFault } from './bodies';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
@@ -55,7 +56,7 @@ export interface RoundelOptions extends StackOptions {
   /** Words may sit in great bowls. */
   cradle?: boolean;
   /** Kern the pieces of a word broken by a non-joining letter (slide together on bare ink), and how much touch is
-   *  allowed. */
+   *  allowed (pixels of bare ink overlapping; 0: the pieces stop short of touching, and keep 0.4 of a pen apart). */
   kern?: boolean;
   kernTouch?: number;
   /** Nest the piece of a word after a tailed letter (ra, zay, waw, ya) into the curve of its tail: slid right over it
@@ -64,9 +65,6 @@ export interface RoundelOptions extends StackOptions {
   /** Stack: the search may lift a piece of a word above the piece before it, slid back over it, so a word rises in
    *  layers (each lift is a move it can make or undo). */
   stack?: boolean;
-  /** Groups (by their letters) written only with a stacked join where they have one (the shin above the mim of
-   *  شمير), so a word gains height about that letter. */
-  stackAt?: string[];
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
@@ -91,7 +89,14 @@ export interface RoundelOptions extends StackOptions {
   readW?: number;
   orderFirm?: number;
   orderSlack?: number;
-  /** Ruled composition, the constrained mode (true for the defaults): see RuledOptions. Replaces path and lanes. */
+  /** The reading order judged from the letters' bodies (bodies.ts), in every mode: a later word's bodies lie left of
+   *  an earlier word's where level with them and never higher; a dropped letter under the next word, or a word set up
+   *  and away from the one before, pays. On by default; the weight is readingW (25, as the other order terms). */
+  reading?: boolean;
+  readingW?: number;
+  /** Ruled composition, the constrained mode (true for the defaults): see RuledOptions. Replaces path and lanes. On
+   *  by default for three words or more when neither a path nor lanes nor a fixed layout is given; false turns it
+   *  off. */
   ruled?: boolean | RuledOptions;
   fixed?: Layout;
 }
@@ -111,9 +116,11 @@ export interface RuledOptions {
   maxGap?: number;
   justify?: number;
   /** Weights (1 each): the stems' rhythm (their tops evenly spaced along each line, and on one or two common
-   *  heights), and the axis (the longest stroke centred on it). */
+   *  heights), the axis (the longest stroke centred on it), and roundness (the number of lines that makes the block
+   *  about the field's proportion, each line about a word high). */
   rhythm?: number;
   axis?: number;
+  round?: number;
 }
 export interface Roundel {
   E: number;
@@ -270,7 +277,8 @@ export function roundelGroups(
       g.marks = g.marks.filter(m => m.k !== k);
     }
   });
-  return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] } };
+  // girift asks for stems through horizontals, which stacked joins supply: the dial keeps them on offer
+  return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7], stackPull: o.stackPull ?? (o.girift ? 1.6 : undefined) } }; // prettier-ignore
 }
 
 /** The pieces of a phrase (its groups, with their marks) and every variant of each that the composer chooses among;
@@ -365,7 +373,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         let k = 0;
         for (let s = 0.25; s <= 4.01; s += 0.25) {
           const bx = -B.x1 + A.x0 - GAP + s;
-          if (pairOverlap(A, 0, 0, B, bx, 0, true) > (o.kernTouch ?? 3)) break;
+          if (pairOverlap(A, 0, 0, B, bx, 0, true) > (o.kernTouch ?? 0)) break;
           k = s;
         }
         kern.set(key, k);
@@ -384,7 +392,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         for (let dy = 0; dy >= -3.01; dy -= 0.25)
           for (let sx = 0; sx <= 8.01; sx += 0.25) {
             const bx = -B.x1 + A.x0 - GAP + sx;
-            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
+            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 0)) break;
             const sc = sx + dy * 0.5;
             if (sc > bs) {
               bs = sc;
@@ -408,7 +416,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         for (let dy = lift0; dy <= A.y1 - B.y0 + 0.8; dy += 0.5)
           for (let sx = 0; sx <= A.x1 - A.x0 + 0.01; sx += 0.5) {
             const bx = -B.x1 + A.x0 - GAP + sx;
-            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
+            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 0)) break;
             const sc = sx - dy * 0.35;
             if (sc > bs) {
               bs = sc;
@@ -434,7 +442,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           const [sx, dy] = nestOf(prev, gi);
           x += sx;
           y = gpos[prev].y + dy;
-        } else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, gi) - 0.15);
+        } else if (o.kern && prev >= 0 && !groups[gi].newWord)
+          x += Math.max(0, kernOf(prev, gi) - (o.kernTouch ? 0.15 : 0.4));
         gpos[gi] = { x, y };
         cur = x + S.x0 - GAP * (groups[gi].sc || 1);
         prev = gi;
@@ -463,7 +472,10 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       return { x0, x1, y0, y1 };
     };
     // on a reading path, words start at their targets (essential for the search to converge)
-    const RU: RuledOptions | null = o.ruled && W > 1 && !o.fixed ? (o.ruled === true ? {} : o.ruled) : null;
+    // ruled by default for a text of three words or more that asks for no other structure (31 October: it is the
+    // mode that reads); ruled: false keeps free composition
+    const ruledOn = o.ruled ?? (W >= 3 && !o.path && !o.lanes && !o.fixed),
+      RU: RuledOptions | null = ruledOn && W > 1 && !o.fixed ? (ruledOn === true ? {} : ruledOn) : null;
     let PP: ReadingPath | null = RU ? null : typeof o.path === 'string' ? (PATHS[o.path] ?? null) : (o.path ?? null),
       fitted: { n: number; gap: number } | undefined;
     const pFill = o.pathFill ?? 0.7;
@@ -514,6 +526,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     let brk: number[] = [0],
       pk = 1,
       wk = 1,
+      linePrior = 0,
       lineFit: { over: number; loose: number }[] = [];
     const anc = new Uint8Array(W),
       chord: { x: number; y: number; half: number }[] = [],
@@ -543,7 +556,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         shift(off);
         for (let s = 0.4; s <= cap; s += 0.4) {
           shift(0.4);
-          if (touch() > (o.kernTouch ?? 3)) break;
+          if (touch() > (o.kernTouch ?? 0)) break;
           off += 0.4;
         }
         // and back off a little, so words that interlock still read apart
@@ -608,10 +621,21 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         wh = bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W,
         make = o.field ? (k: number, gap: number) => fieldLanes(o.field!, k, gap) : undefined,
         lo = { bandFrac: o.lanes?.bandFrac },
-        nL = Math.max(
-          Math.min(W, 2),
-          Math.min(W, RU.lines ?? fitLanes(W, tw, wh, lo, pFill, make).n + [0, 1, -1][t % 3]),
-        ),
+        // how far a count of lines is from a round block: each line about a word high, and the block's proportion
+        // (its lines' length over their height) about the field's. The lines are chosen by this, the tries looking one
+        // either side, and the energy carries it as a prior, so a wide two-line block cannot buy its way in with slack
+        roundness = (k: number) => {
+          const Lk = fitLanes(W, tw, wh, { ...lo, n: k }, pFill, make),
+            lenK = Lk.path.reduce((a, sp) => a + Math.abs(sp[0][0] - sp[sp.length - 1][0]), 0),
+            band = ((tw * pFill) / lenK) * Lk.gap,
+            aspect = tw / k / (k * band);
+          return Math.abs(Math.log(aspect / (o.field ? FIELDS[o.field].aspect : OVAL))) + 0.5 * Math.abs(Math.log(band / ((lo.bandFrac ?? 0.75) * wh))); // prettier-ignore
+        },
+        most = Math.min(W, 7, Math.max(4, Math.ceil(W / 2))),
+        counts = Array.from({ length: Math.max(1, most - 1) }, (_, k) => k + 2),
+        n0 = RU.lines ?? counts.reduce((a, b) => (roundness(b) < roundness(a) ? b : a)),
+        // the tries take the round count and one more, never fewer: fewer lines is the wide block that reads worst
+        nL = Math.max(Math.min(W, 2), Math.min(W, RU.lines ?? n0 + [0, 1, 0][t % 3])),
         L = fitLanes(W, tw, wh, { ...lo, n: nL }, pFill, make),
         len = L.path.map(sp => Math.abs(sp[0][0] - sp[sp.length - 1][0])),
         lenAll = len.reduce((a, b) => a + b, 0),
@@ -623,6 +647,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         chord.push({ x: ((a[0] + b[0]) / 2) * u * sx, y: a[1] * u, half: (Math.abs(a[0] - b[0]) / 2) * u * sx });
       });
       fitted = { n: nL, gap: L.gap };
+      linePrior = (RU.round ?? 1) * 120 * roundness(nL);
       // the first breaks: each line takes its chord's share of the text
       let acc = 0;
       const at = bx0.map(q => {
@@ -720,6 +745,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         r = Math.max(0, farthest(m, cx, cy, ovl)[0]);
       return { cx, cy, r: r + 0.8, ink: sw, oval: ovl, field: o.field };
     };
+    const lvShapes = () => groups.map((_, i) => shapes[i][lv[i]]);
     const stackOrder = () =>
       o.stack
         ? orderFault(
@@ -789,6 +815,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             if (dv > -1) order += 0.6 * (dv + 1) ** 2;
           }
         }
+      // the reading order of the letters' bodies, whatever the mode (bodies.ts)
+      const reading = o.reading === false || W < 2 ? 0 : readingFault({ groups, shapes: lvShapes(), pos: gpos, nib: th.style.nib, clash: !o.girift }); // prettier-ignore
       let cost = 0;
       groups.forEach((_, i) => {
         cost += shapes[i][lv[i]].cost;
@@ -890,8 +918,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         let just = 0,
           rhy = 0;
         lineFit.forEach(f => (just += f.over ** 2 + f.loose ** 2));
-        // each line keeps to its band: a stacked piece no higher than a third of the way to the line above, the ink no
-        // lower than half way to the line below (the last line's, than 0.7 of a line)
+        // each line keeps to its band: a stacked piece no higher than a third of the way to the line above, the
+        // letters' bodies no lower than half way to the line below (the last line's, than 0.7 of a line). Tails and
+        // stems may reach into the next band: that is how tiers interlock, and the overlap term keeps the ink apart
         const pitch = chord.length > 1 ? (chord[0].y - chord[1].y) * pk : 6;
         groups.forEach((g, i) => {
           const l = lineOf(g.word);
@@ -899,7 +928,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           const S = shapes[i][lv[i]],
             y = chord[l].y * pk,
             dev = gpos[i].y - y,
-            lo = y - (l + 1 < chord.length ? 0.5 : 0.7) * pitch - (gpos[i].y + S.y0);
+            bodies = letterBodies(S, th.style.nib, g.sc),
+            bottom = bodies.length ? Math.min(...bodies.map(b => b.y0)) : S.y0,
+            lo = y - (l + 1 < chord.length ? 0.5 : 0.7) * pitch - (gpos[i].y + bottom);
           if (dev > 0.34 * pitch) just += (dev - 0.34 * pitch) ** 2;
           if (lo > 0) just += lo * lo;
         });
@@ -932,10 +963,10 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         const W2 = shapes[wi][lv[wi]],
           ax = ll >= 0 ? gpos[li].x + lx : gpos[wi].x + (W2.x0 + W2.x1) / 2;
         ruled =
-          (RU.justify ?? 4) * just + (RU.rhythm ?? 1) * 12 * rhy + (RU.axis ?? 1) * 20 * (Math.abs(ax - d.cx) / d.r);
+          linePrior + (RU.justify ?? 4) * just + (RU.rhythm ?? 1) * 12 * rhy + (RU.axis ?? 1) * 20 * (Math.abs(ax - d.cx) / d.r); // prettier-ignore
       }
       return (
-        ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
+        ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + (o.readingW ?? 25) * reading + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };

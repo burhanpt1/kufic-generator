@@ -39,6 +39,25 @@ What is already done is listed at the end only as milestones; the commit history
    - reverse-engineer it: measure its word spacing, line steps, stacking and marks, and turn them into a reading check
      that every roundel must pass before taste scores it;
    - then train the critic on legibility as well as taste, and refit with round 2's held votes.
+   - **Landed 31 October, from reading the round 2 roundels letter by letter:** the order was lost in two ways, a
+     stacked join dropping a word's last letters (ـمن, ـيم) into the next line, and the next word slid in to the right
+     of them. Three changes: a reading-order rule on the letters' bodies (`roundel/bodies.ts`: stems and tails are
+     not bodies; a later word's bodies must lie left of an earlier word's where level, and never higher),
+     kept by the composer in every mode, weighed by the judge and reported as the check `reading`; stacked joins are
+     opt-in (`stackPull`, learned stacking, towers or `stackAt`), since rewarded by default they turned every hah and
+     mim join into a staircase; and filler ornaments only in pockets among the letters, never out by the rim, where
+     they read as stray dots. On the basmala, salawat and الحمد لله: reading faults 0 across lanes and ruled (from
+     2–261), every word on its own line.
+   - **Landed the same night (overnight run, 31 October to 1 November):** ruled lines are the default for three
+     words or more (the Studio's dense texts get kashidas and kerning with it; free composition is out of the
+     sweep's families); the number of lines is chosen by roundness (each line about a word high, the block about
+     the field's proportion) and carried as a prior, so a dense text no longer ends as two wide lines in a flat
+     oval; a ruled line's band holds the letters' bodies only, so tails and stems interlock between tiers; kerned
+     pieces stop 0.4 of a pen short of touching; vowels keep within four pens of their letter; the long fatha only
+     across a gap; stacked joins on offer at a small cost rather than rewarded. Judged by eye on five texts (the
+     basmala, the salawat, الحمد لله رب العالمين, the shahada, the opening of Ayat al-Kursi), plain and vocalised:
+     see the write-up and the round 3 pairs. Still open: the hand-pinned basmala, a rule tying stacked drops to the
+     line pitch, and the critic's legibility training.
 3. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
@@ -62,24 +81,29 @@ What is already done is listed at the end only as milestones; the commit history
 ## Thuluth letters
 
 - [~] **Heh is the weakest letter; it needs a master example.**
-  - The initial heh was redone as a split, two-eyed form (`63c3861`). The medial heh is unchanged: a figure-of-eight
-    came out too close to mim.
+  - The initial heh was redone as a split, two-eyed form (`63c3861`). The medial heh keeps the lab's construction,
+    drawn a quarter larger so its ear reads (31 October); a figure-of-eight came out too close to mim, and one with an
+    open upper eye filled in at the 69° nib. The final heh was drawn lower, about three dots.
   - Source: refresh/HANDOVER.md, letters; `tests/thuluth-legibility.test.ts`.
 - [!] **The dense loop heads sit under the 0.3 confusion threshold.** These are fa and qaf, heh and mim, in initial
   and medial position. The test holds each at its present distance, so they may move apart but never closer.
-  Initial fa/heh is the closest pair, at 0.18 (`tests/thuluth-legibility.test.ts`, confusion matrix).
+  Since the medial mim and heh were redrawn (31 October), medial fa/mim is the closest pair, at 0.29 at the roundel
+  pen and 0.27 at the tile pen (`tests/thuluth-legibility.test.ts`, confusion matrix).
 - [ ] **The final ya at ordinary size is still hand-drawn.** The only master instance is a great sweep (lab HANDOVER
       §11).
 - [ ] **The lab's "initial lam/tooth at 0.35" finding was never explained** (refresh/HANDOVER.md). The port has since
       redrawn the initial and medial lam. Check whether the finding still holds.
 - [~] **The name of God is now one ligature** (owner, 30 October; `ALLAH_*` in `src/script/thuluth/fixes.ts`): lams
-  shorter than the alif and joined in bowls, the heh a tall arch as high as the lams, the shadda on the second lam
-  level with the alif's top, the small alif only where a vowelled text writes it. It is drawn everywhere thuluth writes
-  الله; the lab's letters (`labLetters`) keep the old form. Still to judge on the tuning page.
+  a little shorter than the alif, the shadda on the second lam level with the alif's top, the small alif only where a
+  vowelled text writes it. It is drawn everywhere thuluth writes الله; the lab's letters (`labLetters`) keep the old
+  form. Redrawn on 31 October in the classic form, two straight lams with short feet and a small round heh: the first
+  design (lams joined in bowls, the heh a tall arch as high as the lams) read as اللم. Still to judge on the tuning
+  page.
   - Since the lams were shortened, the girift dial no longer draws the basmala in tighter; it still makes crossings
     (`tests/thuluth-paths.test.ts`).
 - [~] **Mim, tah and lam-alif are hand-drawn and only "acceptable"** (lab HANDOVER §4). Each
-  needs a master fit when photos allow.
+  needs a master fit when photos allow. The medial mim's master fit hung below the line and closed into a blob at the
+  roundel pen; it is now a hand-drawn loop on the line (31 October).
 - [ ] **Calibrate the port's rasm confusion matrix against the lab's `checker.js`.** That file is now vendored in
       `refresh/lab/`. The port's scale differs from the lab's: for example, isolated ba/ra and medial kaf/lam are not
       flagged.
@@ -94,8 +118,13 @@ What is already done is listed at the end only as milestones; the commit history
       convention is one pen throughout (lab HANDOVER §11; `companion` in `roundel/compose.ts`).
 - [!] **Free composition scatters the words.** Without lanes, a path or ruling, a dense roundel nearly always ends
   as small words strewn across a large field (fill under 0.05, against 0.08–0.14 for lanes and ruled). In round 1,
-  every free dense roundel but one was disliked. Find out why the composer does not pull the words together, or
-  stop offering free composition for dense texts.
+  every free dense roundel but one was disliked. **Why (31 October):** nothing in the energy pulls consecutive words
+  together. The only cohesion is the fill term, which is flat for every word not on the hull of the enclosing disc,
+  and the overlap term (on masks grown by a margin) pushes neighbours apart, so random word moves drift outward and
+  the disc follows them; the reading-order rule is satisfied by a scatter too. A cohesion term (the gap from each
+  word's last body to the next word's head, beyond a word space, squared) would mend it. Since 1 November free
+  composition is off the defaults for three words or more (ruled lines are), and out of the sweep's families; it
+  stays selectable (`ruled: false`, the Studio's "free").
 - [!] **Great bowls need an oval:** in a circle the bowl and the circle fight (lab HANDOVER §11). Either guard against
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`
@@ -104,8 +133,9 @@ What is already done is listed at the end only as milestones; the commit history
 - [r] **Built options, each waiting on ratings:**
   - ruled composition (`1519791`)
   - the girift dial (`9274874`, `e06c0d0`)
-  - learned stacking (`a6a785f`)
-  - towers (`8554321`)
+  - learned stacking (`a6a785f`) and towers (`8554321`): since 1 November a single shallow stacked join is on offer
+    by default at a small cost; these, `stackAt` and an explicit `stackPull` (1.6 restores the lab's reward) are the
+    routes to deeper and rewarded stacking
   - hairline piercing (`e06c0d0`)
   - nesting, drawn-out tails, rising stems and `stackAt` (`d77fd76`, `1d7f561`, `8727be9`)
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
@@ -144,7 +174,8 @@ What is already done is listed at the end only as milestones; the commit history
 
 - [~] **The critic's accuracy on the current engine is below target:** dense 78%, mirrored 75%, single 87%, against
   85%. Dislikes flatter it (`844ad32`, `10f7d0f`).
-- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment) are
+- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment, and
+  since 31 October the reading order of the letters' bodies) are
   candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`).
 - [~] **Single-name roundels are their own genre.** Per-genre fits exist (`18ca2a7`). Check the Husayn master now
   scores well.

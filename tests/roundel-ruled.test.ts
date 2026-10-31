@@ -35,7 +35,7 @@ describe('ruled composition', () => {
     expect(r2.lv).toEqual(r.lv);
   });
   it('reports baselines shared', () => {
-    expect(alignment(r, th.style.nib).baselines).toBeLessThan(alignment(composeRoundel(th, SALAWAT, { lanes: {}, tries: 1, iters: 1500, seed: 5 })[0], th.style.nib).baselines); // prettier-ignore
+    expect(alignment(r, th.style.nib).baselines).toBeLessThan(alignment(composeRoundel(th, SALAWAT, { ruled: false, tries: 1, iters: 1500, seed: 5 })[0], th.style.nib).baselines); // prettier-ignore
   });
   it('measures two levels', () => {
     expect(twoLevels([1, 1, 5, 5])).toBe(0);

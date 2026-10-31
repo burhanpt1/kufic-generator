@@ -12,10 +12,13 @@ const BASE: RoundelRecipe = { tries: 1, iters: 500, seed: 3, judge: 1 },
 /** Option → the text to try it on and the recipe that sets it (on top of BASE and any `with`). */
 export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelRecipe }> = {
   elongate: { set: { elongate: true } },
-  cross: { text: BASMALA, set: { cross: true }, with: { iters: 1500 } },
-  merge: { text: 'ا ا ا ا ا ا', set: { merge: true }, with: { fillTarget: 0.9, iters: 3000 } },
+  // stems through horizontals cheaply: told apart only where words are pressed together
+  cross: { text: 'لا اله الا الله', set: { cross: true }, with: { fillTarget: 0.9, iters: 3000, ruled: false } },
+  // (the free search's options are tried with ruled lines off, the default for three words or more)
+  merge: { text: 'ا ا ا ا ا ا', set: { merge: true }, with: { fillTarget: 0.9, iters: 3000, ruled: false } },
   cradle: { text: 'علي حسن', set: { cradle: true }, with: { elongate: true, great: { ya: true }, iters: 1500 } },
   kern: { text: 'رسول', set: { kern: true } },
+  kernTouch: { text: 'رسول', set: { kernTouch: 3 }, with: { kern: true } },
   nest: { text: 'رسول', set: { nest: true } },
   stack: { text: 'رسول الله', set: { stack: true }, with: { iters: 1500 } },
   stackAt: { text: 'شمير', set: { stackAt: ['شمير'] } },
@@ -23,17 +26,18 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   girift: { text: BASMALA, set: { girift: 0.12 } },
   hairline: { text: BASMALA, set: { hairline: 0.3 } },
   towers: { text: 'محمد', set: { towers: true }, with: { learnedStack: true, towerPull: 3, iters: 1500 } },
-  towerPull: { text: 'محمد', set: { towerPull: 3 }, with: { learnedStack: true, towers: true, iters: 1500 } },
+  towerPull: { text: 'الحمد', set: { towerPull: 3 }, with: { learnedStack: true, towers: true, iters: 1500 } },
   rise: { text: 'الله', set: { rise: { most: 3, oval: 1 } }, with: { oval: 1.6 } },
   tails: { text: 'ورحمة', set: { tails: {} } },
   noRise: { text: BASMALA, set: { noRise: true } },
   ceiling: { text: BASMALA, set: { ceiling: true } },
-  topFirst: { text: BASMALA, set: { topFirst: true } },
+  // mostly subsumed by the reading-order rule: shows where two short words still overlap in a column
+  topFirst: { text: 'علي حسن', set: { topFirst: true }, with: { seed: 29 } },
   // the fill only pays below the target, so a target far below the fill reached changes the search
   fillTarget: { set: { fillTarget: 0.05 } },
   oval: { set: { oval: 1.6 } },
   emph: { text: 'زينب وقصي', set: { emph: 'ب' }, with: { elongate: true, oval: 1.45, fillTarget: 0.5, iters: 1500 } },
-  tries: { set: { tries: 6 } },
+  tries: { text: 'علي حسن', set: { tries: 6 } },
   iters: { text: BASMALA, set: { iters: 1500 } },
   seed: { text: BASMALA, set: { seed: 41 } },
   fixed: {
@@ -47,6 +51,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
       },
     },
   },
+  stackPull: { set: { stackPull: 1.6 } },
   great: { text: 'علي', set: { great: { ya: true } } },
   tweaks: { set: { tweaks: [{ at: 'علي', scale: 0.7 }] } },
   bowl: { text: 'علي حسن', set: { bowl: {} }, with: { great: { ya: true } } },
@@ -56,22 +61,28 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   ornStyle: { set: { ornStyle: 'trefoil' }, with: { ornaments: true, density: 1 } },
   path: { text: BASMALA, set: { path: 'stag3' } },
   field: { text: BASMALA, set: { field: 'drop' } },
-  ruled: { text: BASMALA, set: { ruled: true } },
+  // ruled is the default for three words or more: turning it off is what shows
+  ruled: { text: BASMALA, set: { ruled: false } },
   lanes: { text: BASMALA, set: { lanes: {} } },
   pathFill: { text: BASMALA, set: { pathFill: 1.1 }, with: { lanes: {} } },
   pathTol: { text: BASMALA, set: { pathTol: 6 }, with: { lanes: {} } },
   readRule: { text: BASMALA, set: { readRule: false }, with: { lanes: {} } },
-  choose: { text: BASMALA, set: { choose: 3 } },
-  vary: { text: BASMALA, set: { vary: false }, with: { choose: 3 } },
-  judge: { set: { judge: 4 }, with: { tries: 4 } },
+  choose: { text: BASMALA, set: { choose: 3 }, with: { ruled: false } },
+  vary: { text: BASMALA, set: { vary: false }, with: { choose: 3, ruled: false } },
+  judge: { text: BASMALA, set: { judge: 4 }, with: { tries: 4 } },
   mirror: { text: 'علي', set: { mirror: true }, with: { great: { ya: true } } },
   fathaRule: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ', set: { fathaRule: false } },
-  longFatha: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { longFatha: false }, with: { iters: 1500 } },
+  longFatha: {
+    text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ',
+    set: { longFatha: false },
+    with: { iters: 1500, ruled: false },
+  },
   allSigns: { text: 'حسين', set: { allSigns: false }, with: { ornaments: true } },
+  pockets: { set: { pockets: false }, with: { ornaments: true, density: 1 } },
   clearance: { text: 'مُحَمَّد عَلِيّ', set: { clearance: 1.2 } },
   markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
-  // without الله, whose marks its ligature draws
-  fathaGap: { text: 'نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
+  // without الله, whose marks its ligature draws; on lanes, where a fatha finds a gap to span
+  fathaGap: { text: 'سَلَامٌ قَوْلًا مِنْ رَبٍّ رَحِيمٍ', set: { fathaGap: false }, with: { iters: 1500, lanes: {} } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {

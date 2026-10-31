@@ -183,6 +183,9 @@ export interface RoundelRecipe {
   merge?: boolean;
   cradle?: boolean;
   kern?: boolean;
+  /** How much bare ink two kerned pieces may share (pixels; 0, the default, keeps them 0.4 of a pen apart; the lab
+   *  allowed 3, a light touch). */
+  kernTouch?: number;
   /** The piece after a ra, zay, waw (or ya) nested in the curve of its tail. */
   nest?: boolean;
   /** The search may stack a piece of a word above the one before it, so words rise in layers. */
@@ -201,6 +204,10 @@ export interface RoundelRecipe {
   girift?: number;
   /** Groups written only with a stacked join where they have one (e.g. 'شمير': the shin above the mim). */
   stackAt?: string[];
+  /** How strongly stacked joins are preferred (the lab's 1.6 earns each one that much). Unset, joins are stacked only
+   *  where learned stacking, towers or stackAt ask; a layout recorded before 31 October needs 1.6 to keep its
+   *  variant numbers. */
+  stackPull?: number;
   /** Tall stems rise into the empty space above them, up to the oval. */
   rise?: { margin?: number; most?: number; oval?: number };
   /** Tails with the rest of their word nested in them drawn out level beneath it, like a tughra's arms. */
@@ -236,6 +243,8 @@ export interface RoundelRecipe {
     autoOval?: boolean;
     dotAt?: number;
     free?: boolean;
+    /** Clear letters within a gap above the centre line too (true; the lab's cartouches keep false). */
+    clearArms?: boolean;
   };
   /** Marks: how far a vowel may sit from its letter; ornaments in the gaps and their density. */
   markReach?: number;
@@ -279,6 +288,8 @@ export interface RoundelRecipe {
   clearance?: number;
   markDensity?: number;
   fathaGap?: boolean;
+  /** Ornaments only in pockets among the letters (true); false: in the largest gaps anywhere, as the lab placed them. */
+  pockets?: boolean;
 }
 export interface RoundelColours {
   field?: string;
@@ -370,9 +381,11 @@ const roundelRecipe = z
     merge: z.boolean(),
     cradle: z.boolean(),
     kern: z.boolean(),
+    kernTouch: z.number().min(0).max(10),
     nest: z.boolean(),
     stack: z.boolean(),
     stackAt: z.array(z.string().min(1).max(40)).max(20),
+    stackPull: z.number().min(0).max(5),
     learnedStack: z.boolean(),
     girift: z.number().min(0).max(0.3),
     towers: z.boolean(),
@@ -424,6 +437,7 @@ const roundelRecipe = z
         autoOval: z.boolean(),
         dotAt: z.number().min(-1).max(1),
         free: z.boolean(),
+        clearArms: z.boolean(),
       })
       .partial(),
     markReach: z.number().min(0.5).max(6),
@@ -476,6 +490,7 @@ const roundelRecipe = z
     clearance: z.number().min(0).max(3),
     markDensity: z.number().min(0).max(1),
     fathaGap: z.boolean(),
+    pockets: z.boolean(),
   })
   .partial();
 const abjadOpts = z.object({

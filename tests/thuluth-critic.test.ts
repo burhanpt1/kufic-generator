@@ -63,7 +63,8 @@ describe('the decorative critic', () => {
       text = 'اللهم صل على محمد وآل محمد',
       compose = { elongate: true, cross: true, kern: true, fillTarget: 0.5, tries: 2, iters: 3000, seed: 29 };
     const lanes = buildRoundel(th, { text, compose: { ...compose, lanes: {} } })!,
-      free = buildRoundel(th, { text, compose })!;
+      // (ruled lines are the default for a dense text now; the scattered one is free composition)
+      free = buildRoundel(th, { text, compose: { ...compose, ruled: false } })!;
     const [a, b] = tasteScores([roundelFeatures(th, lanes.r, lanes.f), roundelFeatures(th, free.r, free.f)]);
     expect(a).toBeGreaterThan(b);
     const chosen = buildRoundel(th, { text: 'علي', compose: { tries: 1, iters: 1500 }, choose: 3 })!;

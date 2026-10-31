@@ -29,6 +29,9 @@ export interface BowlOptions {
    *  far side and drops straight into it, rather than leading out level from where it was written beside the letter
    *  before (a level lead-in from beside an alif made the pair read as a lam). On unless false. */
   free?: boolean;
+  /** Clear the letters within a gap above the centre line too, where the bowl's arms rise to meet them (on unless
+   *  false; the lab cleared only what lay below the centre, and its recorded cartouches keep that). */
+  clearArms?: boolean;
 }
 
 const letters = (r: Roundel, i: number) => r.shapes[i].b.placed.filter(isLetter);
@@ -93,12 +96,19 @@ export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
   // every letter below the centre line stays inside the bowl by a pen's width and a gap: a descending tail (a ra's)
   // low at the side, where the bowl rises, widens that side, and anything too deep lowers the bottom
   const gap = th.style.nib + 1.0;
+  // a bowl shallower than the gap (the other letters all above the join) would divide by nothing below: it starts at
+  // least a little deeper than the gap
+  b = Math.max(b, gap + 0.5);
   for (let pass = 0; pass < 3; pass++)
     other.forEach(([x, y]) => {
       const dy = cy - y;
-      if (dy <= 0) return;
+      // a point within a gap above the centre line is cleared too: the bowl's arms rise to the centre line at their
+      // ends, where a ra's tail would touch them
+      if (dy <= (o.clearArms === false ? 0 : -gap)) return;
       if (dy > b - gap) b = dy + gap + 0.01;
-      const need = gap + Math.abs(x - cx) / Math.sqrt(1 - (dy / (b - gap)) ** 2);
+      // a point as deep as the bowl less its gap (the clearance equals the gap at the roundel pen) would divide by
+      // nothing: the ellipse's rise is read at most at 0.97 of its depth
+      const need = gap + Math.abs(x - cx) / Math.sqrt(1 - Math.min(0.97, Math.max(0, dy) / (b - gap)) ** 2);
       if (x < cx) aL = Math.max(aL, need);
       else aR = Math.max(aR, need);
     });

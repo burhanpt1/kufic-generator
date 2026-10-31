@@ -7,7 +7,8 @@ export const NAMES = 'بُرْهَان وَشَمِيرَة';
 export const th = thuluth({ ...ROUNDEL_PEN, great: { ya: true, yaWide: 2.6, yaDeep: 1.3 } });
 export const spec = (o: Partial<RoundelSpec> = {}): RoundelSpec => ({
   text: NAMES,
-  compose: { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, kern: true, tries: 6 }, // prettier-ignore
+  // stackPull: the stacked joins the lab offered, which this cartouche was found with
+  compose: { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, kern: true, tries: 6, stackPull: 1.6 }, // prettier-ignore
   tweaks: [{ at: 'و', scale: 0.62 }],
   bowl: { clear: 5.6, autoOval: true },
   frame: { markReach: 2.2 },
