@@ -129,17 +129,67 @@ const BOWL_CHOICES = 6;
  *  needed the least: the composer places the letters before the bowl is redrawn, so it cannot see a tail that the new
  *  bowl will run into. */
 export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+  const plan = buildPlan(th, spec);
+  let step = plan.next();
+  while (!step.done) {
+    const need = step.value;
+    step = plan.next(
+      need.kind === 'compose'
+        ? composeRoundel(th, need.text, need.opts)
+        : need.rs.map(r => finishOne(th, need.spec, r)),
+    );
+  }
+  return step.value;
+}
+
+/** What building a roundel needs done, the heavy steps it hands out: the composer's tries, and finishing (adjusting,
+ *  bowl, tails, marks, frame) each of its best arrangements. buildRoundel does them here, in turn;
+ *  buildRoundelAsync hands them to workers, side by side. Either way the plan, and so the roundel, is the same. */
+export type RoundelNeed =
+  { kind: 'compose'; text: string; opts?: RoundelOptions } | { kind: 'finish'; spec: RoundelSpec; rs: Roundel[] };
+type Plan = Generator<RoundelNeed, BuiltRoundel | null, Roundel[] | BuiltRoundel[]>;
+
+/** Adjust a composed arrangement (the recipe's tweaks, bowl, tails, rising stems) and finish it (marks, frame). */
+export function finishOne(th: Thuluth, spec: RoundelSpec, r0: Roundel): BuiltRoundel {
+  const r = adjust(th, r0, spec);
+  return {
+    r,
+    f: spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {}),
+  };
+}
+
+/** Build a roundel with its heavy steps run by `run` (workers): the same roundel as buildRoundel. */
+export async function buildRoundelAsync(
+  th: Thuluth,
+  spec: RoundelSpec,
+  run: {
+    compose: (text: string, opts?: RoundelOptions) => Promise<Roundel[]>;
+    finish: (spec: RoundelSpec, rs: Roundel[]) => Promise<BuiltRoundel[]>;
+  },
+): Promise<BuiltRoundel | null> {
+  const plan = buildPlan(th, spec);
+  let step = plan.next();
+  while (!step.done) {
+    const need = step.value;
+    step = plan.next(
+      need.kind === 'compose' ? await run.compose(need.text, need.opts) : await run.finish(need.spec, need.rs),
+    );
+  }
+  return step.value;
+}
+
+function* buildPlan(th: Thuluth, spec: RoundelSpec): Plan {
   if (spec.compose?.path === 'auto' && !spec.compose.fixed) {
     // fit the path to the text: each family composed and finished, the best kept by the genre's taste, less marks
     // without room, clashes and order faults (one word has no reading path to fit)
     const genre = genreOf(spec.text),
       rest: RoundelOptions = { ...spec.compose, path: undefined },
       words = spec.text.trim().split(/\s+/).length;
-    if (words < 2) return buildRoundel(th, { ...spec, compose: rest });
+    if (words < 2) return yield* buildPlan(th, { ...spec, compose: rest });
     let best: (BuiltRoundel & { score: number }) | null = null;
     for (const fam of AUTO_PATHS) {
       const compose: RoundelOptions = fam === 'lanes' ? { ...rest, lanes: rest.lanes ?? {} } : { ...rest, path: fam },
-        b = buildRoundel(th, { ...spec, compose });
+        b = yield* buildPlan(th, { ...spec, compose });
       if (!b) continue;
       const score = tasteScore(roundelFeatures(th, b.r, b.f), genre) - 3 * b.f.missing - clashes(th, b.r) / 6 - roundelOrderFault(b.r); // prettier-ignore
       if (!best || score > best.score) best = { ...b, path: fam, score };
@@ -154,7 +204,7 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
       const seed = seed0 + k * 101,
         // the first seed takes the recipe as given; the others sample what it leaves open
         varied = k && spec.vary !== false ? sampleRecipe(spec.compose ?? {}, words, seed) : {},
-        b = buildOne(th, { ...spec, compose: { ...spec.compose, ...varied, seed } });
+        b = yield* onePlan(th, { ...spec, compose: { ...spec.compose, ...varied, seed } });
       if (!b) continue;
       const features = roundelFeatures(th, b.r, b.f);
       // a near-duplicate of one already built adds nothing to choose from
@@ -169,10 +219,10 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
       picked = scores.indexOf(Math.max(...scores));
     return { ...built[picked].b, taste: built.map((c, i) => ({ seed: c.seed, varied: c.varied, features: c.features, score: scores[i] })), picked }; // prettier-ignore
   }
-  return buildOne(th, spec);
+  return yield* onePlan(th, spec);
 }
 
-function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
+function* onePlan(th: Thuluth, spec: RoundelSpec): Plan {
   // girift, judged as drawn: each exact stem-through-horizontal crossing earns in proportion to the dial, each crossing
   // at a curve costs, and one through an eye costs double (Derman)
   const g = spec.compose?.girift ?? 0,
@@ -181,21 +231,13 @@ function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
       const c = crossings(r);
       return 10 * g * c.stemHorizontal - 0.5 * c.curve - c.eye;
     };
-  const all = composeRoundel(th, spec.text, spec.compose);
+  const all = (yield { kind: 'compose', text: spec.text, opts: spec.compose }) as Roundel[];
   if (!all.length) return null;
-  const finish = (r: Roundel) =>
-    spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {});
   const k = Math.min(all.length, spec.judge ?? (spec.bowl ? BOWL_CHOICES : 3));
-  if (k <= 1) {
-    const r = adjust(th, all[0], spec);
-    return { r, f: finish(r) };
-  }
+  if (k <= 1) return ((yield { kind: 'finish', spec, rs: [all[0]] }) as BuiltRoundel[])[0];
   // the composer's best few, each finished (bowl, tails, stems, marks, frame) and judged as drawn: a layout's merit
   // shows only once its bowl is redrawn and its marks are placed
-  const done = all.slice(0, k).map(c => {
-    const r = adjust(th, structuredClone(c), spec);
-    return { r, f: finish(r) };
-  });
+  const done = (yield { kind: 'finish', spec, rs: all.slice(0, k).map(c => structuredClone(c)) }) as BuiltRoundel[];
   const taste = tasteScores(
       done.map(d => roundelFeatures(th, d.r, d.f)),
       genreOf(spec.text),

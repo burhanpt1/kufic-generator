@@ -1,6 +1,6 @@
 // Builds the WebAssembly kernels from their C sources and embeds them as base64 TypeScript modules
 // (src/kernels/*.wasm.ts), so the engine can load them without a bundler plugin and tests run without a compiler.
-//   node scripts/build-wasm.mjs
+//   node scripts/build-wasm.mjs [names...]
 // Uses clang's wasm32 target (zig cc works the same: `zig cc -target wasm32-freestanding -O2 -mbulk-memory ...`).
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -15,9 +15,27 @@ const KERNELS = [
   // floating point must match the TypeScript exactly: no fused multiply-adds
   { name: 'partition', exports: ['inbuf', 'outbuf', 'maxn', 'maxg', 'run'], flags: ['-ffp-contract=off'] },
   { name: 'raster', exports: ['ptsbuf', 'winbuf', 'maxpts', 'maxwin', 'fill'], flags: ['-ffp-contract=off'] },
+  { name: 'ratings', exports: ['fit_setup', 'fit'], flags: ['-ffp-contract=off'] },
+  {
+    name: 'roundel',
+    exports: [
+      'gap_setup',
+      'gap_move',
+      'gap_rescan_all',
+      'gap_sum',
+      'disc_setup',
+      'disc_index',
+      'disc',
+      'oval_setup',
+      'oval',
+    ],
+    flags: ['-ffp-contract=off'],
+  },
 ];
+// `node scripts/build-wasm.mjs roundel` builds only the kernels named
+const only = process.argv.slice(2);
 const tmp = mkdtempSync(join(tmpdir(), 'wasm-'));
-for (const k of KERNELS) {
+for (const k of KERNELS.filter(k => !only.length || only.includes(k.name))) {
   const src = join(root, 'src/kernels', `${k.name}.c`),
     out = join(tmp, `${k.name}.wasm`);
   const cc = process.env.CC || 'clang';
@@ -47,7 +65,7 @@ for (const k of KERNELS) {
 
 // Clipper2's own C++ (the clipper2-wasm build, Boost Software License), embedded the same way so it loads from memory
 // in every environment
-{
+if (!only.length || only.includes('clipper2')) {
   const src = join(root, 'node_modules/clipper2-wasm/dist/es/clipper2z.wasm'),
     bytes = readFileSync(src),
     { version } = JSON.parse(readFileSync(join(root, 'node_modules/clipper2-wasm/package.json'), 'utf8'));
