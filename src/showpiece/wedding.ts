@@ -28,8 +28,10 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   oval: 1.45,
   emph: 'ب',
   kern: true,
-  // the lab's variant list, with its stacked joins, so the recorded variant numbers keep their meaning
+  // the lab's variant list, with its stacked joins, so the recorded variant numbers keep their meaning, and its light
+  // touch between kerned pieces
   stackPull: 1.6,
+  kernTouch: 3,
   fixed: {
     lv: [2, 5, 2, 0],
     wp: [

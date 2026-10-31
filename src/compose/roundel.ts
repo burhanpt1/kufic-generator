@@ -62,12 +62,16 @@ function setup({ text, recipe, pen, pair }: RoundelRequest) {
   const base = thuluthStyleOf(pen?.preset === 'roundel' ? pen : { preset: 'roundel' }),
     th: Thuluth = thuluth({ ...base, great: recipe.great });
   const fx = recipe.fixed && structuredClone(recipe.fixed);
+  // a text of three words or more that asks for no other structure is set on ruled lines (the composer's default),
+  // which need kashidas to justify and kerned pieces: those come on with it unless the recipe says otherwise
+  const dense = text.trim().split(/\s+/).length >= 3 && !recipe.lanes && !recipe.path && !recipe.fixed && !recipe.mirror && recipe.ruled !== false; // prettier-ignore
   const compose: RoundelOptions = {
-    elongate: recipe.elongate,
-    cross: recipe.cross,
+    elongate: recipe.elongate ?? (dense || undefined),
+    cross: recipe.cross ?? (dense || undefined),
     merge: recipe.merge,
     cradle: recipe.cradle,
-    kern: recipe.kern,
+    kern: recipe.kern ?? (dense || undefined),
+    kernTouch: recipe.kernTouch,
     nest: recipe.nest,
     stack: recipe.stack,
     stackAt: recipe.stackAt,

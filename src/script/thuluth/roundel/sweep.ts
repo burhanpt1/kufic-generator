@@ -51,7 +51,8 @@ export interface SweepItem {
 export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {}): SweepItem[] {
   const out: SweepItem[] = [],
     // the sharp V (path:calliar3) is out of the defaults: every dense composition on it was disliked (24 October)
-    fams = o.families ?? ['free', 'lanes', 'path:stag3'];
+    // free composition is out of the defaults for dense texts (it scatters; 31 October): ruled first
+    fams = o.families ?? ['ruled', 'lanes', 'path:stag3'];
   let id = 0;
   texts.forEach((text, ti) => {
     const mine: Omit<SweepItem, 'score' | 'genre'>[] = [],

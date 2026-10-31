@@ -186,12 +186,12 @@ function* buildPlan(th: Thuluth, spec: RoundelSpec): Plan {
     // without room, clashes and order faults (one word has no reading path to fit)
     const genre = genreOf(spec.text),
       readW = spec.compose.reading === false ? 0 : 1,
-      rest: RoundelOptions = { ...spec.compose, path: undefined },
+      rest: RoundelOptions = { ...spec.compose, path: undefined, ruled: spec.compose.ruled === true ? undefined : spec.compose.ruled }, // prettier-ignore
       words = spec.text.trim().split(/\s+/).length;
     if (words < 2) return yield* buildPlan(th, { ...spec, compose: rest });
     let best: (BuiltRoundel & { score: number }) | null = null;
     for (const fam of AUTO_PATHS) {
-      const compose: RoundelOptions = fam === 'lanes' ? { ...rest, lanes: rest.lanes ?? {} } : { ...rest, path: fam },
+      const compose: RoundelOptions = fam === 'ruled' ? { ...rest, ruled: rest.ruled || true } : fam === 'lanes' ? { ...rest, lanes: rest.lanes ?? {} } : { ...rest, path: fam }, // prettier-ignore
         b = yield* buildPlan(th, { ...spec, compose });
       if (!b) continue;
       const score = tasteScore(roundelFeatures(th, b.r, b.f), genre) - 3 * b.f.missing - clashes(th, b.r) / 6 - roundelOrderFault(b.r) - readW * roundelReadingFault(b.r, th.style.nib); // prettier-ignore

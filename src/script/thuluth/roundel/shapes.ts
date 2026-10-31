@@ -487,10 +487,14 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
       v.cost = 0.3 * L;
       out.push(v);
     }
-    const pull = o.stackPull ?? (o.learnedStack || o.towers || o.stackAt?.length ? 1.6 : 0);
-    if (pull === 0) return;
+    // stacked joins: asked for (a pull, learned stacking, towers, stackAt), they are rewarded by the pull, in pairs
+    // and at depth too; unasked, the single join at its two shallow offsets is on offer at a small cost, so a word
+    // stacks only where it buys the arrangement something (fit on a line, a rounder block); stackPull 0 forbids them
+    if (o.stackPull === 0) return;
+    const asked = o.stackPull != null || !!o.learnedStack || !!o.towers || !!o.stackAt?.length,
+      pull = o.stackPull ?? 1.6;
     const pairOffs = o.deep ? DEEP_OFFSETS : STACK_OFFSETS.slice(0, 2);
-    if (joins.length >= 2)
+    if (asked && joins.length >= 2)
       for (let a = 0; a < joins.length; a++)
         for (let c = a + 1; c < joins.length; c++)
           for (const oa of pairOffs)
@@ -508,14 +512,15 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
               }
             }
     joins.forEach(j => {
-      const scaled = (o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS).map(off => ({ dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25, learned: false })), // prettier-ignore
+      const offs = !asked ? STACK_OFFSETS.slice(0, 2) : o.deep ? STACK_OFFSETS.concat(DEEP_OFFSETS) : STACK_OFFSETS,
+        scaled = offs.map(off => ({ dx: (off.dx * BODY) / 1.25, dy: (off.dy * BODY) / 1.25, learned: false })),
         depth = o.learnedStack ? stackDepth(th, g.s, j) : null;
       // learned: the depth masters use for this pair, at the two usual reaches, a little preferred
       if (depth) [0.9, 2.1].forEach(dx => scaled.push({ dx: (dx * BODY) / 1.25, dy: -depth, learned: true }));
       scaled.forEach(off => {
         const v2 = groupShape(th, g, L, o, K, { [j]: { dx: off.dx, dy: off.dy } }, j);
         if (v2) {
-          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * pull - (off.learned ? 0.4 : 0);
+          v2.cost = asked ? 0.3 * L - stackWeight(g.s, j, o) * pull - (off.learned ? 0.4 : 0) : 0.3 * L + 0.3;
           v2.stacked = true;
           out.push(v2);
         }

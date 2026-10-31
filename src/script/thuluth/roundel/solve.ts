@@ -93,7 +93,8 @@ const markLevel = (m: MarkName): number =>
 export interface SolveOptions {
   discScale?: number;
   markScale?: number;
-  /** How far (in pen units) a vowel may sit from its letter. */
+  /** How far (in pen units) a vowel may sit from its letter (4: two and a half pens; the even-texture term would otherwise
+   *  carry vowels off into the gaps, where they read as another word's or as ornament). */
   markReach?: number;
   /** Ornaments in the gaps, and how many (0–1); plume or trefoil. */
   ornaments?: boolean;
@@ -312,7 +313,9 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       return false;
     if (it.kind === 'mark' && Math.abs(it.x - (it.lx0 + it.lx1) / 2) > (it.lx1 - it.lx0) / 2 + 1.0 * it.sc)
       return false;
-    if (it.kind === 'mark' && o.markReach && (it.side > 0 ? it.y - h / 2 - Math.max(it.top, it.ay - h / 2 - 0.5 * it.sc) : Math.min(it.bot, it.ay + h / 2) - (it.y + h / 2)) > o.markReach * it.sc) return false; // prettier-ignore
+    // a clearance asked for needs room: the reach grows with it
+    const reachV = (o.markReach ?? 4) + 4 * (o.clearance ?? 0);
+    if (it.kind === 'mark' && reachV && (it.side > 0 ? it.y - h / 2 - Math.max(it.top, it.ay - h / 2 - 0.5 * it.sc) : Math.min(it.bot, it.ay + h / 2) - (it.y + h / 2)) > reachV * it.sc) return false; // prettier-ignore
     if (it.x < it.lx0 - reach || it.x > it.lx1 + reach) return false;
     if (it.side > 0 ? it.y - h / 2 < Math.min(it.top, it.ay - h / 2) - (it.kind === 'dots' ? 1.2 : 0.2) * it.sc : it.y + h / 2 > Math.max(it.bot, it.ay + h / 2) + (it.kind === 'dots' ? 1.2 : 0.2) * it.sc) return false; // prettier-ignore
     return FT.inside(it.x, it.y, Math.hypot(w, h) / 2);

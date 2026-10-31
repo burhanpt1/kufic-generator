@@ -183,6 +183,9 @@ export interface RoundelRecipe {
   merge?: boolean;
   cradle?: boolean;
   kern?: boolean;
+  /** How much bare ink two kerned pieces may share (pixels; 0, the default, keeps them 0.4 of a pen apart; the lab
+   *  allowed 3, a light touch). */
+  kernTouch?: number;
   /** The piece after a ra, zay, waw (or ya) nested in the curve of its tail. */
   nest?: boolean;
   /** The search may stack a piece of a word above the one before it, so words rise in layers. */
@@ -376,6 +379,7 @@ const roundelRecipe = z
     merge: z.boolean(),
     cradle: z.boolean(),
     kern: z.boolean(),
+    kernTouch: z.number().min(0).max(10),
     nest: z.boolean(),
     stack: z.boolean(),
     stackAt: z.array(z.string().min(1).max(40)).max(20),
