@@ -139,11 +139,22 @@ const HAH_SX = 0.8,
 const HAH_INI = scaled(LETTERS.hah.ini!, HAH_SX, HAH_SY),
   HAH_MED = scaled(LETTERS.hah.med!, HAH_SX, HAH_SY);
 
+/** Medial mim: a small round loop sitting on the line, its foot just below it. From the join the pen rises over the
+ *  loop's top to the left, comes down its left side, back along its foot to the right, and turns to leave along the
+ *  foot. The master's fit hung the loop half below the line and ran the exit through it, so at the roundel pen it
+ *  closed into a blob. Wider than it is tall, so it stays apart from the taller, necked loop of medial fa and qaf. */
+const MIM_MED: LetterForm = {
+  src: 'hand',
+  exit: -3.3,
+  s: [{ pts: [[0, 0], [-0.55, 0.35], [-1.25, 1.2], [-2.0, 1.4], [-2.65, 0.95], [-2.75, 0.2], [-2.25, -0.35], [-1.35, -0.4], [-0.75, -0.15, 1, 1], [-1.6, -0.3], [-2.6, -0.15], [-3.3, 0]] }], // prettier-ignore
+};
+
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
   kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
   lam: { ini: LAM_INI, med: LAM_MED },
   tooth: { iso: TOOTH_ISO },
   ha: { ini: HEH_INI },
   hah: { ini: HAH_INI, med: HAH_MED },
+  mim: { med: MIM_MED },
   sin: { fin: SIN_FIN, iso: SIN_ISO },
 };
