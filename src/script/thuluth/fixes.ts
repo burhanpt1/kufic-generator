@@ -160,6 +160,13 @@ const HAH_INI = scaled(LETTERS.hah.ini!, HAH_SX, HAH_SY),
  *  loop's top to the left, comes down its left side, back along its foot to the right, and turns to leave along the
  *  foot. The master's fit hung the loop half below the line and ran the exit through it, so at the roundel pen it
  *  closed into a blob. Wider than it is tall, so it stays apart from the taller, necked loop of medial fa and qaf. */
+/** Initial mim: the lab's loop, drawn smaller (0.85) about its start, the run to the join kept. Its loop stood five pen
+ *  units high, as tall as the hah after it, and محمد began with a dome. */
+const MIM_INI: LetterForm = (() => {
+  const g = scaled(LETTERS.mim.ini!, 0.85, 0.85),
+    pts = g.s[0].pts;
+  return { ...g, exit: -2.9, s: [{ ...g.s[0], pts: [...pts.slice(0, -1), [-2.9, 0, 1]] }] };
+})();
 const MIM_MED: LetterForm = {
   src: 'hand',
   exit: -3.3,
@@ -188,6 +195,6 @@ export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterFor
   tooth: { iso: TOOTH_ISO },
   ha: { ini: HEH_INI, med: HEH_MED },
   hah: { ini: HAH_INI, med: HAH_MED },
-  mim: { med: MIM_MED },
+  mim: { ini: MIM_INI, med: MIM_MED },
   sin: { ini: SIN_INI, med: SIN_MED, fin: SIN_FIN, iso: SIN_ISO },
 };
