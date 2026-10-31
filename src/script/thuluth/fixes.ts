@@ -120,8 +120,25 @@ const sinEnd = (teeth: LetterForm): LetterForm => {
     s: [...teeth.s, ...bowl.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x + dx, y, w, c] as SkelPt) }))],
   };
 };
-const SIN_FIN = sinEnd(LETTERS.sin.med!),
-  SIN_ISO = sinEnd(LETTERS.sin.ini!);
+/** The seen's three teeth, each a short upstroke to a pointed top about a dot high, the pen turning sharply there and
+ *  dropping into a shallow cup to the next; the learned teeth were ripples a third as high, and medial seen dipped
+ *  below the line, so بسم and رسول read as a wavy stroke. The medial form rises from the join into its first tooth;
+ *  the initial one starts at that tooth's top, as the tooth letters do. Shin's dots stand over the middle tooth. */
+const SIN_TEETH: SkelPt[] = [[-0.55, 0.3], [-0.9, -0.15], [-1.35, -0.1], [-1.55, 0.4], [-1.6, 1.0, 0.8, 1], [-1.7, 0.3], [-2.05, -0.15], [-2.5, -0.1], [-2.7, 0.4], [-2.75, 0.95, 0.8, 1], [-2.85, 0.3], [-3.2, -0.1], [-4.0, 0]]; // prettier-ignore
+const SIN_MED: LetterForm = {
+  src: 'hand',
+  exit: -4.0,
+  dotX: -1.5,
+  s: [{ pts: [[0, 0], [-0.3, 0.55], [-0.45, 1.1, 0.8, 1], ...SIN_TEETH] }],
+};
+const SIN_INI: LetterForm = {
+  src: 'hand',
+  exit: -3.6,
+  dotX: -1.1,
+  s: [{ pts: ([[-0.45, 1.15, 0.55], ...SIN_TEETH] as SkelPt[]).map(([x, y, w, c]) => [x + 0.4, y, w, c] as SkelPt) }],
+};
+const SIN_FIN = sinEnd(SIN_MED),
+  SIN_ISO = sinEnd(SIN_INI);
 
 /** A form drawn smaller about its entry (0, 0), the pen's widths kept. */
 const scaled = (g: LetterForm, sx: number, sy: number): LetterForm => ({
@@ -156,5 +173,5 @@ export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterFor
   ha: { ini: HEH_INI },
   hah: { ini: HAH_INI, med: HAH_MED },
   mim: { med: MIM_MED },
-  sin: { fin: SIN_FIN, iso: SIN_ISO },
+  sin: { ini: SIN_INI, med: SIN_MED, fin: SIN_FIN, iso: SIN_ISO },
 };
