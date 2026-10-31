@@ -7,7 +7,7 @@ import { nibPolys, sampleStroke, dotPolys } from '../pen';
 import { Alpha } from '../raster';
 import type { MarkName } from '../shape';
 import { FAM, forms } from '../shape';
-import type { Poly, SkelPt } from '../types';
+import type { Poly, SkelPt, ThuluthStyle } from '../types';
 
 /** A letter group in a composition, with its vowel marks (k = letter index in the group). */
 export interface RGroup {
@@ -343,18 +343,16 @@ export function groupShape(
   return { b, mask, dil, W, H, x0, x1, y0, y1, ink, level, cx, cy, hull, shelves, stemTops, cost: 0 };
 }
 
-/** The ways of writing one group: stretch levels, stacked joins, tails, elongations, an emphatic long final.
- *  Built once for each pen, group and set of options (the same input always builds the same shapes); each caller gets
- *  its own copy, since later steps (a drawn-out tail, a scaled group, a risen stem) redraw the chosen shapes in place. */
+// group variants built so far, by variantsKey
 const VARIANTS = new Map<string, GroupShape[]>(),
   VARIANTS_MAX = 4000,
-  PEN_KEY = new WeakMap<Thuluth, string>();
-export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): GroupShape[] {
-  // what the shapes depend on: the pen (its style: a pen is made fresh for each drawing), the group's letters, marks
-  // and scale, and the options the builders read
-  let pen = PEN_KEY.get(th);
-  if (pen === undefined) PEN_KEY.set(th, (pen = JSON.stringify(th.style)));
-  const key = JSON.stringify([
+  PEN_KEY = new WeakMap<ThuluthStyle, string>();
+/** What a group's variants depend on, as a key: the pen (its style: a pen is made fresh for each drawing), the
+ *  group's letters, marks and scale, and the options the builders read. */
+export function variantsKey(style: ThuluthStyle, g: RGroup, o: StackOptions, K: number): string {
+  let pen = PEN_KEY.get(style);
+  if (pen === undefined) PEN_KEY.set(style, (pen = JSON.stringify(style)));
+  return JSON.stringify([
     pen,
     g.s,
     g.allah,
@@ -380,6 +378,20 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
       elongate: o.elongate,
     },
   ]);
+}
+
+/** Variants built elsewhere (a worker sharing out the building), kept as if built here: groupVariants(th, g, o, K)
+ *  then finds them under variantsKey(th.style, g, o, K). */
+export function primeVariants(key: string, vs: GroupShape[]) {
+  if (VARIANTS.size >= VARIANTS_MAX) VARIANTS.clear();
+  VARIANTS.set(key, vs);
+}
+
+/** The ways of writing one group: stretch levels, stacked joins, tails, elongations, an emphatic long final.
+ *  Built once for each pen, group and set of options (the same input always builds the same shapes); each caller gets
+ *  its own copy, since later steps (a drawn-out tail, a scaled group, a risen stem) redraw the chosen shapes in place. */
+export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): GroupShape[] {
+  const key = variantsKey(th.style, g, o, K);
   let vs = VARIANTS.get(key);
   if (!vs) {
     if (VARIANTS.size >= VARIANTS_MAX) VARIANTS.clear();

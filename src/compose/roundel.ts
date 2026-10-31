@@ -8,7 +8,8 @@ import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
 import { FIELDS, fieldPolygon } from '../script/thuluth/roundel/fields';
 import type { Thuluth } from '../script/thuluth/engine';
-import type { FinishOptions, Roundel, RoundelOptions } from '../script/thuluth/roundel';
+import type { BuiltRoundel, FinishOptions, Roundel, RoundelOptions, RoundelSpec } from '../script/thuluth/roundel';
+import type { RoundelWorkers } from '../script/thuluth/roundel/parallel';
 import {
   buildRoundel,
   clashes,
@@ -38,17 +39,26 @@ const pathOf = (ps: Poly[], cx: number, cy: number) =>
 /** Composing a roundel takes seconds: keep the last few by their inputs. */
 const CACHE = new Map<string, RoundelDrawing | null>();
 const CACHE_MAX = 8;
+/** Forget the roundels drawn so far (for tests that time or compare drawing them). */
+export const forgetRoundels = () => CACHE.clear();
+const keep = (key: string, out: RoundelDrawing | null) => {
+  if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
+  CACHE.set(key, out);
+  return out;
+};
 
-export function drawRoundel(
-  text: string,
-  recipe: RoundelRecipe = {},
-  pen: Style['pen'],
-  counters: boolean,
-  pair?: RoundelColours['pair'],
-): RoundelDrawing | null {
-  // prettier-ignore
-  const key = JSON.stringify([text, recipe, pen ?? null, counters, pair ?? null]);
-  if (CACHE.has(key)) return CACHE.get(key)!;
+/** What a roundel is drawn from: its text, recipe, pen, whether its eyes are drawn, and a two-name scheme. */
+export interface RoundelRequest {
+  text: string;
+  recipe: RoundelRecipe;
+  pen: Style['pen'];
+  counters: boolean;
+  pair?: RoundelColours['pair'];
+}
+const keyOf = (q: RoundelRequest) => JSON.stringify([q.text, q.recipe, q.pen ?? null, q.counters, q.pair ?? null]);
+
+/** The pen, the composer's and the frame's options, and the build's spec, from a request. */
+function setup({ text, recipe, pen, pair }: RoundelRequest) {
   const base = thuluthStyleOf(pen?.preset === 'roundel' ? pen : { preset: 'roundel' }),
     th: Thuluth = thuluth({ ...base, great: recipe.great });
   const fx = recipe.fixed && structuredClone(recipe.fixed);
@@ -84,13 +94,7 @@ export function drawRoundel(
     ruled: recipe.ruled,
   };
   const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap }; // prettier-ignore
-  if (recipe.mirror) {
-    const out = drawMusenna(th, text, recipe, compose, frame);
-    if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
-    CACHE.set(key, out);
-    return out;
-  }
-  const b = buildRoundel(th, {
+  const spec: RoundelSpec = {
     text,
     compose,
     tweaks: recipe.tweaks,
@@ -102,45 +106,90 @@ export function drawRoundel(
     rise: recipe.rise,
     bowl: recipe.bowl ? { ...recipe.bowl, oval: recipe.oval } : false,
     frame,
-  });
-  let out: RoundelDrawing | null = null;
-  if (b) {
-    const art = roundelArt(th, b.r, b.f, { discScale: 1, counters: counters ? '#000000' : undefined }),
-      tints = new Map<string, string>();
-    let ink = '';
-    // with hairline piercing, each group's letters are a layer of their own, in reading order
-    const layers: string[] = [];
-    for (const u of art.units) {
-      const d = pathOf(u.polys, art.cx, art.cy);
-      if (u.tint) tints.set(u.tint, (tints.get(u.tint) || '') + d);
-      else if (recipe.hairline && !u.mark && u.gi != null) layers[u.gi] = (layers[u.gi] || '') + d;
-      else ink += d;
-    }
-    out = {
-      ...(recipe.hairline && { hairline: recipe.hairline, layers: layers.filter(Boolean) }),
-      oval: art.oval,
-      Rf: art.Rf,
-      rim: art.rim,
-      field: art.field,
-      ink,
-      tints: [...tints].map(([colour, d]) => ({ colour, d })),
-      counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
-      ...(pair ? { counterTints: pairCounters(th, b.r, pair, art.cx, art.cy) } : {}),
-      marks: b.f.solved?.count ?? 0,
-      missing: b.f.missing,
-      grow: b.r.bowlGrow ?? 0,
-      overlap: b.r.overlap,
-      tails: b.r.tailsDrawn ?? 0,
-      levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
-      order: roundelOrderFault(b.r),
-      clash: clashes(th, b.r),
-      deco: (f => ({ texture: f.texture, knots: f.knots, unity: f.unity, span: f.span, fill: f.fill, noise: f.noise, taste: tasteScore(f, genreOf(text)) }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
-      checks: { ...roundelChecks(th, b.r, b.f), ...crossings(b.r) },
-    };
+  };
+  return { th, compose, frame, spec };
+}
+
+/** While a resolve is only looked through (collectRoundels), the roundels it asks for and has not drawn yet. */
+let wanted: Map<string, RoundelRequest> | null = null;
+
+export function drawRoundel(
+  text: string,
+  recipe: RoundelRecipe = {},
+  pen: Style['pen'],
+  counters: boolean,
+  pair?: RoundelColours['pair'],
+): RoundelDrawing | null {
+  const q: RoundelRequest = { text, recipe, pen, counters, pair },
+    key = keyOf(q);
+  if (CACHE.has(key)) return CACHE.get(key)!;
+  if (wanted) {
+    wanted.set(key, q);
+    return null;
   }
-  if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);
-  CACHE.set(key, out);
-  return out;
+  const { th, compose, frame, spec } = setup(q);
+  if (recipe.mirror) return keep(key, drawMusenna(th, text, recipe, compose, frame));
+  const b = buildRoundel(th, spec);
+  return keep(key, b && drawingOf(th, b, q));
+}
+
+/** The roundels a resolve would draw that are not drawn yet: `look` is run with roundels left undrawn and its result
+ *  thrown away. */
+export function collectRoundels(look: () => unknown): RoundelRequest[] {
+  const asked = (wanted = new Map<string, RoundelRequest>());
+  try {
+    look();
+  } catch {
+    // a resolve missing its roundels may fail: only what it asked for matters
+  }
+  wanted = null;
+  return [...asked.values()];
+}
+
+/** Draw a roundel on workers (its tries and its best arrangements side by side) and keep it, so a resolve finds it
+ *  drawn: the same drawing drawRoundel makes. A mirrored roundel is left to drawRoundel. */
+export async function prepareRoundel(q: RoundelRequest, workers: RoundelWorkers): Promise<void> {
+  const key = keyOf(q);
+  if (CACHE.has(key) || q.recipe.mirror) return;
+  const { th, spec } = setup(q),
+    b = await workers.build(th, spec);
+  keep(key, b && drawingOf(th, b, q));
+}
+
+/** A built roundel as drawn: its ink, colours, eyes, and the measures the critic reads. */
+function drawingOf(th: Thuluth, b: BuiltRoundel, { text, recipe, counters, pair }: RoundelRequest): RoundelDrawing {
+  const art = roundelArt(th, b.r, b.f, { discScale: 1, counters: counters ? '#000000' : undefined }),
+    tints = new Map<string, string>();
+  let ink = '';
+  // with hairline piercing, each group's letters are a layer of their own, in reading order
+  const layers: string[] = [];
+  for (const u of art.units) {
+    const d = pathOf(u.polys, art.cx, art.cy);
+    if (u.tint) tints.set(u.tint, (tints.get(u.tint) || '') + d);
+    else if (recipe.hairline && !u.mark && u.gi != null) layers[u.gi] = (layers[u.gi] || '') + d;
+    else ink += d;
+  }
+  return {
+    ...(recipe.hairline && { hairline: recipe.hairline, layers: layers.filter(Boolean) }),
+    oval: art.oval,
+    Rf: art.Rf,
+    rim: art.rim,
+    field: art.field,
+    ink,
+    tints: [...tints].map(([colour, d]) => ({ colour, d })),
+    counters: art.counters.map(rs => pathOf(rs, art.cx, art.cy)).join(''),
+    ...(pair ? { counterTints: pairCounters(th, b.r, pair, art.cx, art.cy) } : {}),
+    marks: b.f.solved?.count ?? 0,
+    missing: b.f.missing,
+    grow: b.r.bowlGrow ?? 0,
+    overlap: b.r.overlap,
+    tails: b.r.tailsDrawn ?? 0,
+    levels: new Set(b.r.st.map(p => Math.round(p.y / 2))).size,
+    order: roundelOrderFault(b.r),
+    clash: clashes(th, b.r),
+    deco: (f => ({ texture: f.texture, knots: f.knots, unity: f.unity, span: f.span, fill: f.fill, noise: f.noise, taste: tasteScore(f, genreOf(text)) }))(roundelFeatures(th, b.r, b.f)), // prettier-ignore
+    checks: { ...roundelChecks(th, b.r, b.f), ...crossings(b.r) },
+  };
 }
 
 /** A two-name scheme's eyes: each group's own counters, in the other name's colour (the accent's in the accent). */

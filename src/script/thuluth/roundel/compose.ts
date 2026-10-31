@@ -220,14 +220,12 @@ function spans(m: Uint8Array, W: number, H: number): Int32Array {
   return r;
 }
 
-export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
-  const tries = o.tries ?? 18,
-    iters = o.iters ?? 6000,
-    K = o.K ?? 1.6,
-    seed = o.seed ?? 7;
+/** A text's groups as the composer arranges them (with a companion text's, and each group's marks), and the options
+ *  its group variants are built with; null when the text has no letters. */
+export function roundelGroups(text: string, o: RoundelOptions = {}): { groups: RGroup[]; vopts: StackOptions } | null {
   const { bare, marks } = parseVowels(text);
   const groups: RGroup[] = splitGroups(bare);
-  if (!groups.length) return [];
+  if (!groups.length) return null;
   // companion text joins the arrangement as extra, smaller words
   if (o.companion && o.companion.trim()) {
     const pc = parseVowels(o.companion),
@@ -258,10 +256,23 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
   });
+  return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] } };
+}
+
+/** The composer's tries (each from its own seed), best first. `only`: just those tries, in that order and unsorted
+ *  (each try is independent of the others, so tries run apart and merged by number come out as all run together). */
+export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}, only?: readonly number[]): Roundel[] {
+  const tries = o.tries ?? 18,
+    iters = o.iters ?? 6000,
+    K = o.K ?? 1.6,
+    seed = o.seed ?? 7;
+  const prep = roundelGroups(text, o);
+  if (!prep) return [];
+  const { groups, vopts } = prep;
   // a shaped field sets the proportion
   const OVAL = o.field ? FIELDS[o.field].aspect : o.oval || 1;
   const shapes = groups.map(g => {
-    const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
+    const vs = groupVariants(th, g, vopts, K),
       st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
     return st.length ? st : vs;
   });
@@ -308,7 +319,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     n,
   );
   const results: Roundel[] = [];
-  for (let t = 0; t < tries; t++) {
+  for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
     let sd = seed + t * 7919;
     const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     const lv = groups.map((_, i) => Math.floor(R() * shapes[i].length)),
@@ -1039,6 +1050,6 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]), lanes: fitted, ...(RU ? { ruled: { breaks: brk.slice(), anchored: [...anc.keys()].filter(w => anc[w] && !brk.includes(w)) } } : {}) }); // prettier-ignore
     if (o.fixed) break;
   }
-  results.sort((a, b) => a.E - b.E);
+  if (!only) results.sort((a, b) => a.E - b.E);
   return results;
 }
