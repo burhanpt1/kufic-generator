@@ -1,5 +1,6 @@
 // Finishing a roundel (lab bowl.js): a great final bowl redrawn to follow the frame, the frame fitted to everything
 // drawn, and the small adjustments a calligrapher makes by hand (a smaller conjunction set under a letter).
+import { ovalKernel } from '../../../kernels/roundel';
 import type { PlacedLetter, Thuluth } from '../engine';
 import { isLetter } from '../engine';
 import { redraw } from '../drawn';
@@ -245,17 +246,20 @@ export function fitFrame(th: Thuluth, r: Roundel, o: FrameOptions = {}): Finishe
       my = (Math.min(...ys) + Math.max(...ys)) / 2,
       Wd = Math.max(...xs) - Math.min(...xs),
       Hd = Math.max(...ys) - Math.min(...ys);
-    let best: { area: number; cx: number; cy: number; R: number; v: number } | null = null;
-    for (const v of o.ovals || [1.0, 1.15, 1.3, 1.45, 1.6, 1.8, 2.0, 2.2])
-      for (let dx = -0.15; dx <= 0.1501; dx += 0.03)
-        for (let dy = -0.15; dy <= 0.1501; dy += 0.03) {
-          const ccx = mx + dx * Wd,
-            ccy = my + dy * Hd;
-          let R = 0;
-          pts.forEach(([x, y, m]) => (R = Math.max(R, Math.hypot((x - ccx) / v, y - ccy) + m)));
-          const area = R * R * v * (1 + (o.ovalPull ?? 0.12) * Math.abs(v - (o.ovalPref || 1.5)));
-          if (!best || area < best.area) best = { area, cx: ccx, cy: ccy, R, v };
-        }
+    const ovals = o.ovals || [1.0, 1.15, 1.3, 1.45, 1.6, 1.8, 2.0, 2.2];
+    // in WebAssembly (src/kernels/roundel.c) when it loads, else the same search here
+    let best = ovalKernel(pts, ovals, mx, my, Wd, Hd, o.ovalPull ?? 0.12, o.ovalPref || 1.5);
+    if (best === undefined)
+      for (const v of ovals)
+        for (let dx = -0.15; dx <= 0.1501; dx += 0.03)
+          for (let dy = -0.15; dy <= 0.1501; dy += 0.03) {
+            const ccx = mx + dx * Wd,
+              ccy = my + dy * Hd;
+            let R = 0;
+            pts.forEach(([x, y, m]) => (R = Math.max(R, Math.hypot((x - ccx) / v, y - ccy) + m)));
+            const area = R * R * v * (1 + (o.ovalPull ?? 0.12) * Math.abs(v - (o.ovalPref || 1.5)));
+            if (!best || area < best.area) best = { area, cx: ccx, cy: ccy, R, v };
+          }
     const e = best!;
     r.disc = { ...r.disc, cx: e.cx, cy: e.cy, r: e.R / 1.02, oval: e.v };
     f = finishRoundel(th, r, '', o);

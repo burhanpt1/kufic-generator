@@ -343,8 +343,63 @@ export function groupShape(
   return { b, mask, dil, W, H, x0, x1, y0, y1, ink, level, cx, cy, hull, shelves, stemTops, cost: 0 };
 }
 
-/** The ways of writing one group: stretch levels, stacked joins, tails, elongations, an emphatic long final. */
+/** The ways of writing one group: stretch levels, stacked joins, tails, elongations, an emphatic long final.
+ *  Built once for each pen, group and set of options (the same input always builds the same shapes); each caller gets
+ *  its own copy, since later steps (a drawn-out tail, a scaled group, a risen stem) redraw the chosen shapes in place. */
+const VARIANTS = new Map<string, GroupShape[]>(),
+  VARIANTS_MAX = 4000,
+  PEN_KEY = new WeakMap<Thuluth, string>();
 export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): GroupShape[] {
+  // what the shapes depend on: the pen (its style: a pen is made fresh for each drawing), the group's letters, marks
+  // and scale, and the options the builders read
+  let pen = PEN_KEY.get(th);
+  if (pen === undefined) PEN_KEY.set(th, (pen = JSON.stringify(th.style)));
+  const key = JSON.stringify([
+    pen,
+    g.s,
+    g.allah,
+    g.marks ?? null,
+    g.sc ?? null,
+    K,
+    {
+      tail: o.tail,
+      stackPull: o.stackPull,
+      learnedStack: o.learnedStack,
+      longFinal: o.longFinal,
+      deep: o.deep,
+      kashMap: o.kashMap,
+      emph: o.emph,
+      towers: o.towers,
+      towerPull: o.towerPull,
+      tails: o.tails,
+      stackMin: o.stackMin,
+      stackBowls: o.stackBowls,
+      nest: o.nest,
+      margin: o.margin,
+      levels: o.levels,
+      elongate: o.elongate,
+    },
+  ]);
+  let vs = VARIANTS.get(key);
+  if (!vs) {
+    if (VARIANTS.size >= VARIANTS_MAX) VARIANTS.clear();
+    VARIANTS.set(key, (vs = buildVariants(th, g, o, K)));
+  }
+  // a copy of what later steps change in place (a shape's box; its strokes, letters and dot groups, whose fields are
+  // reassigned); the rest (rasters, hull, shelves, the samples themselves) is only ever replaced, never written
+  return vs.map(v => ({
+    ...v,
+    b: {
+      ...v.b,
+      strokes: v.b.strokes.map(st => ({ ...st })),
+      dots: v.b.dots.slice(),
+      placed: v.b.placed.map(p => ({ ...p })),
+      dotGroups: v.b.dotGroups.map(d => ({ ...d })),
+    },
+  }));
+}
+
+function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): GroupShape[] {
   const BODY = th.style.body,
     out: GroupShape[] = [];
   if (o.emph && !g.sc) {

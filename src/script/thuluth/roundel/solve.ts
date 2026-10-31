@@ -7,6 +7,7 @@
 // الله seated on its shadda.
 import type { Dot, Thuluth } from '../engine';
 import { isLetter } from '../engine';
+import { gapKernel } from '../../../kernels/roundel';
 import { ALIF_ANG, ALIF_PEN, ALIF_SCALE, MARK_PEN, MARK_SHAPES, MARK_SIZE, SIGN_PEN } from '../marks';
 import { sampleStroke } from '../pen';
 import { Alpha, toPixels } from '../raster';
@@ -279,8 +280,17 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
         items.push({ kind: 'orn', m: sign, side: -1, w, h, x: L.lx, y: ay, ax: L.lx, ay, lx0: L.x0, lx1: L.x1, top: L.top, bot: L.bot, sc }); // prettier-ignore
       });
   });
+  // (a dots item's box is kept until its arrangement changes: the same numbers, without measuring again)
+  const boxes = new WeakMap<Item, { arr: unknown; n: number; sc: number; box: [number, number] }>();
   const boxOf = (it: Item): [number, number] => {
     if (it.kind !== 'dots') return [it.w!, it.h!];
+    const kept = boxes.get(it);
+    if (kept && kept.arr === it.arr && kept.n === it.n && kept.sc === it.sc) return kept.box;
+    const box = measure(it);
+    boxes.set(it, { arr: it.arr, n: it.n!, sc: it.sc, box });
+    return box;
+  };
+  const measure = (it: Item): [number, number] => {
     const off = dotOffsets(it.n!, it.arr!, nib * it.sc),
       xs = off.map(q => q[0]),
       ys = off.map(q => q[1]);
@@ -312,17 +322,69 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           iy = Math.round(Y(gy));
         cells.push([gx, gy, ix >= 0 && iy >= 0 && ix < Wd && iy < Hd ? dist[iy * Wd + ix] / K : 0]);
       }
-  // each item's clearance to every cell is kept, and only a moved item's row is measured again (an annealing step
-  // moves one item): the same distances and the same exact minimum, at a fraction of the work
+  // each item's clearance to every cell, measured lazily (an entry is good while its stamp matches its item's); an
+  // annealing step moves one item, and only the cells it could now be nearest to, or was nearest to, are measured
+  // again: the same distances and the same exact minimum, at a fraction of the work
   const nC = cells.length,
-    rowX = new Float64Array(items.length).fill(NaN),
-    rowY = new Float64Array(items.length),
-    rowR = new Float64Array(items.length),
-    rows = new Float64Array(items.length * nC);
+    nI = items.length,
+    CX = Float64Array.from(cells, q => q[0]),
+    CY = Float64Array.from(cells, q => q[1]),
+    CB = Float64Array.from(cells, q => q[2]),
+    rowX = new Float64Array(nI).fill(NaN),
+    rowY = new Float64Array(nI),
+    rowR = new Float64Array(nI),
+    ver = new Int32Array(nI),
+    // the same measure in WebAssembly (src/kernels/roundel.c), when it loads; the tables below are the TypeScript's
+    GK = gapKernel(CX, CY, CB, nI),
+    big = GK ? 0 : nI * nC,
+    rows = new Float64Array(big),
+    stamp = new Int32Array(big).fill(-1),
+    // each cell's nearest (the minimum, and which item gives it: -1 for the ink)
+    cellMin = new Float64Array(nC),
+    cellArg = new Int32Array(nC);
+  let fresh = true;
+  const clearance = (c: number, k: number) => {
+    const o = c * nI + k;
+    if (stamp[o] !== ver[k]) {
+      rows[o] = Math.max(0, Math.hypot(CX[c] - rowX[k], CY[c] - rowY[k]) - rowR[k]);
+      stamp[o] = ver[k];
+    }
+    return rows[o];
+  };
+  const rescan = (c: number) => {
+    let d = CB[c],
+      a = -1;
+    for (let j = 0; j < nI; j++) {
+      const v = clearance(c, j);
+      if (v < d) {
+        d = v;
+        a = j;
+      }
+    }
+    cellMin[c] = d;
+    cellArg[c] = a;
+  };
+  // item k has moved: of every cell, those it could now be nearest to (judged on squares, with room to spare) or was
+  // nearest to are measured again; the rest wait until a measure is needed
+  const moved = (k: number) => {
+    const x = rowX[k],
+      y = rowY[k],
+      r = rowR[k];
+    for (let c = 0; c < nC; c++) {
+      const dx = CX[c] - x,
+        dy = CY[c] - y,
+        reach = cellMin[c] + r + 1e-6;
+      if (cellArg[c] !== k && dx * dx + dy * dy > reach * reach * (1 + 1e-9)) continue;
+      const v = clearance(c, k);
+      if (v < cellMin[c]) {
+        cellMin[c] = v;
+        cellArg[c] = k;
+      } else if (cellArg[c] === k && v > cellMin[c]) rescan(c); // the nearest item moved away: look again
+    }
+  };
   const gapCost = () => {
     let e2 = 0;
-    const n = items.length;
-    for (let k = 0; k < n; k++) {
+    for (let k = 0; k < nI; k++) {
       const it = items[k],
         [w, h] = boxOf(it),
         r = Math.hypot(w, h) / 2;
@@ -330,12 +392,20 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       rowX[k] = it.x;
       rowY[k] = it.y;
       rowR[k] = r;
-      for (let c = 0; c < nC; c++)
-        rows[c * n + k] = Math.max(0, Math.hypot(cells[c][0] - it.x, cells[c][1] - it.y) - r);
+      if (GK) GK.move(k, it.x, it.y, r, fresh);
+      else {
+        ver[k]++;
+        if (!fresh) moved(k);
+      }
     }
+    if (fresh) {
+      fresh = false;
+      if (GK) GK.rescanAll();
+      else for (let c = 0; c < nC; c++) rescan(c);
+    }
+    if (GK) return GK.sum();
     for (let c = 0; c < nC; c++) {
-      let d = cells[c][2];
-      for (let k = 0, o = c * n; k < n; k++) d = Math.min(d, rows[o + k]);
+      const d = cellMin[c];
       if (d > 1.6) e2 += (d - 1.6) ** 2;
     }
     return e2 / Math.max(1, nC);

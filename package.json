@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:durations": "node scripts/test-durations.mjs",
     "typecheck": "tsc",
     "lint": "eslint .",
     "format": "prettier --write .",
