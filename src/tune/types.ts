@@ -8,12 +8,16 @@ export interface TuneFrame {
   vowels: boolean;
   clearance: number;
 }
+/** A roundel (circle) or the words on one baseline (line), drawn without a frame. */
+export type TuneShape = 'circle' | 'line';
 /** What the page edits and saves. */
 export interface TuneState {
+  shape?: TuneShape;
   layout: Layout;
   frame: TuneFrame;
 }
-export type TuneRequest = { id: number; kind: 'init' } | { id: number; kind: 'draw'; layout: Layout; frame: TuneFrame };
+export type TuneRequest =
+  { id: number; kind: 'init' } | { id: number; kind: 'draw'; shape: TuneShape; layout: Layout; frame: TuneFrame };
 export interface TunePiece {
   s: string;
   word: number;

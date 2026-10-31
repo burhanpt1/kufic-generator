@@ -34,7 +34,7 @@ What is already done is listed at the end only as milestones; the commit history
    - **Who does what:** I sweep and publish the round; you vote. The loop is in `tests/ratings/README.md`.
 2. **[~] Legibility first: one basmala roundel set by hand until it reads, then its rules.** An outside judge could
    read none of round 2's dense roundels (30 October): some letters were clear, the order was not. The owner's plan:
-   - pin one basmala (circle) by hand on the tuning page (https://claude.ai/artifact/Nq3Ynm7NjHrfdKrkeRrKz7,
+   - pin one basmala by hand on the tuning page, first on a straight line, then in a circle (owner, 31 October) (https://claude.ai/artifact/Nq3Ynm7NjHrfdKrkeRrKz7,
      `demos/tune.html`), until it is right;
    - reverse-engineer it: measure its word spacing, line steps, stacking and marks, and turn them into a reading check
      that every roundel must pass before taste scores it;
