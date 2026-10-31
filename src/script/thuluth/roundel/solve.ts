@@ -119,7 +119,8 @@ export interface SolveOptions {
    *  only the shadda, madda, hamza and dagger alif; then sukun and tanwin; from a half damma and kasra; from three
    *  quarters every fatha; the clarifying letters from 0.6; the ornaments' density follows it unless set. */
   markDensity?: number;
-  /** The long fatha (main pen) only where it spans a gap: its centre at least two pens from any letter. */
+  /** The long fatha (main pen) only where it spans a gap: its centre at least two pens from any letter (true; a long
+   *  stroke drawn beside the letters reads as one of them). */
   fathaGap?: boolean;
   /** The pen of the ornaments in the gaps, as a share of the letters' at full size (0.38; the lab drew 0.42 before
    *  the three-pen rule). */
@@ -582,7 +583,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       const free = run[0] + run[1],
         gx = Math.round(X(it.x)),
         gy = Math.round(Y(it.y)),
-        spans = !o.fathaGap || (gx >= 0 && gy >= 0 && gx < Wd && gy < Hd && dist[gy * Wd + gx] / K >= 2 * nib),
+        spans = o.fathaGap === false || (gx >= 0 && gy >= 0 && gx < Wd && gy < Hd && dist[gy * Wd + gx] / K >= 2 * nib),
         len = free >= 11 * nib && o.longFatha !== false && spans ? FATHA_DOTS.long : free >= 6 * nib ? FATHA_DOTS.medium : FATHA_DOTS.short; // prettier-ignore
       it.fathaLen = len * nib;
       it.mainPen = len === FATHA_DOTS.long;

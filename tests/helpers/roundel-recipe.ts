@@ -82,7 +82,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   clearance: { text: 'مُحَمَّد عَلِيّ', set: { clearance: 1.2 } },
   markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
   // without الله, whose marks its ligature draws; on lanes, where a fatha finds a gap to span
-  fathaGap: { text: 'سَلَامٌ قَوْلًا مِنْ رَبٍّ رَحِيمٍ', set: { fathaGap: true }, with: { iters: 1500, lanes: {} } },
+  fathaGap: { text: 'سَلَامٌ قَوْلًا مِنْ رَبٍّ رَحِيمٍ', set: { fathaGap: false }, with: { iters: 1500, lanes: {} } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {
