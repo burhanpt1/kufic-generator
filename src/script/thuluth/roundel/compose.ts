@@ -4,6 +4,7 @@
 // arrangement exactly, so letters can be refined without the layout reshuffling.
 import { discKernel } from '../../../kernels/roundel';
 import type { Thuluth } from '../engine';
+import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
 import type { FieldName } from './fields';
@@ -29,6 +30,8 @@ export interface Layout {
   wp: { x: number; y: number }[];
   /** The stacked pieces (by index), if any. */
   up?: number[];
+  /** Pieces moved from where their word puts them (pen units, y up): a hand adjustment, as the tuning page makes. */
+  nudge?: { i: number; x: number; y: number }[];
 }
 export interface RoundelOptions extends StackOptions {
   tries?: number;
@@ -220,9 +223,13 @@ function spans(m: Uint8Array, W: number, H: number): Int32Array {
   return r;
 }
 
-/** A text's groups as the composer arranges them (with a companion text's, and each group's marks), and the options
- *  its group variants are built with; null when the text has no letters. */
-export function roundelGroups(text: string, o: RoundelOptions = {}): { groups: RGroup[]; vopts: StackOptions } | null {
+/** A text's groups as the composer arranges them (with a companion text's, and each group's marks, as the pen with
+ *  this style writes them), and the options its group variants are built with; null when the text has no letters. */
+export function roundelGroups(
+  style: ThuluthStyle,
+  text: string,
+  o: RoundelOptions = {},
+): { groups: RGroup[]; vopts: StackOptions } | null {
   const { bare, marks } = parseVowels(text);
   const groups: RGroup[] = splitGroups(bare);
   if (!groups.length) return null;
@@ -255,8 +262,34 @@ export function roundelGroups(text: string, o: RoundelOptions = {}): { groups: R
     g.marks = (marks[g.word] || [])
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
+    // the ligature of the name of God draws the second lam's marks itself: the shadda on the lam, and the small alif,
+    // when the text writes it, over the heh
+    if (style.allah && g.allah) {
+      const k = [...g.s].length - 2;
+      if (g.marks.some(m => m.k === k && m.m === 'alifk')) g.alif = true;
+      g.marks = g.marks.filter(m => m.k !== k);
+    }
   });
   return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] } };
+}
+
+/** The pieces of a phrase (its groups, with their marks) and every variant of each that the composer chooses among;
+ *  a layout's `lv` indexes these. Null when the text has no letters. */
+export function roundelPieces(
+  th: Thuluth,
+  text: string,
+  o: RoundelOptions = {},
+): { groups: RGroup[]; shapes: GroupShape[][] } | null {
+  const K = o.K ?? 1.6,
+    prep = roundelGroups(th.style, text, o);
+  if (!prep) return null;
+  const { groups, vopts } = prep;
+  const shapes = groups.map(g => {
+    const vs = groupVariants(th, g, vopts, K),
+      st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
+    return st.length ? st : vs;
+  });
+  return { groups, shapes };
 }
 
 /** The composer's tries (each from its own seed), best first. `only`: just those tries, in that order and unsorted
@@ -266,16 +299,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     iters = o.iters ?? 6000,
     K = o.K ?? 1.6,
     seed = o.seed ?? 7;
-  const prep = roundelGroups(text, o);
-  if (!prep) return [];
-  const { groups, vopts } = prep;
+  const pieces = roundelPieces(th, text, o);
+  if (!pieces) return [];
+  const { groups, shapes } = pieces;
   // a shaped field sets the proportion
   const OVAL = o.field ? FIELDS[o.field].aspect : o.oval || 1;
-  const shapes = groups.map(g => {
-    const vs = groupVariants(th, g, vopts, K),
-      st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
-    return st.length ? st : vs;
-  });
   const words: number[][] = [];
   groups.forEach((g, i) => (words[g.word] ??= []).push(i));
   const W = words.length,
@@ -919,6 +947,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       o.fixed.wp.forEach((p, w) => w < W && (wp[w] = { ...p }));
       (o.fixed.up || []).forEach(i => i < n && (up[i] = 1));
       for (let w = 0; w < W; w++) layoutWord(w);
+      for (const q of o.fixed.nudge || []) if (q.i < n) gpos[q.i] = { x: gpos[q.i].x + q.x, y: gpos[q.i].y + q.y };
       for (let a = 0; a < W; a++) recompute(a);
       E = energy();
     }

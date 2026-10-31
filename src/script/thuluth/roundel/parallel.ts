@@ -122,7 +122,7 @@ export class RoundelWorkers {
   async compose(style: ThuluthStyle, text: string, opts?: RoundelOptions): Promise<Roundel[]> {
     const tries = opts?.fixed ? 1 : (opts?.tries ?? 18);
     if (tries <= 1 || this.workers.length <= 1) return (await this.must({ kind: 'compose', style, text, opts })).rs!;
-    const prep = roundelGroups(text, opts);
+    const prep = roundelGroups(style, text, opts);
     if (!prep) return [];
     const K = opts?.K ?? 1.6,
       byKey = new Map(prep.groups.map(g => [variantsKey(style, g, prep.vopts, K), g]));

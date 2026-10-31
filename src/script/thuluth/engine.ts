@@ -1,12 +1,14 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { LETTER_FIXES } from './fixes';
+import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import { DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
 export const DEFAULT_THULUTH: ThuluthStyle = {
+  // the name of God as one ligature (owner, 30 October)
+  allah: { alif: false },
   body: 1.25,
   nib: 1.3,
   ang: 70,
@@ -76,6 +78,8 @@ export interface LineOptions {
   sag?: number;
   /** Treat as the name of God (shadda and dagger alif); noAuto turns the automatic detection off. */
   allah?: boolean;
+  /** With the ligature (style.allah): draw its small alif, as a vowelled text that writes it asks. */
+  allahAlif?: boolean;
   noAuto?: boolean;
 }
 /** A dot: position, then (in compositions) its scale, the nib's rotation and a tint. */
@@ -99,7 +103,8 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 export type Thuluth = ReturnType<typeof thuluth>;
 
 export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
-  const st = style,
+  // the lab's letters exactly: without the later fixes, and so without the ligature of the name of God
+  const st: ThuluthStyle = style.labLetters ? { ...style, allah: undefined } : style,
     cache = new Map<string, GlyphDef | null>();
   const leanK = typeof st.slant === 'number' ? st.slant : st.slant === 'left' ? -0.06 : st.slant === 'right' ? 0.14 : 0;
   const lean = (pts: readonly SkelPt[]) => pts.map(([x, y, w, c]) => [x + leanK * y, y, w, c] as SkelPt);
@@ -158,8 +163,13 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       const fs = forms(w);
       let joined = false;
       y = 0;
+      // the name of God as one ligature: its second lam and its heh in their own forms
+      const allah = st.allah && /^[اأٱ]?لله$/.test(w) ? fs.length - 2 : -1;
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
+        if (allah >= 0 && i === allah - 1) g = ALLAH_LAM_INI;
+        if (allah >= 0 && i === allah) g = ALLAH_LAM;
+        if (allah >= 0 && i === allah + 1) g = scaleGlyph(ALLAH_HEH, st.body);
         if (!g) {
           x -= 2;
           joined = false;
@@ -191,6 +201,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             y += stk.dy;
           } else if (i < fs.length - 1) {
             let kl = o.kashMap && o.kashMap[i + 1] != null ? o.kashMap[i + 1] : kashida;
+            // the ligature keeps its own spacing: its lams are never drawn apart
+            if (allah >= 0 && i >= allah - 1) kl = 0;
             // two joined loop letters need a stretch of baseline between them, or their loops run together
             if (LOOPY.includes(FAM[f.c]) && LOOPY.includes(FAM[fs[i + 1].c])) kl = Math.max(kl, st.loopGap * st.body);
             if (kl > 0) {
@@ -310,8 +322,10 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     // the name of God: shadda and a small upright alif above the second lam
     if (!o.noAuto && (o.allah || /^ٱ?[اأ]?لله$/.test(text.trim()) || /(^|\s)الله(\s|$)/.test(text)))
       placed.forEach((p, i) => {
-        const q = placed[i + 1],
-          r = placed[i + 2];
+        // the letters after it (a kashida between them is not a letter)
+        const next = placed.slice(i + 1).filter(isLetter),
+          q = st.allah ? next[0] : placed[i + 1],
+          r = st.allah ? next[1] : placed[i + 2];
         if (
           isLetter(p) &&
           p.c === 'ل' &&
@@ -323,12 +337,35 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           isLetter(r) &&
           r.c === 'ه'
         ) {
-          const x = q.ox - 0.9,
-            y = 6.2 + (q.oy || 0),
-            sm = 0.55;
-          const sh: SkelPt[] = [[0.95, 0.15], [0.65, 0.65], [0.35, 0.05, 1, 1], [0.05, 0.6], [-0.3, 0.05, 1, 1], [-0.6, 0.6], [-0.9, 0.3, 0.6]]; // prettier-ignore
-          strokes.push({ ang, nib: nib * 0.5, s: sampleStroke(sh.map(([a2, b2, w, c]) => [x + a2 * sm * 2, y + b2 * sm * 2, w ?? 1, c] as SkelPt), st.tension) }); // prettier-ignore
-          strokes.push({ ang: 38, nib: nib * 0.55, s: sampleStroke([[x + 0.35, y + 3.0, 0.3], [x + 0.2, y + 2.6, 0.9], [x + 0.05, y + 1.5, 0.8]], st.tension) }); // prettier-ignore
+          const sm = 0.55,
+            sh: SkelPt[] = [[0.95, 0.15], [0.65, 0.65], [0.35, 0.05, 1, 1], [0.05, 0.6], [-0.3, 0.05, 1, 1], [-0.6, 0.6], [-0.9, 0.3, 0.6]]; // prettier-ignore
+          const shadda = (x: number, y: number) =>
+            strokes.push({ ang, nib: nib * 0.5, s: sampleStroke(sh.map(([a2, b2, w, c]) => [x + a2 * sm * 2, y + b2 * sm * 2, w ?? 1, c] as SkelPt), st.tension) }); // prettier-ignore
+          const smallAlif = (x: number, y0: number, y1: number) =>
+            // the marks pen for the small alif (marks.ts ALIF_ANG, ALIF_PEN)
+            strokes.push({ ang: 38, nib: nib * 0.5, s: sampleStroke([[x + 0.3, y1, 0.3], [x + 0.15, y1 - (y1 - y0) * 0.27, 0.9], [x, y0, 0.8]], st.tension) }); // prettier-ignore
+          if (st.allah) {
+            // the ligature: the shadda sits on the second lam's stem, its top level with the alif's; the small alif,
+            // if drawn, stands over the heh's arch
+            const alif = glyphFor('ا', 'iso')!,
+              alifTop = Math.max(...alif.s.flatMap(s2 => s2.pts.map(pt => pt[1]))),
+              lamTop = Math.max(...q.g.s.flatMap(s2 => s2.pts.map(pt => pt[1]))),
+              x = q.ox + leanK * lamTop,
+              y = alifTop - sm * 2 * 0.65 + nib * 0.25 + (q.oy || 0);
+            shadda(x, y);
+            if (st.allah.alif || o.allahAlif) {
+              const hx = r.g.s.flatMap(s2 => s2.pts.map(pt => pt[0])),
+                hy = r.g.s.flatMap(s2 => s2.pts.map(pt => pt[1])),
+                top = Math.max(...hy) + nib * 0.6;
+              smallAlif(r.ox + (Math.min(...hx) + Math.max(...hx)) / 2, top + (r.oy || 0), Math.max(alifTop, top + 1.6) + (r.oy || 0)); // prettier-ignore
+            }
+          } else {
+            // the lab's: both on the second lam's stem
+            const x = q.ox - 0.9,
+              y = 6.2 + (q.oy || 0);
+            shadda(x, y);
+            strokes.push({ ang: 38, nib: nib * 0.55, s: sampleStroke([[x + 0.35, y + 3.0, 0.3], [x + 0.2, y + 2.6, 0.9], [x + 0.05, y + 1.5, 0.8]], st.tension) }); // prettier-ignore
+          }
         }
       });
     const dotGroups: DotGroup[] = [];

@@ -12,7 +12,7 @@ const BASE: RoundelRecipe = { tries: 1, iters: 500, seed: 3, judge: 1 },
 /** Option → the text to try it on and the recipe that sets it (on top of BASE and any `with`). */
 export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelRecipe }> = {
   elongate: { set: { elongate: true } },
-  cross: { text: BASMALA, set: { cross: true } },
+  cross: { text: BASMALA, set: { cross: true }, with: { iters: 1500 } },
   merge: { text: 'ا ا ا ا ا ا', set: { merge: true }, with: { fillTarget: 0.9, iters: 3000 } },
   cradle: { text: 'علي حسن', set: { cradle: true }, with: { elongate: true, great: { ya: true }, iters: 1500 } },
   kern: { text: 'رسول', set: { kern: true } },
@@ -70,7 +70,8 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   allSigns: { text: 'حسين', set: { allSigns: false }, with: { ornaments: true } },
   clearance: { text: 'مُحَمَّد عَلِيّ', set: { clearance: 1.2 } },
   markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
-  fathaGap: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
+  // without الله, whose marks its ligature draws
+  fathaGap: { text: 'نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {

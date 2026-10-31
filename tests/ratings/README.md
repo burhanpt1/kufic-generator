@@ -26,7 +26,9 @@ A vote on a pair counts towards the refit like any other; read per option, it sa
 
 Round 2 (`rounds/2026-10-30`): the ruled mode against free and lanes on the three dense texts (ids `r…`), and on/off
 pairs for girift, learned stacking, towers, nesting and mark spacing (`clearance` 0.5 with `fathaGap`, on vocalised
-texts) (ids `pa…` to `pd…`).
+texts) (ids `pa…` to `pd…`). Its votes are kept as `votes.held.json` and `dislikes.held.json`, which the refit does not
+read: the owner holds the refit until the legibility work lands (an outside judge could read none of the dense texts),
+and then they are renamed back.
 
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
