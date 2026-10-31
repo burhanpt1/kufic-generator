@@ -48,6 +48,8 @@ h2 { font: 600 13px/1.2 var(--body); letter-spacing: .06em; text-transform: uppe
 .stage { display: grid; gap: 8px; min-width: 0; }
 .view { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #ece6d6; aspect-ratio: 1 / 1; max-width: 100%; touch-action: manipulation; }
 .view svg { display: block; width: 100%; height: 100%; }
+.view.line { aspect-ratio: auto; background: #f6f1e4; overflow-x: auto; }
+.view.line svg { height: auto; min-width: 680px; }
 .view.busy::after { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--paper) 25%, transparent); }
 .hint { color: var(--muted); font-size: 13px; }
 .panel { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--plate); min-width: 0; }
@@ -97,7 +99,7 @@ textarea { width: 100%; min-height: 72px; padding: 8px; border: 1px solid var(--
       <button type="button" id="redo" disabled>Redo</button>
     </div>
     <div class="view" id="view" role="img" aria-label="The basmala roundel as it stands"></div>
-    <div class="hint">Tap a piece of a word to select it, or pick it below. Moves are in pen widths.</div>
+    <div class="hint">Tap a piece of a word to select it, or pick it below. Moves are in pen widths. A line scrolls sideways on a phone.</div>
   </div>
 
   <div class="side">

@@ -4,7 +4,7 @@
 // Claude reads it back; a draft is kept in this browser.
 import type { Layout } from '../script/thuluth/roundel';
 import starts from './starts.json';
-import type { TuneDraw, TuneInit, TunePiece, TuneRequest, TuneState } from './types';
+import type { TuneDraw, TuneInit, TunePiece, TuneRequest, TuneShape, TuneState } from './types';
 
 interface Saved {
   id: string;
@@ -25,7 +25,11 @@ interface Claude {
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const DRAFT = 'tune-basmala';
 const FRAME = { ornaments: false, density: 0.35, vowels: false, clearance: 0 };
-const fresh = (k: number): TuneState => ({ layout: structuredClone(starts[k].layout) as Layout, frame: { ...FRAME } });
+const fresh = (k: number): TuneState => ({
+  shape: starts[k].shape as TuneShape,
+  layout: structuredClone(starts[k].layout) as Layout,
+  frame: { ...FRAME },
+});
 
 // the engine, in its worker
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -94,7 +98,8 @@ async function redraw() {
   drawing = true;
   $('view').classList.add('busy');
   $('status').textContent = 'Drawing…';
-  const r = await ask({ kind: 'draw', layout: state.layout, frame: state.frame });
+  $('view').classList.toggle('line', state.shape === 'line');
+  const r = await ask({ kind: 'draw', shape: state.shape ?? 'circle', layout: state.layout, frame: state.frame });
   drawing = false;
   if (again) {
     again = false;
