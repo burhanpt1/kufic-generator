@@ -58,7 +58,7 @@ export function pathPad(current: unknown, onSet: (path: Path | string | undefine
   };
   cv.onpointerup = () => (cur = null);
   const named = h('select', { 'aria-label': 'Reading path' }, h('option', { value: '', textContent: 'Named path…' }));
-  ['auto', 'lanes', 'stag2', 'stag3', 'stairs2', 'stairs3', 'stairs4', 'zigzag', 'bolt', 'cup', 'line', 'calliar3', 'calliar4'].forEach(v => named.append(h('option', { value: v, textContent: v }))); // prettier-ignore
+  ['auto', 'ruled', 'lanes', 'free', 'stag2', 'stag3', 'stairs2', 'stairs3', 'stairs4', 'zigzag', 'bolt', 'cup', 'line', 'calliar3', 'calliar4'].forEach(v => named.append(h('option', { value: v, textContent: v }))); // prettier-ignore
   named.onchange = () => named.value && onSet(named.value);
   const note = h('span', {
     class: 'note',
