@@ -1,7 +1,7 @@
 // Letters redrawn after the lab, where its forms fail a legibility rule (tests/thuluth-legibility.test.ts). They sit
 // over the generated table (letters.data.ts), which stays as the lab left it.
 import { LETTERS } from './letters.data';
-import type { Family, Form, LetterForm, SkelPt } from './types';
+import type { Family, Form, GlyphDef, LetterForm, SkelPt, ThuluthStyle } from './types';
 
 /** Final and isolated kaf, in the thuluth construction: an upright from the shoulder stroke at the top down to a long
  *  flat base that turns up at its end, with the small kaf sign inside. The lab's form was a leaning shaft over a
@@ -12,9 +12,10 @@ const KAF_END: LetterForm = {
   s: [
     { pts: [[0, 0], [-0.4, 0]] },
     // the shoulder: a short oblique stroke written down into the top of the upright
-    { pts: [[-2.7, 7.5, 0.25], [-1.5, 7.0, 0.9], [-0.5, 6.55, 1]] },
+    // (its top level with the alif's at the roundel body: drawn 7.5 high, the kaf stood a pen width over every alif)
+    { pts: [[-2.7, 6.4, 0.25], [-1.5, 5.95, 0.9], [-0.5, 5.55, 1]] },
     // the upright, a sharp turn at the baseline, the long base, and the lift at its end
-    { pts: [[-0.5, 6.55, 0.9], [-0.4, 3.6], [-0.3, 0.75, 1, 1], [-1.2, 0.0], [-3.8, -0.05], [-5.3, 0.1], [-6.0, 0.6, 0.7], [-6.2, 1.35, 0.2]] },
+    { pts: [[-0.5, 5.55, 0.9], [-0.4, 3.05], [-0.3, 0.75, 1, 1], [-1.2, 0.0], [-3.8, -0.05], [-5.3, 0.1], [-6.0, 0.6, 0.7], [-6.2, 1.35, 0.2]] },
     // the small kaf sign in the opening above the base
     { pts: [[-2.4, 3.55, 0.25], [-3.05, 3.2, 0.5], [-2.6, 2.75, 0.5, 1], [-3.35, 2.3, 0.4]] },
   ],
@@ -44,29 +45,27 @@ const LAM_MED: LetterForm = {
   ],
 };
 
-/** The name of God as one ligature (style.allah), after the classic form (owner, 30 October): the two lams shorter
- *  than the alif, each rounding at its foot into a bowl, the first up into the second and the second up into the heh;
- *  the heh a tall arch as high as the lams; the shadda sitting on the second lam, its top level with the alif's. */
-const ALLAH_TOP = 7.5;
-export const ALLAH_LAM_INI: LetterForm = {
-  src: 'hand',
-  exit: -3.9,
-  // down the stem, round the bowl and up into the second lam's stem (which stands at the exit)
-  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.1], [-3.55, 0.7], [-3.85, 1.8], [-3.9, 2.6, 0.8]] }],
-}; // prettier-ignore
-export const ALLAH_LAM: LetterForm = {
-  src: 'hand',
-  exit: -2.9,
-  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.0]] }],
-}; // prettier-ignore
-/** Its heh, scaled with the body like any heh: up from the second lam's bowl, over the arch and down to a small foot;
- *  its top as high as the lams at the roundel body (1.45). */
-const H = ALLAH_TOP / 1.45 / 4.25;
+/** The name of God as one ligature (style.allah), in the classic thuluth form: two tall lams standing close, a little
+ *  shorter than the alif, each written down to a short foot that runs into the next letter; then a small round heh
+ *  leaning on the second lam's foot. The shadda sits on the second lam, its top level with the alif's. (The design of
+ *  30 October joined the lams in bowls and made the heh a tall arch as high as them, and the word read as اللم.) */
+const ALLAH_TOP = 7.7;
+const allahStem = (dx: number, exitX: number) =>
+  ({
+    ang: 38,
+    lean: true,
+    pts: [[0.6 + dx, ALLAH_TOP, 0.2], [0.22 + dx, ALLAH_TOP - 0.3, 0.8], [0.0 + dx, ALLAH_TOP - 0.9, 1], [0.0 + dx, 4.6, 1], [-0.05 + dx, 1.6, 0.95], [-0.2 + dx, 0.45, 0.9], [-0.75 + dx, 0.05, 1], [exitX, 0.0, 1]], // prettier-ignore
+  }) as LetterForm['s'][number];
+// the first lam's foot runs on to the second lam's stem, which stands at its origin (the shadda is set over it)
+export const ALLAH_LAM_INI: LetterForm = { src: 'hand', exit: -3.1, s: [allahStem(0, -3.1)] };
+export const ALLAH_LAM: LetterForm = { src: 'hand', exit: -1.6, s: [allahStem(0, -1.6)] };
+/** Its heh, scaled with the body like any heh: from the second lam's foot up and round to the left, down and back
+ *  along the line to close against the foot; about two and a half dots tall at the roundel pen. */
 export const ALLAH_HEH: LetterForm = {
   src: 'hand',
   exit: null,
-  s: [{ ang: 38, pts: ([[0, 0], [-0.5, 0.35], [-0.85, 1.1], [-1.05, 2.3], [-1.25, 3.4], [-1.65, 4.1], [-2.25, 4.25], [-2.85, 3.8], [-3.15, 2.8], [-3.25, 1.5], [-3.35, 0.45], [-3.65, 0.0, 0.6], [-4.0, 0.1, 0.25]] as SkelPt[]).map(([x, y, w]) => [x, y * H, w] as SkelPt) }],
-}; // prettier-ignore
+  s: [{ pts: [[0, 0], [-0.9, 0.0], [-2.0, 0.08], [-2.85, 0.5], [-3.2, 1.35], [-2.9, 2.3], [-2.1, 2.75], [-1.35, 2.45], [-0.95, 1.65], [-1.05, 0.8], [-1.55, 0.25, 0.8], [-2.05, 0.12, 0.4]] }], // prettier-ignore
+};
 
 /** Isolated ba, ta, tha: the lab's hand-drawn long flat boat on the baseline. The learned form, a final misfiled in
  *  the dataset, dropped below the line like a ra. */
@@ -122,13 +121,81 @@ const sinEnd = (teeth: LetterForm): LetterForm => {
     s: [...teeth.s, ...bowl.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x + dx, y, w, c] as SkelPt) }))],
   };
 };
-const SIN_FIN = sinEnd(LETTERS.sin.med!),
-  SIN_ISO = sinEnd(LETTERS.sin.ini!);
+/** The seen's three teeth, each a short upstroke to a pointed top about a dot high, the pen turning sharply there and
+ *  dropping into a shallow cup to the next; the learned teeth were ripples a third as high, and medial seen dipped
+ *  below the line, so بسم and رسول read as a wavy stroke. The medial form rises from the join into its first tooth;
+ *  the initial one starts at that tooth's top, as the tooth letters do. Shin's dots stand over the middle tooth. */
+const SIN_TEETH: SkelPt[] = [[-0.55, 0.3], [-0.9, -0.15], [-1.35, -0.1], [-1.55, 0.4], [-1.6, 1.0, 0.8, 1], [-1.7, 0.3], [-2.05, -0.15], [-2.5, -0.1], [-2.7, 0.4], [-2.75, 0.95, 0.8, 1], [-2.85, 0.3], [-3.2, -0.1], [-4.0, 0]]; // prettier-ignore
+const SIN_MED: LetterForm = {
+  src: 'hand',
+  exit: -4.0,
+  dotX: -1.5,
+  s: [{ pts: [[0, 0], [-0.3, 0.55], [-0.45, 1.1, 0.8, 1], ...SIN_TEETH] }],
+};
+const SIN_INI: LetterForm = {
+  src: 'hand',
+  exit: -3.6,
+  dotX: -1.1,
+  s: [{ pts: ([[-0.45, 1.15, 0.55], ...SIN_TEETH] as SkelPt[]).map(([x, y, w, c]) => [x + 0.4, y, w, c] as SkelPt) }],
+};
+const SIN_FIN = sinEnd(SIN_MED),
+  SIN_ISO = sinEnd(SIN_INI);
+
+/** A form drawn smaller about its entry (0, 0), the pen's widths kept. */
+const scaled = (g: LetterForm, sx: number, sy: number): LetterForm => ({
+  src: g.src,
+  exit: g.exit == null ? null : g.exit * sx,
+  dotX: g.dotX == null ? g.dotX : g.dotX * sx,
+  s: g.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x * sx, y * sy, w, c] as SkelPt) })),
+});
+
+/** Initial and medial hah, jim, khah: the master's head (gold panel), drawn smaller. At its own size the head stood
+ *  three teeth tall and as wide as a word, and every word with a hah turned on it; the masters' line hah has a head
+ *  about two and a half dots tall, about as high as ain's and sad's. */
+const HAH_SX = 0.8,
+  HAH_SY = 0.72;
+const HAH_INI = scaled(LETTERS.hah.ini!, HAH_SX, HAH_SY),
+  HAH_MED = scaled(LETTERS.hah.med!, HAH_SX, HAH_SY);
+
+/** Medial mim: a small round loop sitting on the line, its foot just below it. From the join the pen rises over the
+ *  loop's top to the left, comes down its left side, back along its foot to the right, and turns to leave along the
+ *  foot. The master's fit hung the loop half below the line and ran the exit through it, so at the roundel pen it
+ *  closed into a blob. Wider than it is tall, so it stays apart from the taller, necked loop of medial fa and qaf. */
+/** Initial mim: the lab's loop, drawn smaller (0.85) about its start, the run to the join kept. Its loop stood five pen
+ *  units high, as tall as the hah after it, and محمد began with a dome. */
+const MIM_INI: LetterForm = (() => {
+  const g = scaled(LETTERS.mim.ini!, 0.85, 0.85),
+    pts = g.s[0].pts;
+  return { ...g, exit: -2.9, s: [{ ...g.s[0], pts: [...pts.slice(0, -1), [-2.9, 0, 1]] }] };
+})();
+const MIM_MED: LetterForm = {
+  src: 'hand',
+  exit: -3.3,
+  s: [{ pts: [[0, 0], [-0.55, 0.35], [-1.25, 1.2], [-2.0, 1.4], [-2.65, 0.95], [-2.75, 0.2], [-2.25, -0.35], [-1.35, -0.4], [-0.75, -0.15, 1, 1], [-1.6, -0.3], [-2.6, -0.15], [-3.3, 0]] }], // prettier-ignore
+};
+
+/** Final heh and ta marbuta after a join (the round design, style.heh): the same crossed loop, rising from the join,
+ *  over the top and down across its own upstroke to a short tail, drawn lower and a little wider. The lab's stood 5.75
+ *  pen units high at the roundel pen, a tall teardrop on a stalk over the letters around it; this one stands about
+ *  three dots, half the alif, and its eye stays open. */
+export const HEH_FIN_FIXES: Partial<Record<ThuluthStyle['heh'], GlyphDef>> = {
+  round: { exit: null, s: [{ pts: [[0, 0], [-0.7, 0.45], [-1.45, 1.35], [-1.7, 2.25], [-1.35, 2.8], [-0.65, 2.85], [-0.15, 2.35], [-0.25, 1.45], [-0.85, 0.6], [-1.5, 0.2, 0.75], [-2.0, 0.12, 0.4]] }] }, // prettier-ignore
+};
+
+/** Medial heh: the lab's ear above the line and small loop below it, drawn a quarter larger. At its own size it sat
+ *  lower than the teeth beside it and closed into a dark knot at the roundel pen (اللهم). */
+const HEH_MED: LetterForm = {
+  src: 'hand',
+  exit: -3.125,
+  s: [{ pts: [[0, 0], [-0.5, 0.6], [-0.44, 1.98, 0.8], [-1.31, 2.4, 0.8], [-1.69, 1.38], [-1.0, 0.42], [-1.19, -0.66], [-2.0, -0.84], [-2.06, -0.06], [-3.125, 0]] }], // prettier-ignore
+};
 
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
   kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
   lam: { ini: LAM_INI, med: LAM_MED },
   tooth: { iso: TOOTH_ISO },
-  ha: { ini: HEH_INI },
-  sin: { fin: SIN_FIN, iso: SIN_ISO },
+  ha: { ini: HEH_INI, med: HEH_MED },
+  hah: { ini: HAH_INI, med: HAH_MED },
+  mim: { ini: MIM_INI, med: MIM_MED },
+  sin: { ini: SIN_INI, med: SIN_MED, fin: SIN_FIN, iso: SIN_ISO },
 };

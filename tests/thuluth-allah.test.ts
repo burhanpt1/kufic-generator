@@ -1,6 +1,6 @@
 // The name of God as one ligature (style.allah, the default): its lams keep their spacing however a line is drawn
 // out, stand lower than the alif, and carry the shadda on the second lam with its top level with the alif's (the lab
-// set the shadda and small alif behind the second lam's stem); the heh's arch is as high as the lams.
+// set the shadda and small alif behind the second lam's stem); its heh is small and round beside them.
 import { describe, expect, it } from 'vitest';
 import { isLetter, ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
 import { roundelPieces } from '../src/script/thuluth/roundel';
@@ -23,12 +23,13 @@ describe('the ligature of the name of God', () => {
     drawn.slice(1).forEach((p, i) => expect(p.ox).toBeCloseTo(letters[i + 1].ox + shift, 9));
   });
 
-  it('sets the lams and the heh lower than the alif, the heh as high as the lams', () => {
+  it('sets the lams lower than the alif and the heh small beside them (a heh as tall as the lams read as اللم)', () => {
     const alif = top(pts(0)),
       lams = [top(pts(1)), top(pts(2))],
       heh = top(pts(3));
     for (const h of lams) expect(h).toBeLessThan(alif - 1);
-    expect(Math.abs(heh - lams[1])).toBeLessThan(0.3);
+    expect(heh).toBeLessThan(0.6 * lams[1]);
+    expect(heh).toBeGreaterThan(0.35 * lams[1]);
   });
 
   it('sets the shadda on the second lam, its top level with the alif’s', () => {

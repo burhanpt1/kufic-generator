@@ -234,8 +234,8 @@ describe('the rasm confusion matrix', () => {
   // distance: they may get further apart, never closer. Heh is the weakest letter until a master example is found.
   const THRESHOLD = 0.3;
   const KNOWN: Record<string, Record<string, number>> = {
-    roundel: { 'ف/ه ini': 0.179, 'ق/ه ini': 0.179, 'م/ه med': 0.248, 'ف/ه med': 0.266, 'ق/ه med': 0.266, 'ف/م med': 0.28, 'ق/م med': 0.28 }, // prettier-ignore
-    tile: { 'ف/ه ini': 0.224, 'ق/ه ini': 0.224, 'ف/م med': 0.243, 'ق/م med': 0.243, 'ف/ه med': 0.29, 'ق/ه med': 0.29 }, // prettier-ignore
+    roundel: { 'ف/م med': 0.289, 'ق/م med': 0.289, 'م/ه med': 0.291 }, // prettier-ignore
+    tile: { 'ف/م med': 0.272, 'ق/م med': 0.272, 'ف/ه ini': 0.295, 'ق/ه ini': 0.295 }, // prettier-ignore
   };
   for (const [pn, pen] of Object.entries(PENS))
     it(`no other letter shapes come within ${THRESHOLD} of each other (${pn} pen)`, () => {

@@ -81,24 +81,29 @@ What is already done is listed at the end only as milestones; the commit history
 ## Thuluth letters
 
 - [~] **Heh is the weakest letter; it needs a master example.**
-  - The initial heh was redone as a split, two-eyed form (`63c3861`). The medial heh is unchanged: a figure-of-eight
-    came out too close to mim.
+  - The initial heh was redone as a split, two-eyed form (`63c3861`). The medial heh keeps the lab's construction,
+    drawn a quarter larger so its ear reads (31 October); a figure-of-eight came out too close to mim, and one with an
+    open upper eye filled in at the 69° nib. The final heh was drawn lower, about three dots.
   - Source: refresh/HANDOVER.md, letters; `tests/thuluth-legibility.test.ts`.
 - [!] **The dense loop heads sit under the 0.3 confusion threshold.** These are fa and qaf, heh and mim, in initial
   and medial position. The test holds each at its present distance, so they may move apart but never closer.
-  Initial fa/heh is the closest pair, at 0.18 (`tests/thuluth-legibility.test.ts`, confusion matrix).
+  Since the medial mim and heh were redrawn (31 October), medial fa/mim is the closest pair, at 0.29 at the roundel
+  pen and 0.27 at the tile pen (`tests/thuluth-legibility.test.ts`, confusion matrix).
 - [ ] **The final ya at ordinary size is still hand-drawn.** The only master instance is a great sweep (lab HANDOVER
       §11).
 - [ ] **The lab's "initial lam/tooth at 0.35" finding was never explained** (refresh/HANDOVER.md). The port has since
       redrawn the initial and medial lam. Check whether the finding still holds.
 - [~] **The name of God is now one ligature** (owner, 30 October; `ALLAH_*` in `src/script/thuluth/fixes.ts`): lams
-  shorter than the alif and joined in bowls, the heh a tall arch as high as the lams, the shadda on the second lam
-  level with the alif's top, the small alif only where a vowelled text writes it. It is drawn everywhere thuluth writes
-  الله; the lab's letters (`labLetters`) keep the old form. Still to judge on the tuning page.
+  a little shorter than the alif, the shadda on the second lam level with the alif's top, the small alif only where a
+  vowelled text writes it. It is drawn everywhere thuluth writes الله; the lab's letters (`labLetters`) keep the old
+  form. Redrawn on 31 October in the classic form, two straight lams with short feet and a small round heh: the first
+  design (lams joined in bowls, the heh a tall arch as high as the lams) read as اللم. Still to judge on the tuning
+  page.
   - Since the lams were shortened, the girift dial no longer draws the basmala in tighter; it still makes crossings
     (`tests/thuluth-paths.test.ts`).
 - [~] **Mim, tah and lam-alif are hand-drawn and only "acceptable"** (lab HANDOVER §4). Each
-  needs a master fit when photos allow.
+  needs a master fit when photos allow. The medial mim's master fit hung below the line and closed into a blob at the
+  roundel pen; it is now a hand-drawn loop on the line (31 October).
 - [ ] **Calibrate the port's rasm confusion matrix against the lab's `checker.js`.** That file is now vendored in
       `refresh/lab/`. The port's scale differs from the lab's: for example, isolated ba/ra and medial kaf/lam are not
       flagged.
