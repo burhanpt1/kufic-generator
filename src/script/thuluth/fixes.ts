@@ -174,11 +174,19 @@ export const HEH_FIN_FIXES: Partial<Record<ThuluthStyle['heh'], GlyphDef>> = {
   round: { exit: null, s: [{ pts: [[0, 0], [-0.7, 0.45], [-1.45, 1.35], [-1.7, 2.25], [-1.35, 2.8], [-0.65, 2.85], [-0.15, 2.35], [-0.25, 1.45], [-0.85, 0.6], [-1.5, 0.2, 0.75], [-2.0, 0.12, 0.4]] }] }, // prettier-ignore
 };
 
+/** Medial heh: the lab's ear above the line and small loop below it, drawn a quarter larger. At its own size it sat
+ *  lower than the teeth beside it and closed into a dark knot at the roundel pen (اللهم). */
+const HEH_MED: LetterForm = {
+  src: 'hand',
+  exit: -3.125,
+  s: [{ pts: [[0, 0], [-0.5, 0.6], [-0.44, 1.98, 0.8], [-1.31, 2.4, 0.8], [-1.69, 1.38], [-1.0, 0.42], [-1.19, -0.66], [-2.0, -0.84], [-2.06, -0.06], [-3.125, 0]] }], // prettier-ignore
+};
+
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
   kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
   lam: { ini: LAM_INI, med: LAM_MED },
   tooth: { iso: TOOTH_ISO },
-  ha: { ini: HEH_INI },
+  ha: { ini: HEH_INI, med: HEH_MED },
   hah: { ini: HAH_INI, med: HAH_MED },
   mim: { med: MIM_MED },
   sin: { ini: SIN_INI, med: SIN_MED, fin: SIN_FIN, iso: SIN_ISO },
