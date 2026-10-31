@@ -125,10 +125,27 @@ const sinEnd = (teeth: LetterForm): LetterForm => {
 const SIN_FIN = sinEnd(LETTERS.sin.med!),
   SIN_ISO = sinEnd(LETTERS.sin.ini!);
 
+/** A form drawn smaller about its entry (0, 0), the pen's widths kept. */
+const scaled = (g: LetterForm, sx: number, sy: number): LetterForm => ({
+  src: g.src,
+  exit: g.exit == null ? null : g.exit * sx,
+  dotX: g.dotX == null ? g.dotX : g.dotX * sx,
+  s: g.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x * sx, y * sy, w, c] as SkelPt) })),
+});
+
+/** Initial and medial hah, jim, khah: the master's head (gold panel), drawn smaller. At its own size the head stood
+ *  three teeth tall and as wide as a word, and every word with a hah turned on it; the masters' line hah has a head
+ *  about two and a half dots tall, about as high as ain's and sad's. */
+const HAH_SX = 0.8,
+  HAH_SY = 0.72;
+const HAH_INI = scaled(LETTERS.hah.ini!, HAH_SX, HAH_SY),
+  HAH_MED = scaled(LETTERS.hah.med!, HAH_SX, HAH_SY);
+
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
   kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
   lam: { ini: LAM_INI, med: LAM_MED },
   tooth: { iso: TOOTH_ISO },
   ha: { ini: HEH_INI },
+  hah: { ini: HAH_INI, med: HAH_MED },
   sin: { fin: SIN_FIN, iso: SIN_ISO },
 };

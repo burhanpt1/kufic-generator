@@ -141,7 +141,8 @@ describe('thuluth rasteriser', () => {
   it('matches the lab’s canvas within 3% of the ink', () => {
     const fx: { text: string; K: number; x0: number; y1: number; W: number; H: number; scale: number; threshold: number; runs: number[] }[] =
       JSON.parse(readFileSync(join(dir, 'canvas-masks.json'), 'utf8')); // prettier-ignore
-    const th = thuluth(ROUNDEL_PEN);
+    // the lab drew these with its own letters; the rasteriser is what is checked here, not the letters
+    const th = thuluth({ ...ROUNDEL_PEN, labLetters: true });
     for (const f of fx) {
       const ref = new Uint8Array(f.W * f.H);
       let i = 0;
