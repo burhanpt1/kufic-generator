@@ -12,9 +12,10 @@ const KAF_END: LetterForm = {
   s: [
     { pts: [[0, 0], [-0.4, 0]] },
     // the shoulder: a short oblique stroke written down into the top of the upright
-    { pts: [[-2.7, 7.5, 0.25], [-1.5, 7.0, 0.9], [-0.5, 6.55, 1]] },
+    // (its top level with the alif's at the roundel body: drawn 7.5 high, the kaf stood a pen width over every alif)
+    { pts: [[-2.7, 6.4, 0.25], [-1.5, 5.95, 0.9], [-0.5, 5.55, 1]] },
     // the upright, a sharp turn at the baseline, the long base, and the lift at its end
-    { pts: [[-0.5, 6.55, 0.9], [-0.4, 3.6], [-0.3, 0.75, 1, 1], [-1.2, 0.0], [-3.8, -0.05], [-5.3, 0.1], [-6.0, 0.6, 0.7], [-6.2, 1.35, 0.2]] },
+    { pts: [[-0.5, 5.55, 0.9], [-0.4, 3.05], [-0.3, 0.75, 1, 1], [-1.2, 0.0], [-3.8, -0.05], [-5.3, 0.1], [-6.0, 0.6, 0.7], [-6.2, 1.35, 0.2]] },
     // the small kaf sign in the opening above the base
     { pts: [[-2.4, 3.55, 0.25], [-3.05, 3.2, 0.5], [-2.6, 2.75, 0.5, 1], [-3.35, 2.3, 0.4]] },
   ],
