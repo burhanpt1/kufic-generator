@@ -47,8 +47,17 @@ What is already done is listed at the end only as milestones; the commit history
      opt-in (`stackPull`, learned stacking, towers or `stackAt`), since rewarded by default they turned every hah and
      mim join into a staircase; and filler ornaments only in pockets among the letters, never out by the rim, where
      they read as stray dots. On the basmala, salawat and الحمد لله: reading faults 0 across lanes and ruled (from
-     2–261), every word on its own line. Still open: the hand-pinned basmala, a rule for the line pitch (a stacked
-     drop should stay inside its line's band), and the critic's legibility training.
+     2–261), every word on its own line.
+   - **Landed the same night (overnight run, 31 October to 1 November):** ruled lines are the default for three
+     words or more (the Studio's dense texts get kashidas and kerning with it; free composition is out of the
+     sweep's families); the number of lines is chosen by roundness (each line about a word high, the block about
+     the field's proportion) and carried as a prior, so a dense text no longer ends as two wide lines in a flat
+     oval; a ruled line's band holds the letters' bodies only, so tails and stems interlock between tiers; kerned
+     pieces stop 0.4 of a pen short of touching; vowels keep within four pens of their letter; the long fatha only
+     across a gap; stacked joins on offer at a small cost rather than rewarded. Judged by eye on five texts (the
+     basmala, the salawat, الحمد لله رب العالمين, the shahada, the opening of Ayat al-Kursi), plain and vocalised:
+     see the write-up and the round 3 pairs. Still open: the hand-pinned basmala, a rule tying stacked drops to the
+     line pitch, and the critic's legibility training.
 3. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
@@ -108,8 +117,9 @@ What is already done is listed at the end only as milestones; the commit history
   together. The only cohesion is the fill term, which is flat for every word not on the hull of the enclosing disc,
   and the overlap term (on masks grown by a margin) pushes neighbours apart, so random word moves drift outward and
   the disc follows them; the reading-order rule is satisfied by a scatter too. A cohesion term (the gap from each
-  word's last body to the next word's head, beyond a word space, squared) would mend it; or stop offering free
-  composition for dense texts.
+  word's last body to the next word's head, beyond a word space, squared) would mend it. Since 1 November free
+  composition is off the defaults for three words or more (ruled lines are), and out of the sweep's families; it
+  stays selectable (`ruled: false`, the Studio's "free").
 - [!] **Great bowls need an oval:** in a circle the bowl and the circle fight (lab HANDOVER §11). Either guard against
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`
@@ -118,8 +128,9 @@ What is already done is listed at the end only as milestones; the commit history
 - [r] **Built options, each waiting on ratings:**
   - ruled composition (`1519791`)
   - the girift dial (`9274874`, `e06c0d0`)
-  - learned stacking (`a6a785f`) and towers (`8554321`): since 31 October the only routes to a stacked join, with
-    `stackAt` and an explicit `stackPull` (1.6 restores the lab's reward)
+  - learned stacking (`a6a785f`) and towers (`8554321`): since 1 November a single shallow stacked join is on offer
+    by default at a small cost; these, `stackAt` and an explicit `stackPull` (1.6 restores the lab's reward) are the
+    routes to deeper and rewarded stacking
   - hairline piercing (`e06c0d0`)
   - nesting, drawn-out tails, rising stems and `stackAt` (`d77fd76`, `1d7f561`, `8727be9`)
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
