@@ -39,6 +39,16 @@ What is already done is listed at the end only as milestones; the commit history
    - reverse-engineer it: measure its word spacing, line steps, stacking and marks, and turn them into a reading check
      that every roundel must pass before taste scores it;
    - then train the critic on legibility as well as taste, and refit with round 2's held votes.
+   - **Landed 31 October, from reading the round 2 roundels letter by letter:** the order was lost in two ways, a
+     stacked join dropping a word's last letters (ـمن, ـيم) into the next line, and the next word slid in to the right
+     of them. Three changes: a reading-order rule on the letters' bodies (`roundel/bodies.ts`: stems and tails are
+     not bodies; a later word's bodies must lie left of an earlier word's where level, and never higher),
+     kept by the composer in every mode, weighed by the judge and reported as the check `reading`; stacked joins are
+     opt-in (`stackPull`, learned stacking, towers or `stackAt`), since rewarded by default they turned every hah and
+     mim join into a staircase; and filler ornaments only in pockets among the letters, never out by the rim, where
+     they read as stray dots. On the basmala, salawat and الحمد لله: reading faults 0 across lanes and ruled (from
+     2–261), every word on its own line. Still open: the hand-pinned basmala, a rule for the line pitch (a stacked
+     drop should stay inside its line's band), and the critic's legibility training.
 3. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
@@ -94,8 +104,12 @@ What is already done is listed at the end only as milestones; the commit history
       convention is one pen throughout (lab HANDOVER §11; `companion` in `roundel/compose.ts`).
 - [!] **Free composition scatters the words.** Without lanes, a path or ruling, a dense roundel nearly always ends
   as small words strewn across a large field (fill under 0.05, against 0.08–0.14 for lanes and ruled). In round 1,
-  every free dense roundel but one was disliked. Find out why the composer does not pull the words together, or
-  stop offering free composition for dense texts.
+  every free dense roundel but one was disliked. **Why (31 October):** nothing in the energy pulls consecutive words
+  together. The only cohesion is the fill term, which is flat for every word not on the hull of the enclosing disc,
+  and the overlap term (on masks grown by a margin) pushes neighbours apart, so random word moves drift outward and
+  the disc follows them; the reading-order rule is satisfied by a scatter too. A cohesion term (the gap from each
+  word's last body to the next word's head, beyond a word space, squared) would mend it; or stop offering free
+  composition for dense texts.
 - [!] **Great bowls need an oval:** in a circle the bowl and the circle fight (lab HANDOVER §11). Either guard against
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`
@@ -104,8 +118,8 @@ What is already done is listed at the end only as milestones; the commit history
 - [r] **Built options, each waiting on ratings:**
   - ruled composition (`1519791`)
   - the girift dial (`9274874`, `e06c0d0`)
-  - learned stacking (`a6a785f`)
-  - towers (`8554321`)
+  - learned stacking (`a6a785f`) and towers (`8554321`): since 31 October the only routes to a stacked join, with
+    `stackAt` and an explicit `stackPull` (1.6 restores the lab's reward)
   - hairline piercing (`e06c0d0`)
   - nesting, drawn-out tails, rising stems and `stackAt` (`d77fd76`, `1d7f561`, `8727be9`)
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
@@ -144,7 +158,8 @@ What is already done is listed at the end only as milestones; the commit history
 
 - [~] **The critic's accuracy on the current engine is below target:** dense 78%, mirrored 75%, single 87%, against
   85%. Dislikes flatter it (`844ad32`, `10f7d0f`).
-- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment) are
+- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment, and
+  since 31 October the reading order of the letters' bodies) are
   candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`).
 - [~] **Single-name roundels are their own genre.** Per-genre fits exist (`18ca2a7`). Check the Husayn master now
   scores well.

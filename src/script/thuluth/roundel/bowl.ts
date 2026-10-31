@@ -92,6 +92,9 @@ export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
   // every letter below the centre line stays inside the bowl by a pen's width and a gap: a descending tail (a ra's)
   // low at the side, where the bowl rises, widens that side, and anything too deep lowers the bottom
   const gap = th.style.nib + 1.0;
+  // a bowl shallower than the gap (the other letters all above the join) would divide by nothing below: it starts at
+  // least a little deeper than the gap
+  b = Math.max(b, gap + 0.5);
   for (let pass = 0; pass < 3; pass++)
     other.forEach(([x, y]) => {
       const dy = cy - y;

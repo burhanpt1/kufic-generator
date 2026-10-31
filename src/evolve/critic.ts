@@ -132,6 +132,8 @@ registerCritic('roundel', p => {
       spaced: clamp(1 - m.wordSpace / 4),
       ownMarks: clamp(1 - (m.strayMarks + m.strayDots) / 4),
       single: clamp(1 - m.doubled / 6),
+      // the letters' bodies in reading order (the composer keeps this rule; a fixed layout may still break it)
+      ordered: clamp(1 - (m.reading ?? 0) / 8),
     }),
   };
 });
@@ -148,6 +150,7 @@ export const METRIC_LABELS: Record<string, string> = {
   order: 'Read in order', clear: 'Letters do not touch', taste: 'The owner’s taste (fitted)', texture: 'Even texture', calm: 'No heavy knots',
   unity: 'One body', span: 'Spans the field', light: 'Light, not heavy', quiet: 'Quiet (no near-touches)',
   spaced: 'Words hold together', ownMarks: 'Marks by their letters', single: 'No ink drawn twice',
+  ordered: 'Bodies in reading order',
 }; // prettier-ignore
 
 /** All metrics for a placed composition; null if nothing could be placed. */

@@ -19,6 +19,8 @@ export const NAMES_RECIPE: RoundelRecipe = {
   kern: true,
   nest: true,
   stack: true,
+  // the stacked joins the lab offered, which this design was found with
+  stackPull: 1.6,
   oval: 1.3,
   fillTarget: 0.55,
   tries: 6,

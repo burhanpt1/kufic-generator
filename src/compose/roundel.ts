@@ -61,6 +61,7 @@ export function drawRoundel(
     nest: recipe.nest,
     stack: recipe.stack,
     stackAt: recipe.stackAt,
+    stackPull: recipe.stackPull,
     learnedStack: recipe.learnedStack,
     girift: recipe.girift,
     towers: recipe.towers,
@@ -83,7 +84,7 @@ export function drawRoundel(
     readRule: recipe.readRule,
     ruled: recipe.ruled,
   };
-  const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap }; // prettier-ignore
+  const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap, pockets: recipe.pockets }; // prettier-ignore
   if (recipe.mirror) {
     const out = drawMusenna(th, text, recipe, compose, frame);
     if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!);

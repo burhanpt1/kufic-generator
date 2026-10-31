@@ -122,6 +122,10 @@ export interface SolveOptions {
   /** The pen of the ornaments in the gaps, as a share of the letters' at full size (0.38; the lab drew 0.42 before
    *  the three-pen rule). */
   ornPen?: number;
+  /** Ornaments only in pockets among the letters (true): ink within reach on three sides, or to both left and right.
+   *  false: in the largest gaps anywhere in the field, as the lab placed them (out by the rim they read as stray
+   *  dots). */
+  pockets?: boolean;
   /** Ink that is not the roundel's letters but blocks marks (a companion text). */
   extraInk?: { strokes: Stroke[]; dots: Dot[] } | null;
 }
@@ -418,15 +422,41 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     else Object.assign(it, old);
     T = Math.max(0.02, T * Math.pow(0.02 / 6, 1 / iters));
   }
-  // ornaments in the largest gaps that remain, as many as the density asks for
+  // ornaments in the largest gaps that remain, as many as the density asks for. A gap is a pocket among the letters,
+  // with ink within reach on three sides, or to both left and right (between two words on a line): the open field by
+  // the rim is not a gap, and an ornament set there reads as a stray dot
   const fillers: { m: Ornament; x: number; y: number; w: number; h: number; sz: number }[] = [];
   if (o.ornaments) {
     const density = o.density ?? o.markDensity ?? 0.5,
       thresh = 3.2 - 1.6 * density,
-      maxN = Math.round(2 + 10 * density);
+      maxN = Math.round(2 + 10 * density),
+      reach = 6 * nib,
+      enclosed = (gx: number, gy: number) => {
+        let hits = 0,
+          across = 0;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ])
+          // prettier-ignore
+          for (let s = 0.5; s <= reach; s += 0.5) {
+            const ix = Math.round(X(gx + dx * s)),
+              iy = Math.round(Y(gy + dy * s));
+            if (ix < 0 || iy < 0 || ix >= Wd || iy >= Hd) break;
+            if (ink[iy * Wd + ix]) {
+              hits++;
+              if (dy === 0) across++;
+              break;
+            }
+          }
+        return hits >= 3 || across === 2;
+      },
+      pockets = o.pockets === false ? cells : cells.filter(([gx, gy]) => enclosed(gx, gy));
     for (let n2 = 0; n2 < maxN; n2++) {
       let best: [number, number, number] | null = null;
-      for (const [gx, gy, d0] of cells) {
+      for (const [gx, gy, d0] of pockets) {
         let d = d0;
         for (const it of [...items, ...fillers]) {
           const [w, h] = 'kind' in it ? boxOf(it) : [it.w, it.h];

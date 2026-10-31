@@ -28,6 +28,8 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   oval: 1.45,
   emph: 'ب',
   kern: true,
+  // the lab's variant list, with its stacked joins, so the recorded variant numbers keep their meaning
+  stackPull: 1.6,
   fixed: {
     lv: [2, 5, 2, 0],
     wp: [
@@ -41,9 +43,11 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   markReach: 2.2,
   ornaments: true,
   density: 0.6,
-  // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only)
+  // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only), and the
+  // ornaments in the largest gaps, as the lab placed them
   fathaRule: false,
   allSigns: false,
+  pockets: false,
 };
 
 export type WeddingVariant = 'cobalt' | 'lapis';

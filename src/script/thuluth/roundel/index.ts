@@ -3,6 +3,7 @@
 import type { Thuluth } from '../engine';
 import type { BowlOptions, FrameOptions, RiseOptions, TailOptions } from './bowl';
 import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
+import { roundelReadingFault } from './bodies';
 import { crossings } from './checks';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel, roundelOrderFault } from './compose';
@@ -12,6 +13,7 @@ import { AUTO_PATHS } from './paths';
 import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
+export * from './bodies';
 export * from './bowl';
 export * from './checks';
 export * from './compose';
@@ -133,6 +135,7 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
     // fit the path to the text: each family composed and finished, the best kept by the genre's taste, less marks
     // without room, clashes and order faults (one word has no reading path to fit)
     const genre = genreOf(spec.text),
+      readW = spec.compose.reading === false ? 0 : 1,
       rest: RoundelOptions = { ...spec.compose, path: undefined },
       words = spec.text.trim().split(/\s+/).length;
     if (words < 2) return buildRoundel(th, { ...spec, compose: rest });
@@ -141,7 +144,7 @@ export function buildRoundel(th: Thuluth, spec: RoundelSpec): BuiltRoundel | nul
       const compose: RoundelOptions = fam === 'lanes' ? { ...rest, lanes: rest.lanes ?? {} } : { ...rest, path: fam },
         b = buildRoundel(th, { ...spec, compose });
       if (!b) continue;
-      const score = tasteScore(roundelFeatures(th, b.r, b.f), genre) - 3 * b.f.missing - clashes(th, b.r) / 6 - roundelOrderFault(b.r); // prettier-ignore
+      const score = tasteScore(roundelFeatures(th, b.r, b.f), genre) - 3 * b.f.missing - clashes(th, b.r) / 6 - roundelOrderFault(b.r) - readW * roundelReadingFault(b.r, th.style.nib); // prettier-ignore
       if (!best || score > best.score) best = { ...b, path: fam, score };
     }
     return best;
@@ -176,6 +179,8 @@ function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
   // girift, judged as drawn: each exact stem-through-horizontal crossing earns in proportion to the dial, each crossing
   // at a curve costs, and one through an eye costs double (Derman)
   const g = spec.compose?.girift ?? 0,
+    // the reading-order rule weighs here as in the composer (reading: false turns both off)
+    readW = spec.compose?.reading === false ? 0 : 1,
     giriftScore = (r: Roundel) => {
       if (!g) return 0;
       const c = crossings(r);
@@ -204,7 +209,7 @@ function buildOne(th: Thuluth, spec: RoundelSpec): BuiltRoundel | null {
       ...d,
       // a bowl that had to widen much to clear the letters ran into them as composed
       bowlOk: (d.r.bowlGrow ?? 0) <= 0.08,
-      score: taste[i] - 3 * d.f.missing - clashes(th, d.r) / 6 - roundelOrderFault(d.r) + giriftScore(d.r),
+      score: taste[i] - 3 * d.f.missing - clashes(th, d.r) / 6 - roundelOrderFault(d.r) - readW * roundelReadingFault(d.r, th.style.nib) + giriftScore(d.r), // prettier-ignore
     }));
   const pool = judged.some(d => d.bowlOk)
     ? judged.filter(d => d.bowlOk)

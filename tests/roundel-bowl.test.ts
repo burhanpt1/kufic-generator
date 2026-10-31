@@ -24,7 +24,7 @@ const NAMES = 'بُرْهَان وَشَمِيرَة';
 const th = thuluth({ ...ROUNDEL_PEN, great: { ya: true, yaWide: 2.6, yaDeep: 1.3 } });
 const spec = (o: Partial<RoundelSpec> = {}): RoundelSpec => ({
   text: NAMES,
-  compose: { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, kern: true, tries: 6 }, // prettier-ignore
+  compose: { elongate: true, cross: true, fillTarget: 0.5, noRise: true, cradle: true, oval: 1.45, kern: true, tries: 6, stackPull: 1.6 }, // prettier-ignore
   tweaks: [{ at: 'و', scale: 0.62 }],
   bowl: { clear: 5.6, autoOval: true },
   frame: { markReach: 2.2 },
@@ -255,7 +255,7 @@ describe('height: rising stems and stacked joins', () => {
 describe('clashes', () => {
   it('counts letters of different pieces touching, and the finished cartouche has none', async () => {
     const { clashes } = await import('../src/script/thuluth/roundel');
-    const opts = { elongate: true, cross: true, fillTarget: 0.55, noRise: true, kern: true, oval: 1.3, tries: 1, iters: 0, nest: true }; // prettier-ignore
+    const opts = { elongate: true, cross: true, fillTarget: 0.55, noRise: true, kern: true, oval: 1.3, tries: 1, iters: 0, nest: true, stackPull: 1.6 }; // prettier-ignore
     const r = composeRoundel(th, NAMES, opts)[0];
     // pile shamira onto burhan: they touch
     const j = r.groups.findIndex(g => g.s === 'شمير'),

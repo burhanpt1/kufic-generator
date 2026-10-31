@@ -5,6 +5,7 @@
 import type { Thuluth } from '../engine';
 import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
+import { readingFault } from './bodies';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
@@ -62,9 +63,6 @@ export interface RoundelOptions extends StackOptions {
   /** Stack: the search may lift a piece of a word above the piece before it, slid back over it, so a word rises in
    *  layers (each lift is a move it can make or undo). */
   stack?: boolean;
-  /** Groups (by their letters) written only with a stacked join where they have one (the shin above the mim of
-   *  شمير), so a word gains height about that letter. */
-  stackAt?: string[];
   /** A short companion text set smaller among the words, and its scale. */
   companion?: string;
   companionScale?: number;
@@ -89,6 +87,11 @@ export interface RoundelOptions extends StackOptions {
   readW?: number;
   orderFirm?: number;
   orderSlack?: number;
+  /** The reading order judged from the letters' bodies (bodies.ts), in every mode: a later word's bodies lie left of
+   *  an earlier word's where level with them and never higher; a dropped letter under the next word, or a word set up
+   *  and away from the one before, pays. On by default; the weight is readingW (25, as the other order terms). */
+  reading?: boolean;
+  readingW?: number;
   /** Ruled composition, the constrained mode (true for the defaults): see RuledOptions. Replaces path and lanes. */
   ruled?: boolean | RuledOptions;
   fixed?: Layout;
@@ -249,7 +252,8 @@ export function roundelPieces(
     }
   });
   const shapes = groups.map(g => {
-    const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),
+    // girift asks for stems through horizontals, which stacked joins supply: the dial keeps them on offer
+    const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7], stackPull: o.stackPull ?? (o.girift ? 1.6 : undefined) }, K), // prettier-ignore
       st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
     return st.length ? st : vs;
   });
@@ -625,6 +629,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       pts.forEach(p => (r = Math.max(r, Math.hypot((p[0] - cx) / ovl, p[1] - cy))));
       return { cx, cy, r: r + 0.8, ink: sw, oval: ovl, field: o.field };
     };
+    const lvShapes = () => groups.map((_, i) => shapes[i][lv[i]]);
     const stackOrder = () =>
       o.stack
         ? orderFault(
@@ -694,6 +699,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             if (dv > -1) order += 0.6 * (dv + 1) ** 2;
           }
         }
+      // the reading order of the letters' bodies, whatever the mode (bodies.ts)
+      const reading = o.reading === false || W < 2 ? 0 : readingFault({ groups, shapes: lvShapes(), pos: gpos, nib: th.style.nib, clash: !o.girift }); // prettier-ignore
       let cost = 0;
       groups.forEach((_, i) => {
         cost += shapes[i][lv[i]].cost;
@@ -840,7 +847,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           (RU.justify ?? 4) * just + (RU.rhythm ?? 1) * 12 * rhy + (RU.axis ?? 1) * 20 * (Math.abs(ax - d.cx) / d.r);
       }
       return (
-        ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
+        ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + (o.readingW ?? 25) * reading + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
         110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
       ); // prettier-ignore
     };

@@ -8,6 +8,7 @@
 import type { Thuluth } from '../engine';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
+import { roundelReadingFault } from './bodies';
 import type { Finished } from './finish';
 
 interface Pt {
@@ -68,6 +69,9 @@ export interface RoundelChecks {
   strayDots: number;
   /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
+  /** The reading order judged from the letters' bodies (bodies.ts readingFault): 0 when every later word lies left of
+   *  or below the earlier ones, body by body. */
+  reading: number;
   /** Alignment (alignment()). */
   baselines: number;
   stemRhythm: number;
@@ -184,7 +188,7 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
         [bx, by] = tangent(twin);
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
-  return { wordSpace, strayMarks, strayDots, doubled, ...alignment(r, nib) };
+  return { wordSpace, strayMarks, strayDots, doubled, reading: roundelReadingFault(r, nib), ...alignment(r, nib) };
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */
@@ -232,6 +236,8 @@ export function crossings(r: Roundel): Crossings {
   const cell = 3,
     grid = new Map<string, number[]>();
   segs.forEach((s, i) => {
+    // a redrawn stroke that failed leaves no finite segment to cross
+    if (![s.ax, s.ay, s.bx, s.by].every(Number.isFinite)) return;
     for (let x = Math.floor(Math.min(s.ax, s.bx) / cell); x <= Math.floor(Math.max(s.ax, s.bx) / cell); x++)
       for (let y = Math.floor(Math.min(s.ay, s.by) / cell); y <= Math.floor(Math.max(s.ay, s.by) / cell); y++) {
         const k = x + ',' + y;

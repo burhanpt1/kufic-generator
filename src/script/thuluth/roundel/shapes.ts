@@ -69,7 +69,9 @@ export interface StackOptions {
   /** Margin (pixels) kept round each group. */
   margin?: number;
   levels?: number[];
-  /** Stacks: how strongly to prefer them (0 = none); deep stacks too. */
+  /** Stacked joins: how strongly to prefer them (the lab's 1.6 earns each stacked join that much; 0 = none). Unset,
+   *  joins are stacked only where learned stacking, towers or stackAt ask for it: rewarded by default, stacking turned
+   *  every hah and mim join into a staircase and dropped letters into the next line (31 October). */
   stackPull?: number;
   /** Stack the joins masters stack (STACK_PRIOR): any join whose next letter is stacked at least stackMin (0.2) of
    *  the time may be, pulled in proportion to that rate (against mim's); off, only joins before hah and mim. */
@@ -82,6 +84,9 @@ export interface StackOptions {
   /** Towers: three stacked joins in one group, pulled at towerPull (1) times the stacks' own pull. */
   towers?: boolean;
   towerPull?: number;
+  /** Groups (by their letters) written only with a stacked join where they have one (the shin above the mim of
+   *  شمير), so a word gains height about that letter. */
+  stackAt?: string[];
   deep?: boolean;
   /** Final tails stretched (roundels). */
   tails?: boolean;
@@ -413,7 +418,8 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
       v.cost = 0.3 * L;
       out.push(v);
     }
-    if (o.stackPull === 0) return;
+    const pull = o.stackPull ?? (o.learnedStack || o.towers || o.stackAt?.length ? 1.6 : 0);
+    if (pull === 0) return;
     const pairOffs = o.deep ? DEEP_OFFSETS : STACK_OFFSETS.slice(0, 2);
     if (joins.length >= 2)
       for (let a = 0; a < joins.length; a++)
@@ -427,7 +433,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
               };
               const v3 = groupShape(th, g, L, o, K, stk, joins[c]);
               if (v3 && groupShapeOk(th, g, L, o, stk, joins[a])) {
-                v3.cost = 0.3 * L - 0.9 * (stackWeight(g.s, joins[a], o) + stackWeight(g.s, joins[c], o)) * (o.stackPull ?? 1.6); // prettier-ignore
+                v3.cost = 0.3 * L - 0.9 * (stackWeight(g.s, joins[a], o) + stackWeight(g.s, joins[c], o)) * pull; // prettier-ignore
                 v3.stacked = true;
                 out.push(v3);
               }
@@ -440,7 +446,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
       scaled.forEach(off => {
         const v2 = groupShape(th, g, L, o, K, { [j]: { dx: off.dx, dy: off.dy } }, j);
         if (v2) {
-          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * (o.stackPull ?? 1.6) - (off.learned ? 0.4 : 0);
+          v2.cost = 0.3 * L - stackWeight(g.s, j, o) * pull - (off.learned ? 0.4 : 0);
           v2.stacked = true;
           out.push(v2);
         }
@@ -464,7 +470,7 @@ export function groupVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number
                   if (!groupShapeOk(th, g, L, o, stk, J[a]) || !groupShapeOk(th, g, L, o, stk, J[c])) continue;
                   const v4 = groupShape(th, g, L, o, K, stk, J[e]);
                   if (!v4) continue;
-                  v4.cost = 0.3 * L - (o.towerPull ?? 1.0) * (stackWeight(g.s, J[a], o) + stackWeight(g.s, J[c], o) + stackWeight(g.s, J[e], o)) * (o.stackPull ?? 1.6); // prettier-ignore
+                  v4.cost = 0.3 * L - (o.towerPull ?? 1.0) * (stackWeight(g.s, J[a], o) + stackWeight(g.s, J[c], o) + stackWeight(g.s, J[e], o)) * pull; // prettier-ignore
                   v4.stacked = true;
                   v4.tower = 3;
                   towers++;
