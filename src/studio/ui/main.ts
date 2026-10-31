@@ -5,7 +5,8 @@ import type { Taste } from '../../evolve/taste';
 import { train } from '../../evolve/trainer';
 import type { Rating, TasteModel } from '../../evolve/trainer';
 import { loadKernels } from '../../kernels';
-import { resolve } from '../../compose';
+import { resolveAsync } from '../../compose';
+import { RoundelWorkers } from '../../script/thuluth/roundel/parallel';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
 import { renderPlaced } from '../../render/composition';
@@ -59,6 +60,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 
 await loadKernels();
 
+let workers: RoundelWorkers | null = null;
+const roundelWorkers = () => (workers ??= new RoundelWorkers());
 let comp: Composition = structuredClone(PRESETS[0].comp),
   svg = '',
   placed: Placed | null = null;
@@ -106,10 +109,16 @@ function changed() {
   $<HTMLButtonElement>('undo').disabled = !undo.length;
   $<HTMLButtonElement>('redo').disabled = !redo.length;
 }
-function renderPreview() {
-  const t0 = performance.now();
+// a composition's roundels are drawn on workers first (their tries side by side); a newer change supersedes the wait
+let previewRun = 0;
+async function renderPreview() {
+  const run = ++previewRun,
+    t0 = performance.now();
   try {
-    placed = resolve(comp);
+    const slow = window.setTimeout(() => run === previewRun && ($('info').textContent = 'Composing…'), 150),
+      p = await resolveAsync(comp, roundelWorkers()).finally(() => clearTimeout(slow));
+    if (run !== previewRun) return;
+    placed = p;
     svg = renderPlaced(placed, { idPrefix: 'pv' });
     $('preview').innerHTML = svg;
     const m = placed.meta,
@@ -124,7 +133,7 @@ function renderPreview() {
     $('info').textContent =
       parts.filter(Boolean).join(' · ') + (m.warnings.length ? ' — ' + m.warnings.join('; ') : '');
   } catch (e) {
-    $('info').textContent = 'Could not lay this out: ' + String((e as Error)?.message ?? e);
+    if (run === previewRun) $('info').textContent = 'Could not lay this out: ' + String((e as Error)?.message ?? e);
   }
 }
 

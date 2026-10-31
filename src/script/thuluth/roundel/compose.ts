@@ -2,7 +2,9 @@
 // annealing to fill a disc or an oval, keeping the reading order, with word moves, variant swaps, and lifts onto
 // shelves (an elongation, a long final) and into cradles (a great bowl). A recorded layout (`fixed`) rebuilds a chosen
 // arrangement exactly, so letters can be refined without the layout reshuffling.
+import { discKernel } from '../../../kernels/roundel';
 import type { Thuluth } from '../engine';
+import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
 import { ligate, parseVowels, splitGroups } from '../shape';
 import { readingFault } from './bodies';
@@ -202,15 +204,35 @@ export function twoLevels(ys: readonly number[]): number {
   return best;
 }
 
-/** The pieces of a phrase (its groups, with their marks) and every variant of each that the composer chooses among;
- *  a layout's `lv` indexes these. Null when the text has no letters. */
-export function roundelPieces(
-  th: Thuluth,
+/** Each row's first and one-past-last nonzero column of a W × H bitmap (an empty row gives [W, 0]). */
+const SPANS = new WeakMap<Uint8Array, Int32Array>();
+function spans(m: Uint8Array, W: number, H: number): Int32Array {
+  let r = SPANS.get(m);
+  if (!r) {
+    r = new Int32Array(2 * H);
+    for (let y = 0; y < H; y++) {
+      let a = W,
+        b = 0;
+      for (let x = 0; x < W; x++)
+        if (m[y * W + x]) {
+          if (a === W) a = x;
+          b = x + 1;
+        }
+      r[2 * y] = a;
+      r[2 * y + 1] = b;
+    }
+    SPANS.set(m, r);
+  }
+  return r;
+}
+
+/** A text's groups as the composer arranges them (with a companion text's, and each group's marks, as the pen with
+ *  this style writes them), and the options its group variants are built with; null when the text has no letters. */
+export function roundelGroups(
+  style: ThuluthStyle,
   text: string,
   o: RoundelOptions = {},
-): { groups: RGroup[]; shapes: GroupShape[][] } | null {
-  // prettier-ignore
-  const K = o.K ?? 1.6;
+): { groups: RGroup[]; vopts: StackOptions } | null {
   const { bare, marks } = parseVowels(text);
   const groups: RGroup[] = splitGroups(bare);
   if (!groups.length) return null;
@@ -245,22 +267,38 @@ export function roundelPieces(
       .map(m => ({ k: m.li - off, m: m.m }));
     // the ligature of the name of God draws the second lam's marks itself: the shadda on the lam, and the small alif,
     // when the text writes it, over the heh
-    if (th.style.allah && g.allah) {
+    if (style.allah && g.allah) {
       const k = [...g.s].length - 2;
       if (g.marks.some(m => m.k === k && m.m === 'alifk')) g.alif = true;
       g.marks = g.marks.filter(m => m.k !== k);
     }
   });
+  // girift asks for stems through horizontals, which stacked joins supply: the dial keeps them on offer
+  return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7], stackPull: o.stackPull ?? (o.girift ? 1.6 : undefined) } }; // prettier-ignore
+}
+
+/** The pieces of a phrase (its groups, with their marks) and every variant of each that the composer chooses among;
+ *  a layout's `lv` indexes these. Null when the text has no letters. */
+export function roundelPieces(
+  th: Thuluth,
+  text: string,
+  o: RoundelOptions = {},
+): { groups: RGroup[]; shapes: GroupShape[][] } | null {
+  const K = o.K ?? 1.6,
+    prep = roundelGroups(th.style, text, o);
+  if (!prep) return null;
+  const { groups, vopts } = prep;
   const shapes = groups.map(g => {
-    // girift asks for stems through horizontals, which stacked joins supply: the dial keeps them on offer
-    const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7], stackPull: o.stackPull ?? (o.girift ? 1.6 : undefined) }, K), // prettier-ignore
+    const vs = groupVariants(th, g, vopts, K),
       st = o.stackAt?.includes(g.s) ? vs.filter(v => v.stacked) : [];
     return st.length ? st : vs;
   });
   return { groups, shapes };
 }
 
-export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}): Roundel[] {
+/** The composer's tries (each from its own seed), best first. `only`: just those tries, in that order and unsorted
+ *  (each try is independent of the others, so tries run apart and merged by number come out as all run together). */
+export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}, only?: readonly number[]): Roundel[] {
   const tries = o.tries ?? 18,
     iters = o.iters ?? 6000,
     K = o.K ?? 1.6,
@@ -289,10 +327,15 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       mw = o.merge ? 0.25 : 1,
       curve = gir ? 1.6 : 1,
       src = bare ? A.mask : A.dil;
+    const sa = spans(src, A.W, A.H),
+      sb = spans(B.mask, B.W, B.H);
     for (let y = ys; y < ye; y++) {
       const ra = y * A.W,
-        rb = (y - dy) * B.W - dx;
-      for (let x = xs; x < xe; x++) {
+        rb = (y - dy) * B.W - dx,
+        // only where both rows have ink (empty pixels add nothing)
+        x0 = Math.max(xs, sa[2 * y], sb[2 * (y - dy)] + dx),
+        x1 = Math.min(xe, sa[2 * y + 1], sb[2 * (y - dy) + 1] + dx);
+      for (let x = x0; x < x1; x++) {
         const ta = src[ra + x],
           tb = B.mask[rb + x];
         // a stem may pass through a horizontal (in girift it is sought, and never at a curve or eye)
@@ -302,8 +345,13 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     return c;
   };
+  // the enclosing disc in WebAssembly (src/kernels/roundel.c), with every variant's hull registered once
+  const DK = discKernel(
+    shapes.flatMap(vs => vs.map(v => v.hull)),
+    n,
+  );
   const results: Roundel[] = [];
-  for (let t = 0; t < tries; t++) {
+  for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
     let sd = seed + t * 7919;
     const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     const lv = groups.map((_, i) => Math.floor(R() * shapes[i].length)),
@@ -458,6 +506,13 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const recompute = (a: number) => {
       for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = wordOverlap(a, b);
     };
+    // a word's overlaps as they are, to put back when a move is undone (the same numbers recompute would give)
+    const keep = (a: number) => {
+      const row = ov[a].slice();
+      return () => {
+        for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = row[b];
+      };
+    };
     for (let a = 0; a < W; a++) recompute(a);
     // ruled: the lines as the field's chords, scaled so their length is about the text's (pathFill)
     let brk: number[] = [0],
@@ -591,42 +646,82 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       layoutRuled(allLines());
     }
     // the disc: centred on the ink, radius reaching the furthest ink
+    // (the points in flat arrays, reused; the farthest point found by squared distance, with Math.hypot, as before,
+    // only among the near-farthest, so the same point wins and the radius is the same number)
+    let px = new Float64Array(256),
+      py = new Float64Array(256);
+    const farthest = (m: number, cx: number, cy: number, sx: number) => {
+      let best = -1;
+      for (let k = 0; k < m; k++) {
+        const dx = (px[k] - cx) / sx,
+          dy = py[k] - cy,
+          q = dx * dx + dy * dy;
+        if (q > best) best = q;
+      }
+      let fd = -1,
+        at = 0;
+      const near = best * (1 - 1e-9);
+      for (let k = 0; k < m; k++) {
+        const dx = (px[k] - cx) / sx,
+          dy = py[k] - cy;
+        if (dx * dx + dy * dy < near) continue;
+        const dd = Math.hypot(dx, dy);
+        if (dd > fd) {
+          fd = dd;
+          at = k;
+        }
+      }
+      return [fd, at];
+    };
     const disc = (): Disc => {
-      const pts: [number, number][] = [];
-      let sw = 0;
+      if (DK) {
+        let sw = 0;
+        groups.forEach((_, i) => {
+          const S = shapes[i][lv[i]];
+          sw += S.ink;
+          DK.place(i, gpos[i].x, gpos[i].y, S.hull);
+        });
+        const [cx, cy, r] = DK.run(n, OVAL)!;
+        return { cx, cy, r: r + 0.8, ink: sw, oval: OVAL, field: o.field };
+      }
+      let sw = 0,
+        m = 0;
       groups.forEach((_, i) => {
         const S = shapes[i][lv[i]];
         sw += S.ink;
-        S.hull.forEach(([hx, hy]) => pts.push([gpos[i].x + hx, gpos[i].y + hy]));
+        if (m + S.hull.length > px.length) {
+          const nx = new Float64Array(2 * (m + S.hull.length)),
+            ny = new Float64Array(2 * (m + S.hull.length));
+          nx.set(px);
+          ny.set(py);
+          px = nx;
+          py = ny;
+        }
+        for (const [hx, hy] of S.hull) {
+          px[m] = gpos[i].x + hx;
+          py[m++] = gpos[i].y + hy;
+        }
       });
       let x0 = 1e9,
         x1 = -1e9,
         y0 = 1e9,
         y1 = -1e9;
-      pts.forEach(
-        ([x, y]) => ((x0 = Math.min(x0, x)), (x1 = Math.max(x1, x)), (y0 = Math.min(y0, y)), (y1 = Math.max(y1, y))),
-      );
+      for (let k = 0; k < m; k++) {
+        x0 = Math.min(x0, px[k]);
+        x1 = Math.max(x1, px[k]);
+        y0 = Math.min(y0, py[k]);
+        y1 = Math.max(y1, py[k]);
+      }
       let cx = (x0 + x1) / 2,
-        cy = (y0 + y1) / 2,
-        r = 0;
+        cy = (y0 + y1) / 2;
       for (let it = 0; it < 12; it++) {
         // nudge the centre towards the furthest point (a quick smallest-enclosing circle)
-        let far: [number, number] = pts[0],
-          fd = -1;
-        pts.forEach(p => {
-          const dd = Math.hypot(p[0] - cx, p[1] - cy);
-          if (dd > fd) {
-            fd = dd;
-            far = p;
-          }
-        });
-        r = fd;
-        cx += ((far[0] - cx) * 0.08) / (1 + it * 0.3);
-        cy += ((far[1] - cy) * 0.08) / (1 + it * 0.3);
+        const k = farthest(m, cx, cy, 1)[1];
+        cx += ((px[k] - cx) * 0.08) / (1 + it * 0.3);
+        cy += ((py[k] - cy) * 0.08) / (1 + it * 0.3);
       }
-      const ovl = OVAL;
-      r = 0;
-      pts.forEach(p => (r = Math.max(r, Math.hypot((p[0] - cx) / ovl, p[1] - cy))));
+      const ovl = OVAL,
+        r = Math.max(0, farthest(m, cx, cy, ovl)[0]);
       return { cx, cy, r: r + 0.8, ink: sw, oval: ovl, field: o.field };
     };
     const lvShapes = () => groups.map((_, i) => shapes[i][lv[i]]);
@@ -919,13 +1014,14 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         // lift a piece onto the one before it, or set it back down
         const gi = stackable[Math.floor(R() * stackable.length)],
           w = groups[gi].word;
+        const back = keep(w);
         up[gi] ^= 1;
         layoutWord(w);
         recompute(w);
         undo = () => {
           up[gi] ^= 1;
           layoutWord(w);
-          recompute(w);
+          back();
         };
       } else if ((o.emph || o.elongate) && !PP && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
         // (not on a reading path: the lift teleports whole words across the field)
@@ -938,6 +1034,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             others = words.map((_, w) => w).filter(w => w !== groups[gi].word),
             w = others[Math.floor(R() * others.length)];
           const old = { ...wp[w] },
+            back = keep(w),
             bxw = wbox(w),
             sx0 = gpos[gi].x + sh.x0,
             sy = gpos[gi].y + sh.y;
@@ -948,12 +1045,13 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           undo = () => {
             wp[w] = old;
             layoutWord(w);
-            recompute(w);
+            back();
           };
         } else undo = () => {};
       } else if (mv < 0.6 && W > 1) {
         const w = Math.floor(R() * W),
           old = { ...wp[w] },
+          back = keep(w),
           s = T > 2 ? 1 : 0.35;
         wp[w].x += (R() - 0.5) * 8 * s;
         wp[w].y += (R() - 0.5) * 8 * s;
@@ -962,19 +1060,20 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         undo = () => {
           wp[w] = old;
           layoutWord(w);
-          recompute(w);
+          back();
         };
       } else {
         const g2 = Math.floor(R() * n),
           w = groups[g2].word,
-          old = lv[g2];
+          old = lv[g2],
+          back = keep(w);
         lv[g2] = Math.floor(R() * shapes[g2].length);
         layoutWord(w);
         recompute(w);
         undo = () => {
           lv[g2] = old;
           layoutWord(w);
-          recompute(w);
+          back();
         };
       }
       const E2 = energy();
@@ -987,6 +1086,6 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     results.push({ E, overlap: o2, disc: disc(), st: gpos.map(p => ({ ...p })), shapes: groups.map((_, i) => shapes[i][lv[i]]), groups, lv: lv.slice(), wp: wp.map(p => ({ ...p })), up: [...up.keys()].filter(i => up[i]), lanes: fitted, ...(RU ? { ruled: { breaks: brk.slice(), anchored: [...anc.keys()].filter(w => anc[w] && !brk.includes(w)) } } : {}) }); // prettier-ignore
     if (o.fixed) break;
   }
-  results.sort((a, b) => a.E - b.E);
+  if (!only) results.sort((a, b) => a.E - b.E);
   return results;
 }

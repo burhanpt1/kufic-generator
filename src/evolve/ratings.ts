@@ -1,6 +1,7 @@
 // The rating loop (PORT-PLAN.md §5; prototypes/thuluth-lab/refresh/tools): pairwise votes between compositions ("which
 // is more beautiful?"), ranked by Bradley–Terry, and a taste fitted to them by logistic regression on the differences
 // of standardised features. The lab's fit (roundel/deco.ts TASTE_FIT) came from 148 such votes; refit as votes grow.
+import { fitKernel } from '../kernels/ratings';
 
 /** One vote: a against b, won by a, by b, or a tie. */
 export interface Vote {
@@ -61,19 +62,30 @@ export function fitPairwise(
         zb = z(v.b);
       return { d: za.map((x, j) => x - zb[j]), y: v.w === 'a' ? 1 : 0 };
     });
+  // (in flat arrays, summed in the same order as a reduce over each row would)
   const fit = (data: typeof rows) => {
-    const w = new Array<number>(k).fill(0),
+    // in WebAssembly (src/kernels/ratings.c) when it loads
+    const native = fitKernel(data, k, o.l2 ?? 0.01, o.iters ?? 2000);
+    if (native) return native;
+    const m = data.length,
+      D = new Float64Array(m * k),
+      Y = Float64Array.from(data, r => r.y),
+      w = new Float64Array(k),
+      g = new Float64Array(k),
       l2 = o.l2 ?? 0.01,
       lr = 0.5;
+    data.forEach((r, i) => D.set(r.d, i * k));
     for (let it = 0; it < (o.iters ?? 2000); it++) {
-      const g = w.map(wj => l2 * wj);
-      for (const { d, y } of data) {
-        const p = 1 / (1 + Math.exp(-d.reduce((s, x, j) => s + x * w[j], 0)));
-        for (let j = 0; j < k; j++) g[j] += ((p - y) * d[j]) / data.length;
+      for (let j = 0; j < k; j++) g[j] = l2 * w[j];
+      for (let i = 0; i < m; i++) {
+        let s = 0;
+        for (let j = 0; j < k; j++) s = s + D[i * k + j] * w[j];
+        const p = 1 / (1 + Math.exp(-s));
+        for (let j = 0; j < k; j++) g[j] += ((p - Y[i]) * D[i * k + j]) / m;
       }
       for (let j = 0; j < k; j++) w[j] -= lr * g[j];
     }
-    return w;
+    return Array.from(w);
   };
   const w = fit(rows);
   let loo: number | undefined;
