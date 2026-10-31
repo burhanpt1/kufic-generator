@@ -55,8 +55,9 @@ describe('the great bowl', () => {
 
 describe('hand adjustments', () => {
   it('moves a group by an offset', () => {
-    const a = buildRoundel(th, spec({ bowl: false, frame: false }))!,
-      m = buildRoundel(th, spec({ bowl: false, frame: false, tweaks: [{ at: 'و', scale: 0.62, move: [1.5, -0.5] }] }))!; // prettier-ignore
+    // (judge 1: the composer's own best both times, so the move is the only difference)
+    const a = buildRoundel(th, spec({ bowl: false, frame: false, judge: 1 }))!,
+      m = buildRoundel(th, spec({ bowl: false, frame: false, judge: 1, tweaks: [{ at: 'و', scale: 0.62, move: [1.5, -0.5] }] }))!; // prettier-ignore
     const i = a.r.groups.findIndex(g => g.s === 'و'),
       [p, q] = [groupBox(a.r, i), groupBox(m.r, i)];
     expect(q.x0 - p.x0).toBeCloseTo(1.5, 6);

@@ -26,13 +26,13 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   girift: { text: BASMALA, set: { girift: 0.12 } },
   hairline: { text: BASMALA, set: { hairline: 0.3 } },
   towers: { text: 'محمد', set: { towers: true }, with: { learnedStack: true, towerPull: 3, iters: 1500 } },
-  towerPull: { text: 'محمد', set: { towerPull: 3 }, with: { learnedStack: true, towers: true, iters: 1500 } },
+  towerPull: { text: 'الحمد', set: { towerPull: 3 }, with: { learnedStack: true, towers: true, iters: 1500 } },
   rise: { text: 'الله', set: { rise: { most: 3, oval: 1 } }, with: { oval: 1.6 } },
   tails: { text: 'ورحمة', set: { tails: {} } },
   noRise: { text: BASMALA, set: { noRise: true } },
   ceiling: { text: BASMALA, set: { ceiling: true } },
   // mostly subsumed by the reading-order rule: shows where two short words still overlap in a column
-  topFirst: { text: 'علي حسن', set: { topFirst: true }, with: { seed: 5 } },
+  topFirst: { text: 'علي حسن', set: { topFirst: true }, with: { seed: 29 } },
   // the fill only pays below the target, so a target far below the fill reached changes the search
   fillTarget: { set: { fillTarget: 0.05 } },
   oval: { set: { oval: 1.6 } },
@@ -69,7 +69,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   readRule: { text: BASMALA, set: { readRule: false }, with: { lanes: {} } },
   choose: { text: BASMALA, set: { choose: 3 }, with: { ruled: false } },
   vary: { text: BASMALA, set: { vary: false }, with: { choose: 3, ruled: false } },
-  judge: { text: 'علي حسن', set: { judge: 4 }, with: { tries: 4, seed: 5 } },
+  judge: { text: BASMALA, set: { judge: 4 }, with: { tries: 4 } },
   mirror: { text: 'علي', set: { mirror: true }, with: { great: { ya: true } } },
   fathaRule: { text: 'اَللّٰهُ نُورُ السَّمَاوَاتِ', set: { fathaRule: false } },
   longFatha: {

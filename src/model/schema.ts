@@ -243,6 +243,8 @@ export interface RoundelRecipe {
     autoOval?: boolean;
     dotAt?: number;
     free?: boolean;
+    /** Clear letters within a gap above the centre line too (true; the lab's cartouches keep false). */
+    clearArms?: boolean;
   };
   /** Marks: how far a vowel may sit from its letter; ornaments in the gaps and their density. */
   markReach?: number;
@@ -435,6 +437,7 @@ const roundelRecipe = z
         autoOval: z.boolean(),
         dotAt: z.number().min(-1).max(1),
         free: z.boolean(),
+        clearArms: z.boolean(),
       })
       .partial(),
     markReach: z.number().min(0.5).max(6),
