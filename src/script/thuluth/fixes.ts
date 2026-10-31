@@ -44,29 +44,27 @@ const LAM_MED: LetterForm = {
   ],
 };
 
-/** The name of God as one ligature (style.allah), after the classic form (owner, 30 October): the two lams shorter
- *  than the alif, each rounding at its foot into a bowl, the first up into the second and the second up into the heh;
- *  the heh a tall arch as high as the lams; the shadda sitting on the second lam, its top level with the alif's. */
-const ALLAH_TOP = 7.5;
-export const ALLAH_LAM_INI: LetterForm = {
-  src: 'hand',
-  exit: -3.9,
-  // down the stem, round the bowl and up into the second lam's stem (which stands at the exit)
-  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.1], [-3.55, 0.7], [-3.85, 1.8], [-3.9, 2.6, 0.8]] }],
-}; // prettier-ignore
-export const ALLAH_LAM: LetterForm = {
-  src: 'hand',
-  exit: -2.9,
-  s: [{ ang: 38, lean: true, pts: [[0.6, ALLAH_TOP, 0.2], [0.22, ALLAH_TOP - 0.3, 0.8], [0.0, ALLAH_TOP - 0.9, 1], [0.0, 4.6, 1], [-0.05, 2.6, 0.95], [-0.3, 1.0], [-1.0, 0.1], [-1.95, -0.05], [-2.9, 0.0]] }],
-}; // prettier-ignore
-/** Its heh, scaled with the body like any heh: up from the second lam's bowl, over the arch and down to a small foot;
- *  its top as high as the lams at the roundel body (1.45). */
-const H = ALLAH_TOP / 1.45 / 4.25;
+/** The name of God as one ligature (style.allah), in the classic thuluth form: two tall lams standing close, a little
+ *  shorter than the alif, each written down to a short foot that runs into the next letter; then a small round heh
+ *  leaning on the second lam's foot. The shadda sits on the second lam, its top level with the alif's. (The design of
+ *  30 October joined the lams in bowls and made the heh a tall arch as high as them, and the word read as اللم.) */
+const ALLAH_TOP = 7.7;
+const allahStem = (dx: number, exitX: number) =>
+  ({
+    ang: 38,
+    lean: true,
+    pts: [[0.6 + dx, ALLAH_TOP, 0.2], [0.22 + dx, ALLAH_TOP - 0.3, 0.8], [0.0 + dx, ALLAH_TOP - 0.9, 1], [0.0 + dx, 4.6, 1], [-0.05 + dx, 1.6, 0.95], [-0.2 + dx, 0.45, 0.9], [-0.75 + dx, 0.05, 1], [exitX, 0.0, 1]], // prettier-ignore
+  }) as LetterForm['s'][number];
+// the first lam's foot runs on to the second lam's stem, which stands at its origin (the shadda is set over it)
+export const ALLAH_LAM_INI: LetterForm = { src: 'hand', exit: -3.1, s: [allahStem(0, -3.1)] };
+export const ALLAH_LAM: LetterForm = { src: 'hand', exit: -1.6, s: [allahStem(0, -1.6)] };
+/** Its heh, scaled with the body like any heh: from the second lam's foot up and round to the left, down and back
+ *  along the line to close against the foot; about two and a half dots tall at the roundel pen. */
 export const ALLAH_HEH: LetterForm = {
   src: 'hand',
   exit: null,
-  s: [{ ang: 38, pts: ([[0, 0], [-0.5, 0.35], [-0.85, 1.1], [-1.05, 2.3], [-1.25, 3.4], [-1.65, 4.1], [-2.25, 4.25], [-2.85, 3.8], [-3.15, 2.8], [-3.25, 1.5], [-3.35, 0.45], [-3.65, 0.0, 0.6], [-4.0, 0.1, 0.25]] as SkelPt[]).map(([x, y, w]) => [x, y * H, w] as SkelPt) }],
-}; // prettier-ignore
+  s: [{ pts: [[0, 0], [-0.9, 0.0], [-2.0, 0.08], [-2.85, 0.5], [-3.2, 1.35], [-2.9, 2.3], [-2.1, 2.75], [-1.35, 2.45], [-0.95, 1.65], [-1.05, 0.8], [-1.55, 0.25, 0.8], [-2.05, 0.12, 0.4]] }], // prettier-ignore
+};
 
 /** Isolated ba, ta, tha: the lab's hand-drawn long flat boat on the baseline. The learned form, a final misfiled in
  *  the dataset, dropped below the line like a ra. */

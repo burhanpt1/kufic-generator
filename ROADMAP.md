@@ -73,9 +73,11 @@ What is already done is listed at the end only as milestones; the commit history
 - [ ] **The lab's "initial lam/tooth at 0.35" finding was never explained** (refresh/HANDOVER.md). The port has since
       redrawn the initial and medial lam. Check whether the finding still holds.
 - [~] **The name of God is now one ligature** (owner, 30 October; `ALLAH_*` in `src/script/thuluth/fixes.ts`): lams
-  shorter than the alif and joined in bowls, the heh a tall arch as high as the lams, the shadda on the second lam
-  level with the alif's top, the small alif only where a vowelled text writes it. It is drawn everywhere thuluth writes
-  الله; the lab's letters (`labLetters`) keep the old form. Still to judge on the tuning page.
+  a little shorter than the alif, the shadda on the second lam level with the alif's top, the small alif only where a
+  vowelled text writes it. It is drawn everywhere thuluth writes الله; the lab's letters (`labLetters`) keep the old
+  form. Redrawn on 31 October in the classic form, two straight lams with short feet and a small round heh: the first
+  design (lams joined in bowls, the heh a tall arch as high as the lams) read as اللم. Still to judge on the tuning
+  page.
   - Since the lams were shortened, the girift dial no longer draws the basmala in tighter; it still makes crossings
     (`tests/thuluth-paths.test.ts`).
 - [~] **Mim, tah and lam-alif are hand-drawn and only "acceptable"** (lab HANDOVER §4). Each
