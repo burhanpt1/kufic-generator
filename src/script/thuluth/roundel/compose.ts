@@ -240,6 +240,13 @@ export function roundelPieces(
     g.marks = (marks[g.word] || [])
       .filter(m => m.li >= off && m.li < off + [...g.s].length)
       .map(m => ({ k: m.li - off, m: m.m }));
+    // the ligature of the name of God draws the second lam's marks itself: the shadda on the lam, and the small alif,
+    // when the text writes it, over the heh
+    if (th.style.allah && g.allah) {
+      const k = [...g.s].length - 2;
+      if (g.marks.some(m => m.k === k && m.m === 'alifk')) g.alif = true;
+      g.marks = g.marks.filter(m => m.k !== k);
+    }
   });
   const shapes = groups.map(g => {
     const vs = groupVariants(th, g, { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] }, K),

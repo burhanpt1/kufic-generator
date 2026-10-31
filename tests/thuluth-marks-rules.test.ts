@@ -1,5 +1,6 @@
 // The rules for the marks from the Arabic sources (PORT-PLAN.md §1–2; lab marks2.js): fatha length by its space, all
-// fathas parallel, three pens, the clarifying letters, and the dagger alif of الله seated on its shadda.
+// fathas parallel, three pens, the clarifying letters; the dagger alif of الله, once seated on its shadda, is now drawn
+// by the ligature of the name (tests/thuluth-allah.test.ts).
 import { describe, expect, it } from 'vitest';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
 import { ALIF_ANG, ALIF_PEN } from '../src/script/thuluth/marks';
@@ -9,10 +10,14 @@ import type { Stroke } from '../src/script/thuluth/types';
 
 const th = thuluth(ROUNDEL_PEN),
   nib = th.style.nib;
-const build = (text: string, frame: FrameOptions = {}) => {
+const built = (text: string, frame: FrameOptions = {}) => {
   const spec: RoundelSpec = { text, compose: { elongate: true, cross: true, kern: true, tries: 2, iters: 1500 }, frame: { ornaments: true, density: 0.4, ...frame }, judge: 1 }; // prettier-ignore
-  return buildRoundel(th, spec)!.f.solved!;
+  return buildRoundel(th, spec)!;
 };
+const build = (text: string, frame: FrameOptions = {}) => built(text, frame).f.solved!;
+/** The small alif of الله, drawn by its ligature: strokes at the marks' angle and pen in the name's own ink. */
+const allahAlif = (b: ReturnType<typeof built>) =>
+  b.r.shapes[b.r.groups.findIndex(g => g.allah)].b.strokes.filter(q => q.ang === ALIF_ANG && Math.abs((q.nib ?? 0) - nib * ALIF_PEN) < 1e-9); // prettier-ignore
 const box = (s: Stroke) => {
   const xs = s.s.map(q => q.x),
     ys = s.s.map(q => q.y);
@@ -38,20 +43,16 @@ describe('mark rules', () => {
     const old = build('اَللّٰهُ نُورُ', { fathaRule: false });
     expect(old.fathas.every(f => f === 0)).toBe(true);
   });
-  it('seats the dagger alif of الله on its shadda, upright at the stems’ angle with half the pen', () => {
-    const s = build('اللّٰهُ'),
-      alif = s.strokes.filter(q => q.ang === ALIF_ANG);
+  it('draws the dagger alif of الله, as the text writes it, in its ligature: upright at the stems’ angle with half the pen', () => {
+    const b = built('اللّٰهُ'),
+      alif = allahAlif(b);
     expect(alif).toHaveLength(1);
-    expect(alif[0].nib).toBeCloseTo(nib * ALIF_PEN, 6);
-    const a = box(alif[0]),
-      cx = (a.x0 + a.x1) / 2;
-    // the shadda: the widest mark just beneath it
-    const below = s.strokes
-      .filter(q => q !== alif[0] && q.mark)
-      .map(box)
-      .filter(b => b.x0 < cx && b.x1 > cx && b.y1 <= a.y0 + nib && b.y1 > a.y0 - nib * 1.5);
-    expect(below.length).toBeGreaterThanOrEqual(1);
+    // not also among the solved marks
+    expect(b.f.solved!.strokes.filter(q => q.ang === ALIF_ANG)).toHaveLength(0);
+    const a = box(alif[0]);
     expect(a.y1 - a.y0).toBeGreaterThan((a.x1 - a.x0) * 2);
+    // without it in the text, the name is drawn without it
+    expect(allahAlif(built('اللّهُ'))).toHaveLength(0);
   });
   it('writes a clarifying letter under ح س ص ط ع ك م, made from the engine’s own letter', () => {
     expect(build('حُسَيْن').signs.sort()).toEqual(['mini:ح', 'mini:س']);
@@ -65,11 +66,13 @@ describe('marks, second generation', { timeout: 180_000 }, () => {
   it('thin from Sâmi to Râkım: fathas go first, the shadda and dagger alif stay', () => {
     const dense = build(text, { markDensity: 1 }),
       mid = build(text, { markDensity: 0.5 }),
-      sparse = build(text, { markDensity: 0.1 });
+      sparseRoundel = built(text, { markDensity: 0.1 }),
+      sparse = sparseRoundel.f.solved!;
     expect(dense.fathas.length).toBeGreaterThan(0);
     expect(mid.fathas).toHaveLength(0);
     expect(sparse.count).toBeLessThan(mid.count);
-    expect(sparse.strokes.some(s => s.ang === ALIF_ANG)).toBe(true);
+    // the dagger alif belongs to the ligature of the name, which thinning never touches
+    expect(allahAlif(sparseRoundel)).toHaveLength(1);
     expect(sparse.signs).toHaveLength(0);
   });
   it('keep a clearance as a rule, and report what could not be cleared', () => {
