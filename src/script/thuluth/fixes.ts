@@ -1,7 +1,7 @@
 // Letters redrawn after the lab, where its forms fail a legibility rule (tests/thuluth-legibility.test.ts). They sit
 // over the generated table (letters.data.ts), which stays as the lab left it.
 import { LETTERS } from './letters.data';
-import type { Family, Form, LetterForm, SkelPt } from './types';
+import type { Family, Form, GlyphDef, LetterForm, SkelPt, ThuluthStyle } from './types';
 
 /** Final and isolated kaf, in the thuluth construction: an upright from the shoulder stroke at the top down to a long
  *  flat base that turns up at its end, with the small kaf sign inside. The lab's form was a leaning shaft over a
@@ -164,6 +164,14 @@ const MIM_MED: LetterForm = {
   src: 'hand',
   exit: -3.3,
   s: [{ pts: [[0, 0], [-0.55, 0.35], [-1.25, 1.2], [-2.0, 1.4], [-2.65, 0.95], [-2.75, 0.2], [-2.25, -0.35], [-1.35, -0.4], [-0.75, -0.15, 1, 1], [-1.6, -0.3], [-2.6, -0.15], [-3.3, 0]] }], // prettier-ignore
+};
+
+/** Final heh and ta marbuta after a join (the round design, style.heh): the same crossed loop, rising from the join,
+ *  over the top and down across its own upstroke to a short tail, drawn lower and a little wider. The lab's stood 5.75
+ *  pen units high at the roundel pen, a tall teardrop on a stalk over the letters around it; this one stands about
+ *  three dots, half the alif, and its eye stays open. */
+export const HEH_FIN_FIXES: Partial<Record<ThuluthStyle['heh'], GlyphDef>> = {
+  round: { exit: null, s: [{ pts: [[0, 0], [-0.7, 0.45], [-1.45, 1.35], [-1.7, 2.25], [-1.35, 2.8], [-0.65, 2.85], [-0.15, 2.35], [-0.25, 1.45], [-0.85, 0.6], [-1.5, 0.2, 0.75], [-2.0, 0.12, 0.4]] }] }, // prettier-ignore
 };
 
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
