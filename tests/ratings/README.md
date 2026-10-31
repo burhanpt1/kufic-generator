@@ -30,5 +30,14 @@ texts) (ids `pa…` to `pd…`). Its votes are kept as `votes.held.json` and `di
 read: the owner holds the refit until the legibility work lands (an outside judge could read none of the dense texts),
 and then they are renamed back.
 
+Round 3 (`rounds/2026-11-01`, published 1 November): the old engine against the new, 28 pairs. Each pair is the same
+text, family (lanes or ruled) and seed, drawn by main at `cdf47a1` (`variant: 'off'`, ids `r3o…`) and by the branch
+of the overnight legibility work (`variant: 'on'`, ids `r3n…`); the texts are the basmala, the salawat,
+الحمد لله رب العالمين, the shahada and the opening of Ayat al-Kursi, with the basmala and salawat vocalised too.
+`scripts/round3.mjs` built it from the two sweeps (`SWEEP_N=2 SWEEP_FAMILIES=lanes,ruled`, the same `SWEEP_TEXTS`
+order on both sides). Its `items.json` is the published file: it carries each item's `url` and the fits in force,
+which the page needs. Read its votes back as `rounds/2026-11-01/votes.json` (the `r3` ids; the store also holds round
+2's), and tally by `variant`: a vote for the `on` side is a vote for the new engine.
+
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
