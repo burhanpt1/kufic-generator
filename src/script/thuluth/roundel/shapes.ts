@@ -455,7 +455,10 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
   }
   const n = [...g.s].length,
     levels = g.sc ? [0, 2] : n > 1 ? (o.levels ?? LEVELS) : [0],
-    joins = g.sc ? [] : stackable(g.s, o);
+    // the name محمد written as its ligature (alts.muhammad) is stacked already: every way of writing it is the
+    // ligature, so two of them in one composition are alike
+    name = th.nameAt(g.s) >= 0,
+    joins = g.sc || name ? [] : stackable(g.s, o);
   const tails = o.tails && n >= 1 && !g.sc ? [{ sx: 1.4, sy: 1.3 }, { sx: 1.8, sy: 1.6 }] : []; // prettier-ignore
   tails.forEach(tl => {
     const v = groupShape(th, g, 0, { ...o, tail: tl }, K, null);
@@ -464,7 +467,7 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
       out.push(v);
     }
   });
-  if (o.elongate && !g.sc && n > 1) {
+  if (o.elongate && !g.sc && n > 1 && !name) {
     const fs = forms(g.s);
     for (let j = 1; j < fs.length; j++) {
       if (fs[j].form !== 'med' && fs[j].form !== 'fin') continue;

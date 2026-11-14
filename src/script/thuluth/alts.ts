@@ -99,6 +99,12 @@ const stemStroke = (pts: SkelPt[], lean = true): StrokeDef => ({ ang: STEM_ANG, 
 
 /** A stem that joins onwards: the shaft tapering into the bend, and the bend at the line's own angle out to `exit`. */
 function joiningStem(pen: Pen, x: number, top: number, exit: number): StrokeDef[] {
+  // c: the same foot with a longer taper and a rounder bend, so the two strokes' outlines run into one curve
+  if (pen.alt === 'c')
+    return [
+      stemStroke([...head(pen, x, top), [x, 5.2, 1], [x - 0.02, 2.2, 1], [x - 0.08, 1.25, 0.93], [x - 0.3, 0.6, 0.66], [x - 0.62, 0.22, 0.34], [x - 0.9, 0.08, 0.12]]), // prettier-ignore
+      { lean: true, pts: [[x - 0.02, 2.6, 0.4], [x - 0.04, 1.6, 0.75], [x - 0.22, 0.62, 0.97], [x - 0.62, 0.14, 1], [x - 1.15, 0.01, 1], [exit, 0, 1]] }, // prettier-ignore
+    ];
   return [
     stemStroke([...head(pen, x, top), [x, 5.2, 1], [x - 0.02, 1.9, 1], [x - 0.08, 1.0, 0.92], [x - 0.3, 0.42, 0.55], [x - 0.6, 0.18, 0.15]]), // prettier-ignore
     { lean: true, pts: [[x - 0.02, 2.4, 0.5], [x - 0.05, 1.3, 0.85], [x - 0.3, 0.42, 1], [x - 0.95, 0.03, 1], [exit, 0, 1]] }, // prettier-ignore
@@ -249,14 +255,15 @@ const DAL_FIN_A: LetterForm = {
 const NAME_MIM: LetterForm = {
   src: 'hand',
   exit: -3.4,
-  s: [{ pts: [[-2.05, 2.0, 1], [-1.0, 1.5, 1], [-0.2, 1.85, 1], [0.1, 2.55, 1], [-0.35, 3.2, 1], [-1.15, 3.4, 1], [-1.8, 3.0, 1], [-2.0, 2.5, 1], [-2.05, 2.0, 1], [-2.45, 1.15, 1], [-3.0, 0.35, 1], [-3.4, 0, 1, 1]] }], // prettier-ignore
+  s: [{ pts: [[-2.05, 2.0, 1], [-1.0, 1.5, 1], [-0.2, 1.85, 1], [0.1, 2.55, 1], [-0.35, 3.2, 1], [-1.15, 3.4, 1], [-1.8, 3.0, 1], [-2.0, 2.5, 1], [-2.05, 2.0, 1], [-2.45, 1.15, 1], [-3.0, 0.4, 0.82], [-3.4, 0, 0.42, 1]] }], // prettier-ignore
 };
 const NAME_DROP = 2.7;
 const NAME_HAH: LetterForm = {
   src: 'hand',
   exit: -2.3,
   dotX: 1.2,
-  s: [{ pts: [[0, 0, 1], [1.2, -0.25, 1], [2.6, -0.3, 1], [3.7, -0.05, 0.9, 1], [2.6, -0.75, 1], [1.0, -1.7, 1], [-0.4, -2.4, 1], [-1.5, -NAME_DROP, 1], [-2.7, -NAME_DROP, 1]] }], // prettier-ignore
+  // (the roof begins and ends in a point: the pen opens out of the mim's tail, and closes into the head's point)
+  s: [{ pts: [[0, 0, 0.42], [0.55, -0.16, 0.78], [1.3, -0.27, 1], [2.6, -0.3, 1], [3.35, -0.14, 0.8], [3.75, 0.0, 0.3, 1], [3.3, -0.33, 0.72], [2.6, -0.75, 1], [1.0, -1.7, 1], [-0.4, -2.4, 1], [-1.5, -NAME_DROP, 1], [-2.7, -NAME_DROP, 1]] }], // prettier-ignore
 };
 /** The ligature's letters for a style, or null when the name is written letter by letter. */
 export function nameForms(alts: ThuluthAlts | undefined): { letters: LetterForm[]; drop: number } | null {

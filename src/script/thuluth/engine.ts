@@ -166,6 +166,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     // apart, so that their heads keep the room their shafts have
     LED = ledForms(ALTS, table, st.nib),
     STEM_JOIN = LED ? 0.45 * (st.nib / 1.6) : 0;
+  /** Where a word is written as the ligature of the name محمد (the position of its first mim), or -1. */
+  const nameAt = (word: string) => (MUHAMMAD ? muhammadAt(word) : -1);
 
   function glyphRaw(c: string, form: Form): GlyphDef | null {
     const fam = FORM_FAM[c + '|' + form] || FAM[c],
@@ -205,7 +207,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         allah = name ? name.lam + 1 : -1;
       // the name محمد as a ligature (a drafted alternative): its first mim and its hah in their own forms, a storey
       // above the line the rest stands on. Not when the caller stacks the word's joins itself.
-      const mu = MUHAMMAD && !(o.stacks && Object.keys(o.stacks).length) ? muhammadAt(w) : -1,
+      const mu = !(o.stacks && Object.keys(o.stacks).length) ? nameAt(w) : -1,
         rise = mu >= 0 ? MUHAMMAD!.drop * st.body : 0;
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
@@ -249,7 +251,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             let kl = o.kashMap && o.kashMap[i + 1] != null ? o.kashMap[i + 1] : kashida;
             // the ligature keeps its own spacing: its lams are never drawn apart
             if (allah >= 0 && i >= allah - 1) kl = 0;
-            if (mu >= 0 && (i === mu || i === mu + 1)) kl = 0;
+            // (nor are the letters of the name محمد, written as its ligature)
+            if (mu >= 0 && i >= mu) kl = 0;
             // (and a lam from the tall loop of a sad that follows it)
             if (STEM_JOIN && allah < 0 && STEM_LETTERS.has(f.c) && (STEM_LETTERS.has(fs[i + 1].c) || FAM[fs[i + 1].c] === 'sad')) kl = Math.max(kl, STEM_JOIN); // prettier-ignore
             // two joined loop letters need a stretch of baseline between them, or their loops run together
@@ -477,7 +480,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     return drawSVG(b.strokes, b.dots, o);
   };
 
-  return { style: st, table, glyphFor, setLine, buildStrokes, strokePolys, dotPolysAt, drawSVG, renderLine };
+  return { style: st, table, glyphFor, setLine, buildStrokes, strokePolys, dotPolysAt, drawSVG, renderLine, nameAt };
 }
 
 /** All the ink of built strokes and dots, as polygons. */
