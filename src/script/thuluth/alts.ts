@@ -135,6 +135,66 @@ export function allahForms(alts: ThuluthAlts | undefined): { ini: LetterForm; la
   return { ini: re(ALLAH_LAM_INI), lam: re(ALLAH_LAM), heh: ALLAH_HEH };
 }
 
+// ---- Part 2: محمد ----
+/** Initial mim: a closed, open-eyed head standing on the line, an egg a little taller than wide, written from its
+ *  foot round to the right, over the top and down the left side into the join. (Taller than wide on purpose: a round
+ *  or a low head came within 0.3 of the initial heh and fa in the confusion matrix.) */
+const MIM_INI_A: LetterForm = {
+  src: 'hand',
+  exit: -3.4,
+  s: [{ pts: [[-2.2, 0.1, 1], [-1.2, -0.1, 1], [-0.25, 0.4, 1], [0.2, 1.4, 1], [0.0, 2.3, 1], [-0.7, 2.8, 1], [-1.6, 2.5, 1], [-2.1, 1.6, 1], [-2.2, 0.1, 1], [-2.8, 0, 1], [-3.4, 0, 1]] }], // prettier-ignore
+};
+/** Medial hah: the join rises to the head's point on the right and turns back in one sweep down to the line; the
+ *  roof is a second stroke from its free left end, a short hook, to that point. Open on the left, as ح must be. */
+const HAH_MED_A: LetterForm = {
+  src: 'hand',
+  exit: -6.0,
+  dotX: -2.6,
+  s: [
+    { pts: [[0, 0, 1], [-0.45, 0.25, 1], [-0.7, 1.0, 0.8], [-0.75, 2.0, 0.45, 1], [-1.6, 1.65, 1], [-3.0, 0.85, 1], [-4.3, 0.2, 1], [-5.2, 0.0, 1], [-6.0, 0, 1]] },
+    { pts: [[-4.35, 2.5, 0.4], [-4.1, 2.95, 0.85], [-3.5, 3.2, 1], [-2.3, 3.0, 1], [-1.2, 2.55, 1], [-0.55, 2.1, 0.6]] },
+  ], // prettier-ignore
+};
+/** Medial mim: a round bead hanging under the line, solid at the jali pen. */
+const MIM_MED_A: LetterForm = {
+  src: 'hand',
+  exit: -3.1,
+  s: [{ pts: [[0, 0, 1], [-0.8, -0.05, 1], [-1.6, -0.5, 1], [-1.95, -1.35, 1], [-1.55, -2.1, 1], [-0.85, -1.85, 1], [-0.7, -1.05, 1], [-1.25, -0.3, 1], [-2.2, 0, 1], [-3.1, 0, 1]] }], // prettier-ignore
+};
+/** Final dal at a letter's size: three dots tall, its base as long, the angle between them open. */
+const DAL_FIN_A: LetterForm = {
+  src: 'hand',
+  exit: null,
+  s: [{ pts: [[0, 0], [-1.3, 0]] }, { pts: [[-1.5, 2.85, 0.5], [-1.15, 2.1, 0.85], [-0.5, 0.25, 1, 1], [-1.5, 0.0, 1], [-2.9, -0.05, 0.9], [-3.6, 0.25, 0.4]] }], // prettier-ignore
+};
+/** The name written as the jali ligature: the mim raised, its tail coming down to where the hah's roof begins; the
+ *  roof sweeping back to the right under the mim to the head's point, and from there the long stroke down to the
+ *  line, a storey below, where the second mim and the dal stand. `drop` is how far the line falls after the hah. */
+const NAME_MIM: LetterForm = {
+  src: 'hand',
+  exit: -3.4,
+  s: [{ pts: [[-2.05, 2.0, 1], [-1.0, 1.5, 1], [-0.2, 1.85, 1], [0.1, 2.55, 1], [-0.35, 3.2, 1], [-1.15, 3.4, 1], [-1.8, 3.0, 1], [-2.0, 2.5, 1], [-2.05, 2.0, 1], [-2.45, 1.15, 1], [-3.0, 0.35, 1], [-3.4, 0, 1, 1]] }], // prettier-ignore
+};
+const NAME_DROP = 2.7;
+const NAME_HAH: LetterForm = {
+  src: 'hand',
+  exit: -2.3,
+  dotX: 1.2,
+  s: [{ pts: [[0, 0, 1], [1.2, -0.25, 1], [2.6, -0.3, 1], [3.7, -0.05, 0.9, 1], [2.6, -0.75, 1], [1.0, -1.7, 1], [-0.4, -2.4, 1], [-1.5, -NAME_DROP, 1], [-2.7, -NAME_DROP, 1]] }], // prettier-ignore
+};
+/** The ligature's letters for a style, or null when the name is written letter by letter. */
+export function nameForms(alts: ThuluthAlts | undefined): { letters: LetterForm[]; drop: number } | null {
+  return alts?.muhammad === 'b' || alts?.muhammad === 'c'
+    ? { letters: [NAME_MIM, NAME_HAH, MIM_MED_A, DAL_FIN_A], drop: NAME_DROP }
+    : null;
+}
+
+function muhammadForms(alt: NonNullable<ThuluthAlts['muhammad']>): Forms {
+  // a: the letters redrawn, in every word; b: the ligature alone, in the name; c: both
+  if (alt === 'b') return {};
+  return { mim: { ini: MIM_INI_A, med: MIM_MED_A }, hah: { med: HAH_MED_A }, dal: { fin: DAL_FIN_A } };
+}
+
 /** The letter forms a style's alternatives replace, given the table they are laid over. */
 export function altForms(alts: ThuluthAlts, base: Forms): Forms {
   const out: Forms = {};
@@ -144,5 +204,6 @@ export function altForms(alts: ThuluthAlts, base: Forms): Forms {
   };
 
   if (alts.stems) add(stemForms(alts.stems, base));
+  if (alts.muhammad) add(muhammadForms(alts.muhammad));
   return out;
 }

@@ -142,6 +142,13 @@ export function allahSpan(word: string): AllahSpan | null {
   return m && { lam: [...m[1]].length, final: !m[2] };
 }
 
+/** The name محمد in a word (with or without its vowels; after و, which joins nothing): the position of its first mim,
+ *  or -1. Only the name: not محمود, not أحمد, and not a form where the mim is joined from before (بمحمد). */
+export function muhammadAt(word: string): number {
+  const m = /^(و?)محمد$/u.exec(word.replace(/[\p{Mn}ـ]/gu, ''));
+  return m ? m[1].length : -1;
+}
+
 /** Whether the pen lifts after letter i of a word's letters (lam-alif ligated): the end of a connected group. */
 export const endsGroup = (cs: readonly string[], i: number) =>
   NONJOIN.has(cs[i]) || !FAM[cs[i]] || i === cs.length - 1 || cs[i + 1] === ALONE;
