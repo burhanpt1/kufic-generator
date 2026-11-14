@@ -141,6 +141,8 @@ export interface Solved {
   signs: string[];
   /** Items left nearer the letters or each other than the clearance (0 without a clearance). */
   clearFaults: number;
+  /** Dots and marks the search left lying on ink (the letters, or a companion): the marks without room. */
+  unplaced: number;
 }
 
 interface Item {
@@ -616,6 +618,11 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           });
         }).length
       : 0,
+    // as drawn, by the item's own box (the search pays for ink within a quarter unit more)
+    unplaced: items.filter(it => {
+      const [w, h] = boxOf(it);
+      return inkHits(it.x, it.y, w, h) > 0;
+    }).length,
     E,
     items: items.map(it => {
       const [w, h] = boxOf(it);

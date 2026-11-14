@@ -304,7 +304,13 @@ export interface Finished {
   solved: Solved | null;
   companion: Companion | null;
   discScale: number;
+  /** Marks without room, as the score reads it: counted by the greedy pass, and always 0 once the solver has run
+   *  (it places every mark somewhere), so with the solver on only a companion that found no room counts. */
   missing: number;
+  /** Marks without room, as drawn: with the solver, the dots and marks it left lying on ink (Solved.unplaced); with
+   *  the greedy pass, those it could not place. Reported (checks.ts), and not part of any score: scoring by it would
+   *  change which arrangement is chosen. */
+  marksUnplaced: number;
 }
 /** Marks (and a companion) placed in the smallest frame that holds them all. */
 export function finishRoundel(th: Thuluth, r: Roundel, companion: string, o: FinishOptions = {}): Finished {
@@ -313,7 +319,7 @@ export function finishRoundel(th: Thuluth, r: Roundel, companion: string, o: Fin
     const pm = placeMarks(th, r, { ...o, discScale: ds });
     const comp = companion ? placeCompanion(th, r, companion, pm.occ, { ...o, discScale: ds }) : null;
     const solved = o.solver !== false ? solveMarks(th, r, { ...o, discScale: ds, extraInk: comp }) : null; // marks are solved around the placed companion
-    const res: Finished = { marks: pm.strokes, solved, companion: comp, discScale: ds, missing: (solved ? 0 : pm.missing) + (companion && !comp ? 1 : 0) }; // prettier-ignore
+    const res: Finished = { marks: pm.strokes, solved, companion: comp, discScale: ds, missing: (solved ? 0 : pm.missing) + (companion && !comp ? 1 : 0), marksUnplaced: solved ? solved.unplaced : pm.missing }; // prettier-ignore
     if (!best || res.missing < best.missing) best = res;
     if (!res.missing) break;
   }

@@ -68,6 +68,9 @@ export interface RoundelChecks {
   strayDots: number;
   /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
+  /** Dots and marks left lying on ink once the marks are placed (Finished.marksUnplaced): the measure the score's
+   *  "marks without room" was meant to be, which with the solver on is always 0. A candidate for the score. */
+  marksUnplaced: number;
   /** Alignment (alignment()). */
   baselines: number;
   stemRhythm: number;
@@ -184,7 +187,7 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
         [bx, by] = tangent(twin);
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
-  return { wordSpace, strayMarks, strayDots, doubled, ...alignment(r, nib) };
+  return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, ...alignment(r, nib) };
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */
