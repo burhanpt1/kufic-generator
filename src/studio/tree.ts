@@ -1,6 +1,6 @@
 // The composition tree as layers (COMPOSITION_ENGINE.md §8, level 3): list nodes, and add, remove, reorder and
 // replace them. Every edit returns a new composition that passes the schema, or null when the edit would break it.
-import type { BorderNode, Composition, FillerNode, RegionNode, SpandrelNode } from '../model/schema';
+import type { BorderNode, Composition, FillerNode, RegionNode, ScriptId, SpandrelNode } from '../model/schema';
 import { CompositionSchema } from '../model/schema';
 
 export type Path = (string | number)[];
@@ -175,4 +175,30 @@ export function defaultFill(type: FillerNode['type'], c: Composition): FillerNod
     default:
       return { type } as FillerNode;
   }
+}
+
+/** The scripts each text slot is written in. A region writes in its own script (its style's, else the one it
+ *  inherits); a roundel is always thuluth. A slot nothing writes is not listed. */
+export function slotScripts(c: Composition): Map<string, Set<ScriptId>> {
+  const out = new Map<string, Set<ScriptId>>();
+  const add = (slot: string | undefined, s: ScriptId) => {
+    if (slot === undefined) return;
+    if (!out.has(slot)) out.set(slot, new Set());
+    out.get(slot)!.add(s);
+  };
+  const fill = (f: SpandrelNode | undefined, s: ScriptId) => {
+    if (!f) return;
+    if (f.type === 'region') region(f.node, s);
+    else if (f.type === 'roundel') add(f.text, 'thuluth');
+    else if ('text' in f) add(f.text, s);
+  };
+  const region = (r: RegionNode, parent: ScriptId) => {
+    const s = r.style?.script ?? parent;
+    for (const b of r.borders) if (b.type === 'textBorder') add(b.text, s);
+    fill(r.fill, s);
+  };
+  const s = c.root.style?.script ?? c.style.script;
+  fill(c.root.spandrels, s);
+  region(c.root.child, s);
+  return out;
 }

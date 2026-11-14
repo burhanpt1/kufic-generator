@@ -10,7 +10,7 @@ import { SILHOUETTE_NAMES, SILHOUETTES } from '../../model/silhouettes';
 import type { SilhouetteName } from '../../model/silhouettes';
 import { shape } from '../../engine';
 import { abjadTable, valueOf } from '../chronogram';
-import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt } from '../tree';
+import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt, slotScripts } from '../tree';
 import type { Path } from '../tree';
 import { svgOutline } from './editor-outline';
 import { pathPad } from './editor-path';
@@ -111,12 +111,15 @@ export function wireEditor(app: App) {
         );
       }
     }
+    const scripts = slotScripts(c);
     for (const [name, s] of Object.entries(c.texts)) {
       const ta = $<HTMLTextAreaElement>('slot-' + name);
       if (document.activeElement !== ta && ta.value !== s.text) ta.value = s.text;
       (ta.nextElementSibling!.firstElementChild as HTMLSelectElement).value = s.repeat;
-      // characters no letter is drawn for (Latin, emoji, digits) are named rather than dropped silently
-      const lost = shape(s.text).unsupported;
+      // characters no letter is drawn for (Latin, emoji, digits) are named rather than dropped silently. The list is
+      // the Kufic shaper's: a slot only thuluth writes shows none (its engine does not report what it leaves out)
+      const by = scripts.get(name),
+        lost = (by ? by.has('kufi') : c.style.script === 'kufi') ? shape(s.text).unsupported : [];
       $('abjad-' + name).textContent =
         `abjad ${valueOf(s.text, T)}` + (lost.length ? ` · not drawn: ${lost.slice(0, 12).join(' ')}` : '');
     }
