@@ -44,7 +44,7 @@ export function wireLetters(app: App) {
     sad: s.sad,
     ovr: {},
   } as EditorState;
-  loadOverrides(state);
+  const dropped = loadOverrides(state);
   const draw = () => {
     const st = app.comp.style,
       slot = mainSlot(app.comp),
@@ -54,11 +54,17 @@ export function wireLetters(app: App) {
     $('letterPreview').innerHTML =
       linePreview(text.split('\n')[0], st) + renderGrid(alpha, renderOpts(st, 'Kufic letter forms'), 1);
   };
-  const { drawEditor } = wireLetterEditor(lookup(document), document, state, () => {
-    clearMonogramCache();
-    draw();
-    app.glyphsChanged();
-  });
+  const { drawEditor } = wireLetterEditor(
+    lookup(document),
+    document,
+    state,
+    () => {
+      clearMonogramCache();
+      draw();
+      app.glyphsChanged();
+    },
+    dropped,
+  );
   drawEditor();
   app.onChange(draw);
 }

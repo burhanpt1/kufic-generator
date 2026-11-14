@@ -64,7 +64,7 @@ export function wireChrono(app: App) {
       s = phrase.value;
     $('chBreak').innerHTML = '';
     for (const x of breakdown(s, T))
-      $('chBreak').append(x ? h('span', {}, h('b', {}, x.c), h('small', {}, String(x.v))) : h('i'));
+      $('chBreak').append(x ? h('span', {}, h('b', { lang: 'ar' }, x.c), h('small', {}, String(x.v))) : h('i'));
     const v = valueOf(s, T);
     $('chTotal').textContent = v.toLocaleString('en-GB');
     $('chPreview').innerHTML = s.trim() ? linePreview(s, app.comp.style) : '';
@@ -93,7 +93,7 @@ export function wireChrono(app: App) {
     return h(
       'div',
       { class: 'res' },
-      h('div', {}, h('div', { class: 'p' }, s.phrase), h('div', { class: 'v' }, note)),
+      h('div', {}, h('div', { class: 'p', lang: 'ar' }, s.phrase), h('div', { class: 'v' }, note)),
       h(
         'div',
         { class: 'bar' },
