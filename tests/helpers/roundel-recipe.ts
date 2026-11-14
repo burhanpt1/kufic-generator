@@ -8,7 +8,13 @@ import { ROUNDEL_RECIPE_KEYS } from '../../src/model/schema';
 
 const BASE: RoundelRecipe = { tries: 1, iters: 500, seed: 3, judge: 1 },
   NAMES = 'محمد علي',
-  BASMALA = 'بسم الله الرحمن الرحيم';
+  BASMALA = 'بسم الله الرحمن الرحيم',
+  RISING: RoundelRecipe['path'] = [
+    [
+      [1, -0.8],
+      [-1, 0.8],
+    ],
+  ];
 /** Option → the text to try it on and the recipe that sets it (on top of BASE and any `with`). */
 export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: RoundelRecipe }> = {
   elongate: { set: { elongate: true } },
@@ -72,6 +78,19 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
   // without الله, whose marks its ligature draws
   fathaGap: { text: 'نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
+  companion: { set: { companion: 'نور' } },
+  companionScale: { set: { companionScale: 0.8 }, with: { companion: 'نور' } },
+  kernTouch: { text: 'رسول', set: { kernTouch: 20 }, with: { kern: true, nest: true } },
+  stackPull: { text: 'محمد', set: { stackPull: 0 } },
+  stackMin: { text: 'محمد علي', set: { stackMin: 0.45 }, with: { learnedStack: true } },
+  stackBowls: { text: 'حسين', set: { stackBowls: true }, with: { learnedStack: true } },
+  levels: { text: BASMALA, set: { levels: [6] } },
+  margin: { set: { margin: 3 } },
+  pathW: { text: BASMALA, set: { pathW: 6 }, with: { lanes: {} } },
+  readW: { text: BASMALA, set: { readW: 8 }, with: { lanes: {} } },
+  // on a path that climbs as it is read, so every word is above the one before
+  orderFirm: { text: BASMALA, set: { orderFirm: 15 }, with: { path: RISING } },
+  orderSlack: { text: BASMALA, set: { orderSlack: 6 }, with: { path: RISING } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {
