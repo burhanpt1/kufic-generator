@@ -9,6 +9,10 @@ type LetterForm = GlyphDef & { src?: string };
  *  of محمد redrawn with the name as its ligature, and the audit's corrections. */
 export const RECOMMENDED: ThuluthAlts = { stems: 'a', muhammad: 'c', fixes: true };
 
+/** The set the owner chose from the comparison sheets (14 November 2026): the fuller jali head on the stems, the
+ *  letters of محمد redrawn with the name as its ligature, and the audit's corrections. */
+export const CHOSEN: ThuluthAlts = { stems: 'c', muhammad: 'c', fixes: true };
+
 type Forms = Partial<Record<Family, Partial<Record<Form, LetterForm>>>>;
 type Head = NonNullable<ThuluthAlts['stems']>;
 
@@ -30,33 +34,79 @@ type Head = NonNullable<ThuluthAlts['stems']>;
 // end stood proud of the nib's slanted cut, the flat tab on every stem top.
 const STEM_ANG = 38;
 
-/** Half the roundel nib along its edge at STEM_ANG: the serifs are drawn for that pen (a lighter pen rounds them). */
+/** Half the roundel nib along its edge at STEM_ANG: the serifs of a and b are drawn for that pen (a lighter pen
+ *  rounds them); c's are drawn for the pen that writes them (headC). */
 const HX = 0.8 * Math.cos((STEM_ANG * Math.PI) / 180),
   HY = 0.8 * Math.sin((STEM_ANG * Math.PI) / 180);
 /** A serif written from its tip (dx, dy from the top's right corner) into the stem's top: the nib's upper end runs
- *  straight from the tip to that corner while it opens from nothing to `w` (as t^p: 1 a wedge, more a hollow beak). */
-function serif(x: number, top: number, tip: [number, number], w: number, p: number): SkelPt[] {
+ *  from the tip to that corner (straight, or bowed outwards by `bow`) while it opens from nothing to `w` (as t^p: 1 a
+ *  wedge, more a hollow beak). `hx`, `hy`: half the nib along its edge. */
+function serif(
+  x: number,
+  top: number,
+  tip: [number, number],
+  w: number,
+  p: number,
+  hx = HX,
+  hy = HY,
+  bow = 0,
+): SkelPt[] {
+  // prettier-ignore
   // the top's right corner: the upper end of the nib where it stands at the head of the shaft
-  const cx = x + HX * w,
-    cy = top;
+  const cx = x + hx * w,
+    cy = top,
+    l = Math.hypot(tip[0], tip[1]),
+    nx = -tip[1] / l,
+    ny = tip[0] / l;
   return [0, 0.18, 0.36, 0.54, 0.72, 0.88, 1].map(t => {
-    const k = Math.max(0.02, w * t ** p);
-    return [cx + tip[0] * (1 - t) - HX * k, cy + tip[1] * (1 - t) - HY * k, k, t === 1 ? 1 : undefined] as SkelPt;
+    const k = Math.max(0.02, w * t ** p),
+      b = bow * Math.sin(Math.PI * t);
+    return [cx + tip[0] * (1 - t) + nx * b - hx * k, cy + tip[1] * (1 - t) + ny * b - hy * k, k, t === 1 ? 1 : undefined] as SkelPt; // prettier-ignore
   });
+}
+/** Which head a stem of alternative c carries: the full one; the lesser one of a lam that follows another stem in
+ *  its word (ال, لل: in a run of stems the first carries the full head and the next a smaller one, or the heads
+ *  crowd each other); none, the top cut by the nib, on the second lam of the name of God. */
+type Rank = 0 | 1 | 2;
+/** How a stem is drawn: the alternative, the pen's nib (c's head keeps its proportion to the shaft at every pen),
+ *  and the head's rank. */
+interface Pen {
+  alt: Head;
+  nib: number;
+  rank: Rank;
+}
+/** The head of alternative c for a nib: the serif, the swell below it and the taper to the shaft's weight. */
+function headC(x: number, top: number, nib: number, rank: Rank): SkelPt[] {
+  const s = nib / 1.6,
+    hx = HX * s,
+    hy = HY * s;
+  if (rank === 2) return [[x, top - hy * 0.94, 0.94], [x, top - 1.3, 1], [x, top - 2, 1]]; // prettier-ignore
+  const m = rank ? 0.66 : 1,
+    w = rank ? 1.05 : 1.14;
+  return [
+    ...serif(x, top, [0.78 * s * m, -1.5 * s * m], w, 1.45, hx, hy, 0.1 * s * m),
+    ...(rank ? ([[x, top - 2, 1]] as SkelPt[]) : ([[x, top - 1.9, 1.1], [x, top - 3.8, 1]] as SkelPt[])), // prettier-ignore
+  ];
 }
 /** The head of a stem standing at x with its top at `top` (the ink's top, not the skeleton's), down to where the
  *  shaft begins. */
-function head(alt: Head, x: number, top: number): SkelPt[] {
-  if (alt === 'a') return [...serif(x, top, [0.58, -1.05], 1, 2), [x, top - 2, 1]];
-  if (alt === 'b') return [[x, top - HY, 1], [x, top - 2, 1]]; // prettier-ignore
-  return [...serif(x, top, [0.8, -1.55], 1.16, 1.15), [x, top - 2.1, 1.08], [x, top - 3.8, 1]];
+function head(pen: Pen, x: number, top: number): SkelPt[] {
+  if (pen.alt === 'a') return [...serif(x, top, [0.58, -1.05], 1, 2), [x, top - 2, 1]];
+  if (pen.alt === 'b') return [[x, top - HY, 1], [x, top - 2, 1]]; // prettier-ignore
+  return headC(x, top, pen.nib, pen.rank);
 }
 const stemStroke = (pts: SkelPt[], lean = true): StrokeDef => ({ ang: STEM_ANG, lean, pts });
 
 /** A stem that joins onwards: the shaft tapering into the bend, and the bend at the line's own angle out to `exit`. */
-function joiningStem(alt: Head, x: number, top: number, exit: number): StrokeDef[] {
+function joiningStem(pen: Pen, x: number, top: number, exit: number): StrokeDef[] {
+  // c: the same foot with a longer taper and a rounder bend, so the two strokes' outlines run into one curve
+  if (pen.alt === 'c')
+    return [
+      stemStroke([...head(pen, x, top), [x, 5.2, 1], [x - 0.02, 2.2, 1], [x - 0.08, 1.25, 0.93], [x - 0.3, 0.6, 0.66], [x - 0.62, 0.22, 0.34], [x - 0.9, 0.08, 0.12]]), // prettier-ignore
+      { lean: true, pts: [[x - 0.02, 2.6, 0.4], [x - 0.04, 1.6, 0.75], [x - 0.22, 0.62, 0.97], [x - 0.62, 0.14, 1], [x - 1.15, 0.01, 1], [exit, 0, 1]] }, // prettier-ignore
+    ];
   return [
-    stemStroke([...head(alt, x, top), [x, 5.2, 1], [x - 0.02, 1.9, 1], [x - 0.08, 1.0, 0.92], [x - 0.3, 0.42, 0.55], [x - 0.6, 0.18, 0.15]]), // prettier-ignore
+    stemStroke([...head(pen, x, top), [x, 5.2, 1], [x - 0.02, 1.9, 1], [x - 0.08, 1.0, 0.92], [x - 0.3, 0.42, 0.55], [x - 0.6, 0.18, 0.15]]), // prettier-ignore
     { lean: true, pts: [[x - 0.02, 2.4, 0.5], [x - 0.05, 1.3, 0.85], [x - 0.3, 0.42, 1], [x - 0.95, 0.03, 1], [exit, 0, 1]] }, // prettier-ignore
   ];
 }
@@ -78,28 +128,17 @@ function kafEnd(f: LetterForm, joined: boolean): LetterForm {
   };
 }
 
-const reHead = (alt: Head, st: StrokeDef, keepFrom: number, x: number, top: number): StrokeDef => ({
+const reHead = (pen: Pen, st: StrokeDef, keepFrom: number, x: number, top: number): StrokeDef => ({
   ...st,
-  pts: [...head(alt, x, top), ...st.pts.slice(keepFrom)],
+  pts: [...head(pen, x, top), ...st.pts.slice(keepFrom)],
 });
 
-function stemForms(alt: Head, base: Forms): Forms {
+/** The lams (and the lam-alif) with a head: every form, for a full head or a lesser one. */
+function lamForms(pen: Pen, la: Partial<Record<Form, LetterForm>>): Forms {
   const lamBowl = (dx: number): SkelPt[] => [[dx, 5.2, 1], [-0.05 + dx, 1.4, 0.95], [-0.25 + dx, -0.4], [-0.9 + dx, -1.55], [-2.2 + dx, -2.05], [-3.3 + dx, -1.5], [-3.65 + dx, -0.4], [-3.45 + dx, 0.55, 0.4], [-3.15 + dx, 1.1, 0.12]]; // prettier-ignore
-  const ta = base.ta!,
-    la = base.lamalif!;
-  const taStem = (f: LetterForm, x: number): LetterForm => ({
-    ...f,
-    s: f.s.map(s => (s.ang === 38 ? stemStroke([...head(alt, x, 8.9), [x, 4, 1], [x, 1.6, 0.9]], false) : s)),
-  });
   return {
-    alif: {
-      // the alif at the lam's height, its foot thinning to a point that turns a little to the left
-      iso: { src: 'hand', exit: null, s: [stemStroke([...head(alt, 0, 10), [0, 5.2, 1], [-0.03, 2.6, 0.9], [-0.12, 1.0, 0.6], [-0.28, 0.1, 0.2]])] }, // prettier-ignore
-      // joined from the right: up from the line with no serif, as a joined alif is written
-      fin: { src: 'hand', exit: null, s: [{ lean: true, pts: [[0, 0], [-0.5, 0.02], [-0.84, 0.36, 0.95], [-0.9, 1.3, 0.75], [-0.9, 2.4, 0.5]] }, stemStroke([[-0.88, 9.5, 0.8], [-0.9, 8.6, 0.95], [-0.9, 5.2, 1], [-0.9, 1.9, 1], [-0.86, 1.0, 0.9], [-0.66, 0.42, 0.5], [-0.4, 0.2, 0.15]])] }, // prettier-ignore
-    },
     lam: {
-      ini: { src: 'hand', exit: -1.9, s: joiningStem(alt, 0, 10, -1.9) },
+      ini: { src: 'hand', exit: -1.9, s: joiningStem(pen, 0, 10, -1.9) },
       med: {
         src: 'hand',
         exit: -2.7,
@@ -110,29 +149,72 @@ function stemForms(alt: Head, base: Forms): Forms {
               [-2.7, 0],
             ],
           },
-          ...joiningStem(alt, -1.0, 10, -2.2),
+          ...joiningStem(pen, -1.0, 10, -2.2),
         ],
       },
-      fin: { src: 'hand', exit: null, s: [{ pts: [[0, 0], [-0.8, 0]] }, stemStroke([...head(alt, -0.9, 10), ...lamBowl(-0.9)])] }, // prettier-ignore
-      iso: { src: 'hand', exit: null, s: [stemStroke([...head(alt, 0, 10), ...lamBowl(0)])] },
+      fin: { src: 'hand', exit: null, s: [{ pts: [[0, 0], [-0.8, 0]] }, stemStroke([...head(pen, -0.9, 10), ...lamBowl(-0.9)])] }, // prettier-ignore
+      iso: { src: 'hand', exit: null, s: [stemStroke([...head(pen, 0, 10), ...lamBowl(0)])] },
     },
-    ta: { ini: taStem(ta.ini!, -1.5), iso: taStem(ta.iso!, -1.5), med: taStem(ta.med!, -1.9), fin: taStem(ta.fin!, -1.9) }, // prettier-ignore
-    // final and isolated kaf: its upright at the stems' weight (it was a hairline beside a heavy base), turning
-    // into the base as the lams do
-    kaf: { fin: kafEnd(base.kaf!.fin!, true), iso: kafEnd(base.kaf!.iso!, false) },
     lamalif: {
-      iso: { ...la.iso!, s: [reHead(alt, la.iso!.s[0], 3, 0.6, 9.7), la.iso!.s[1]] },
-      fin: { ...la.fin!, s: [la.fin!.s[0], reHead(alt, la.fin!.s[1], 3, -0.4, 9.7), la.fin!.s[2]] },
+      iso: { ...la.iso!, s: [reHead(pen, la.iso!.s[0], 3, 0.6, 9.7), la.iso!.s[1]] },
+      fin: { ...la.fin!, s: [la.fin!.s[0], reHead(pen, la.fin!.s[1], 3, -0.4, 9.7), la.fin!.s[2]] },
     },
   };
 }
 
-/** The lams and heh of the name of God, with the alternative's head on the lams. */
-export function allahForms(alts: ThuluthAlts | undefined): { ini: LetterForm; lam: LetterForm; heh: LetterForm } {
+/** The height of c's alif: a little under the lams' 10, as the masters set the two. */
+const ALIF_TOP_C = 9.7;
+
+function stemForms(alt: Head, base: Forms, nib: number, body: number): Forms {
+  const pen: Pen = { alt, nib, rank: 0 },
+    c = alt === 'c',
+    ta = base.ta!;
+  // the ta is drawn at the body's scale: with c its stem stands as high as the lam and its head is the lam's (a and
+  // b leave both to grow with the body)
+  const taPen: Pen = { ...pen, nib: nib / body },
+    taTop = c ? 10 / body : 8.9,
+    taStem = (f: LetterForm, x: number): LetterForm => ({
+      ...f,
+      s: f.s.map(s =>
+        s.ang === 38 ? stemStroke([...head(taPen, x, taTop), [x, c ? 2.6 : 4, 1], [x, 1.6, 0.9]], false) : s,
+      ),
+    });
+  // the alif's foot thins to a point that turns a little to the left
+  const alifTop = c ? ALIF_TOP_C : 10,
+    foot: SkelPt[] = c
+      ? [[0, 5.6, 1], [-0.02, 3.3, 0.9], [-0.1, 1.5, 0.66], [-0.24, 0.5, 0.36], [-0.36, 0.05, 0.14]] // prettier-ignore
+      : [[0, 5.2, 1], [-0.03, 2.6, 0.9], [-0.12, 1.0, 0.6], [-0.28, 0.1, 0.2]]; // prettier-ignore
+  return {
+    alif: {
+      iso: { src: 'hand', exit: null, s: [stemStroke([...head(pen, 0, alifTop), ...foot])] },
+      // joined from the right: up from the line with no serif, as a joined alif is written
+      fin: { src: 'hand', exit: null, s: [{ lean: true, pts: [[0, 0], [-0.5, 0.02], [-0.84, 0.36, 0.95], [-0.9, 1.3, 0.75], [-0.9, 2.4, 0.5]] }, stemStroke([[-0.88, 9.5, 0.8], [-0.9, 8.6, 0.95], [-0.9, 5.2, 1], [-0.9, 1.9, 1], [-0.86, 1.0, 0.9], [-0.66, 0.42, 0.5], [-0.4, 0.2, 0.15]])] }, // prettier-ignore
+    },
+    ...lamForms(pen, base.lamalif!),
+    ta: { ini: taStem(ta.ini!, -1.5), iso: taStem(ta.iso!, -1.5), med: taStem(ta.med!, -1.9), fin: taStem(ta.fin!, -1.9) }, // prettier-ignore
+    // final and isolated kaf: its upright at the stems' weight (it was a hairline beside a heavy base), turning
+    // into the base as the lams do
+    kaf: { fin: kafEnd(base.kaf!.fin!, true), iso: kafEnd(base.kaf!.iso!, false) },
+  };
+}
+
+/** With c, the forms of a lam (or lam-alif) that follows another tall stem in its word: the lesser head. Null for
+ *  the other alternatives, whose stems are all alike. */
+export function ledForms(alts: ThuluthAlts | undefined, base: Forms, nib: number): Forms | null {
+  return alts?.stems === 'c' ? lamForms({ alt: 'c', nib, rank: 1 }, base.lamalif!) : null;
+}
+
+/** The lams and heh of the name of God, with the alternative's head on the lams (c: the lesser head on the first,
+ *  which stands beside the alif's full one, and none on the second, under the shadda). */
+export function allahForms(
+  alts: ThuluthAlts | undefined,
+  nib = 1.6,
+): { ini: LetterForm; lam: LetterForm; heh: LetterForm } {
   const alt = alts?.stems;
   if (!alt) return { ini: ALLAH_LAM_INI, lam: ALLAH_LAM, heh: ALLAH_HEH };
-  const re = (f: LetterForm): LetterForm => ({ ...f, s: [reHead(alt, f.s[0], 3, 0, 7.85)] });
-  return { ini: re(ALLAH_LAM_INI), lam: re(ALLAH_LAM), heh: ALLAH_HEH };
+  const c = alt === 'c',
+    re = (f: LetterForm, rank: Rank): LetterForm => ({ ...f, s: [reHead({ alt, nib, rank }, f.s[0], 3, 0, 7.85)] });
+  return { ini: re(ALLAH_LAM_INI, c ? 1 : 0), lam: re(ALLAH_LAM, c ? 2 : 0), heh: ALLAH_HEH };
 }
 
 // ---- Part 2: محمد ----
@@ -173,14 +255,15 @@ const DAL_FIN_A: LetterForm = {
 const NAME_MIM: LetterForm = {
   src: 'hand',
   exit: -3.4,
-  s: [{ pts: [[-2.05, 2.0, 1], [-1.0, 1.5, 1], [-0.2, 1.85, 1], [0.1, 2.55, 1], [-0.35, 3.2, 1], [-1.15, 3.4, 1], [-1.8, 3.0, 1], [-2.0, 2.5, 1], [-2.05, 2.0, 1], [-2.45, 1.15, 1], [-3.0, 0.35, 1], [-3.4, 0, 1, 1]] }], // prettier-ignore
+  s: [{ pts: [[-2.05, 2.0, 1], [-1.0, 1.5, 1], [-0.2, 1.85, 1], [0.1, 2.55, 1], [-0.35, 3.2, 1], [-1.15, 3.4, 1], [-1.8, 3.0, 1], [-2.0, 2.5, 1], [-2.05, 2.0, 1], [-2.45, 1.15, 1], [-3.0, 0.4, 0.82], [-3.4, 0, 0.42, 1]] }], // prettier-ignore
 };
 const NAME_DROP = 2.7;
 const NAME_HAH: LetterForm = {
   src: 'hand',
   exit: -2.3,
   dotX: 1.2,
-  s: [{ pts: [[0, 0, 1], [1.2, -0.25, 1], [2.6, -0.3, 1], [3.7, -0.05, 0.9, 1], [2.6, -0.75, 1], [1.0, -1.7, 1], [-0.4, -2.4, 1], [-1.5, -NAME_DROP, 1], [-2.7, -NAME_DROP, 1]] }], // prettier-ignore
+  // (the roof begins and ends in a point: the pen opens out of the mim's tail, and closes into the head's point)
+  s: [{ pts: [[0, 0, 0.42], [0.55, -0.16, 0.78], [1.3, -0.27, 1], [2.6, -0.3, 1], [3.35, -0.14, 0.8], [3.75, 0.0, 0.3, 1], [3.3, -0.33, 0.72], [2.6, -0.75, 1], [1.0, -1.7, 1], [-0.4, -2.4, 1], [-1.5, -NAME_DROP, 1], [-2.7, -NAME_DROP, 1]] }], // prettier-ignore
 };
 /** The ligature's letters for a style, or null when the name is written letter by letter. */
 export function nameForms(alts: ThuluthAlts | undefined): { letters: LetterForm[]; drop: number } | null {
@@ -264,7 +347,7 @@ const FIXES: Record<(typeof ALT_FIXES)[number], (base: Forms) => Forms> = {
 };
 
 /** The letter forms a style's alternatives replace, given the table they are laid over. */
-export function altForms(alts: ThuluthAlts, base: Forms): Forms {
+export function altForms(alts: ThuluthAlts, base: Forms, nib = 1.6, body = 1.45): Forms {
   const out: Forms = {};
   const add = (f: Forms) => {
     for (const [fam, fs] of Object.entries(f) as [Family, Partial<Record<Form, LetterForm>>][])
@@ -276,7 +359,7 @@ export function altForms(alts: ThuluthAlts, base: Forms): Forms {
   const fixed = { ...base };
   for (const [fam, fs] of Object.entries(out) as [Family, Partial<Record<Form, LetterForm>>][])
     fixed[fam] = { ...base[fam], ...fs };
-  if (alts.stems) add(stemForms(alts.stems, fixed));
+  if (alts.stems) add(stemForms(alts.stems, fixed, nib, body));
   if (alts.muhammad) add(muhammadForms(alts.muhammad));
   return out;
 }
