@@ -2,6 +2,7 @@
 // All randomness comes from the seed in the parameters (Park–Miller).
 import { glyphEpoch } from '../glyphs/overrides';
 import { runSeal } from '../kernels/seal';
+import { parkMiller, seedInt } from '../model/seed';
 import { compose as classicCompose } from '../layout/compose';
 import type { SquareRing } from '../types';
 import type { LetterStyle, ScriptEngine } from '../script/types';
@@ -25,6 +26,7 @@ import {
 import type { LetterShape } from './words';
 import { letterShape, wordGrid } from './words';
 import { wordBlock } from './wordBlock';
+import { clampMonoParams } from './params';
 import { strokeGraph } from '../geometry/strokegraph';
 
 export type MonoMethod =
@@ -231,9 +233,9 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
   const ink0 = V.reduce((a, vs) => a + vs[0].cells.length, 0) * copies;
   const N =
     Math.max(...V.flat().map(l => Math.max(l.w, l.h))) * (copies > 1 ? 2 : 1) +
-    Math.ceil(Math.sqrt(ink0 / 0.3) * p.box);
-  let sd = p.seed;
-  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    // never smaller than the largest letter, whatever the box
+    Math.ceil(Math.sqrt(ink0 / 0.3) * Math.max(0, p.box));
+  const R = parkMiller(p.seed);
   const vi = V.map(() => 0),
     pos = V.map(vs => [Math.floor(R() * (N - vs[0].w)), Math.floor(R() * (N - vs[0].h))]);
   const LCs = V.map(vs => vs.map(l => l.cells.map(([x, y, v]) => [x, y, v === 1 && l.share.has(x + ',' + y) ? 1 : 0])));
@@ -253,7 +255,7 @@ export function sealCompose(p: MonoParams, text: string, script: ScriptEngine, l
   });
   const res = runSeal({
     L: Lf, V: Vf, C: Cf, J: Jf, P: pos.flatMap(([x, y], i) => [x, y, vi[i]]), n, N, copies,
-    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (p.seed % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000),
+    sym: sym === 'none' ? 0 : sym === 'mirror' ? 1 : 2, iters, seed: (seedInt(p.seed) % 2147483646) + 1, shareMilli: Math.round(p.share * 1000), ink0: Math.round(ink0), blockMilli: Math.round(p.blocks * 1000),
   }); // prettier-ignore
   if (!res) return null;
   pos.forEach((q, i) => {
@@ -646,6 +648,8 @@ export function buildMonogram(
   script: ScriptEngine,
   letter: LetterStyle,
 ) {
+  // out-of-range values (a hand-written link, an old saved file) are clamped, never trusted as loop bounds
+  params = clampMonoParams(params);
   const k = JSON.stringify([method, params, text, letter, script.id, glyphEpoch()]);
   if (memo.has(k)) return memo.get(k)!;
   // word seals are laid out, not searched: one try is all there is

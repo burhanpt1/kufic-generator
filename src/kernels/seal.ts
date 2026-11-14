@@ -2,6 +2,7 @@
 // Two backends with bit-identical results: the C kernel compiled to WebAssembly (about 7× faster), and an exact
 // TypeScript port of the same code (same Park–Miller sequence, same arithmetic, same evaluation order), used until
 // or unless the WebAssembly loads. So a composition and seed give the same seal everywhere.
+import { seedState } from '../model/seed';
 import { WASM_BASE64 } from './seal.wasm';
 
 export const MAXG = 40000;
@@ -352,7 +353,12 @@ export const unloadSealWasm = () => {
 };
 
 let triedSync = false;
-export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'): SealOutput | null {
+/** The JS port's memory, kept between runs (4 MB; a seal search with several tries would allocate it each time).
+ *  Like the WebAssembly kernel's, it is not cleared: a run reads only what layout() and the run itself wrote. */
+let jsMem: Int32Array | null = null;
+export function runSeal(input: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'): SealOutput | null {
+  // a seed of 0, a multiple of the modulus or a negative one would give both kernels a constant or negative stream
+  const inp = input.seed === seedState(input.seed) ? input : { ...input, seed: seedState(input.seed) };
   // Node and workers can compile synchronously; a browser's main thread refuses and keeps the identical JS port
   if (backend === 'auto' && !wasm && !triedSync) {
     triedSync = true;
@@ -360,9 +366,14 @@ export function runSeal(inp: SealInput, backend: 'auto' | 'js' | 'wasm' = 'auto'
   }
   const useWasm = backend === 'wasm' || (backend === 'auto' && !!wasm);
   if (useWasm && !wasm) throw new Error('seal WebAssembly kernel not loaded');
-  const m = useWasm ? new Int32Array(wasm!.memory.buffer, wasm!.buf(), MEM_INTS) : new Int32Array(MEM_INTS);
+  const m = useWasm ? new Int32Array(wasm!.memory.buffer, wasm!.buf(), MEM_INTS) : (jsMem ??= new Int32Array(MEM_INTS));
   const o = layout(m, inp);
   if (!o) return null;
+  if (!useWasm) {
+    // what a fresh memory would hold where layout() wrote nothing: the gap after the joins, and the results
+    m.fill(0, o.offJ + inp.J.length, o.offP);
+    m.fill(0, o.offS, o.offS + 8 + inp.n);
+  }
   const rc = useWasm
     ? wasm!.run(
         inp.n,
