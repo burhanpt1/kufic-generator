@@ -195,6 +195,74 @@ function muhammadForms(alt: NonNullable<ThuluthAlts['muhammad']>): Forms {
   return { mim: { ini: MIM_INI_A, med: MIM_MED_A }, hah: { med: HAH_MED_A }, dal: { fin: DAL_FIN_A } };
 }
 
+// ---- Part 3: corrections from the audit ----
+// Each is a drawing error, not a matter of taste: a join that does not reach, a stub with nothing to join, a spur
+// where two strokes meet, dots that land on the next letter.
+export const ALT_FIXES = ['kaf-med', 'kaf-iso', 'dal-fin', 'qaf-end', 'fa-qaf-room'] as const;
+const move = (pts: readonly SkelPt[], dx: number): SkelPt[] => pts.map(([x, y, w, c]) => [x + dx, y, w, c] as SkelPt);
+const FIXES: Record<(typeof ALT_FIXES)[number], (base: Forms) => Forms> = {
+  // medial kaf: its joining stroke stopped 0.6 from the letter before, three units short of the kaf's foot, so the
+  // kaf stood apart from its word (لكم). The join now runs along the line to the foot.
+  'kaf-med': base => {
+    const f = base.kaf!.med!;
+    return {
+      kaf: {
+        med: {
+          ...f,
+          s: [
+            {
+              pts: [
+                [0, 0, 1],
+                [-2.0, 0.02, 1],
+                [-3.9, 0.0, 1],
+              ],
+            },
+            ...f.s.slice(1),
+          ],
+        },
+      },
+    };
+  },
+  // isolated kaf: drawn with the final's joining stub, which stuck out at its foot with nothing to join
+  'kaf-iso': base => {
+    const f = base.kaf!.iso!;
+    return f.s.length === 4 ? { kaf: { iso: { ...f, s: f.s.slice(1) } } } : {};
+  },
+  // final dal: the joining stub ran under the corner and out the other side, a spur below the letter. The join now
+  // runs into the base, and the upright comes down onto it.
+  'dal-fin': () => ({
+    dal: { fin: { src: 'hand', exit: null, s: [{ pts: [[0, 0], [-0.9, 0]] }, { pts: [[-1.05, 2.25, 0.5], [-0.75, 1.6, 0.85], [-0.4, 0.22, 1, 1], [-1.2, 0.02, 1], [-2.1, 0, 0.85], [-2.6, 0.2, 0.4]] }] } }, // prettier-ignore
+  }),
+  // final and isolated qaf: the bowl began at full width outside the head, a blunt end crossing the head's own
+  // close (a star of spurs on its right). It now leaves from inside the head's right wall, as a waw's does; and the
+  // isolated qaf has no joining stub.
+  'qaf-end': base => {
+    const head = base.qaf!.fin!.s[0],
+      bowl: StrokeDef = { pts: [[-0.13, 1.1, 0.7], [-0.12, 0.3, 0.95], [-0.55, -0.75, 1], [-1.6, -1.9, 1], [-2.9, -2.45, 1], [-4, -1.9, 1], [-4.4, -0.7, 1], [-4.65, 0.47, 0.4], [-4.25, 1.28, 0.12]] }; // prettier-ignore
+    return {
+      qaf: {
+        fin: { ...base.qaf!.fin!, s: [head, bowl] },
+        iso: { ...base.qaf!.iso!, s: [{ ...head, pts: head.pts.slice(1) }, bowl] },
+      },
+    };
+  },
+  // initial and medial fa and qaf: the dots, set over the middle of the join, landed on a stem that followed (قلب),
+  // and the join was so short that the stem stood against the head. The dots now sit over the head, and the initial
+  // letter's join is a little longer (no more: a long join brings the letter towards the initial heh).
+  'fa-qaf-room': base => {
+    const room = (f: LetterForm, head: number, more: number): LetterForm => ({
+      ...f,
+      exit: f.exit! - more,
+      dotX: head,
+      s: f.s.map((st, i) => (i === f.s.length - 1 ? { ...st, pts: [...st.pts.slice(0, -1), ...move(st.pts.slice(-1), -more)] } : st)), // prettier-ignore
+    });
+    return {
+      fa: { ini: room(base.fa!.ini!, -0.55, 0.3), med: room(base.fa!.med!, -0.8, 0) },
+      qaf: { ini: room(base.qaf!.ini!, -0.55, 0.3), med: room(base.qaf!.med!, -0.8, 0) },
+    };
+  },
+};
+
 /** The letter forms a style's alternatives replace, given the table they are laid over. */
 export function altForms(alts: ThuluthAlts, base: Forms): Forms {
   const out: Forms = {};
@@ -202,8 +270,13 @@ export function altForms(alts: ThuluthAlts, base: Forms): Forms {
     for (const [fam, fs] of Object.entries(f) as [Family, Partial<Record<Form, LetterForm>>][])
       out[fam] = { ...out[fam], ...fs };
   };
-
-  if (alts.stems) add(stemForms(alts.stems, base));
+  // the corrections first, so that an alternative which redraws the same letter is laid over its correction
+  const fixes = alts.fixes === true ? ALT_FIXES : alts.fixes || [];
+  for (const k of fixes) if (k in FIXES) add(FIXES[k as (typeof ALT_FIXES)[number]](base));
+  const fixed = { ...base };
+  for (const [fam, fs] of Object.entries(out) as [Family, Partial<Record<Form, LetterForm>>][])
+    fixed[fam] = { ...base[fam], ...fs };
+  if (alts.stems) add(stemForms(alts.stems, fixed));
   if (alts.muhammad) add(muhammadForms(alts.muhammad));
   return out;
 }
