@@ -102,6 +102,14 @@ export interface RoundelOptions extends StackOptions {
    *  same baseline do, unless one lies over the other (riding on its shelf or in its bowl, which sets its own space).
    *  The pieces of one word are not held apart by it: stacking, nesting and kerning place those. */
   wordGap?: number;
+  /** The clear space set between the pieces of a word broken by a non-joining letter (pen units, ink edge to ink edge;
+   *  absent or 0: off, and `kern` alone places them). Each piece slides in after the one before, on their baseline,
+   *  until exactly this much space is left between their inks, measured on the pen's own outlines wherever the two
+   *  come nearest: so it runs in over a tail (a ra's, a waw's) and under an overhanging head (an initial hah's) as
+   *  far as the letters' bodies allow, and it stops short of an alif it would otherwise touch. It keeps the space
+   *  from every piece before it on the baseline, not only the last; dots keep half of it. It kerns whether or not
+   *  `kern` is set; a piece that is stacked, or nested in a tail (`nest`), is placed by those instead. */
+  innerGap?: number;
 }
 /** Ruled composition: the structure is fixed and the search only fills it. The baselines are ruled as the field's
  *  chords, read from the top down; each word sits exactly on its line, the words of a line in reading order from the
@@ -254,6 +262,74 @@ function nearOf(S: GroupShape, P: number): Near {
   const f = { P, W, H, d, edge: Int32Array.from(edge) };
   NEARS.set(S, f);
   return f;
+}
+
+/** For the space inside a word (innerGap): a shape's ink as the pen draws it, seen from the left and from the right.
+ *  In bands SIDE_H high (band k holds the heights from (k0 + k) * SIDE_H up), the least and the greatest x of the
+ *  letters' ink (lo, hi: ±Infinity where a band has none), and the same with the dots counted (dlo, dhi). */
+interface Sides {
+  k0: number;
+  n: number;
+  lo: Float64Array;
+  hi: Float64Array;
+  dlo: Float64Array;
+  dhi: Float64Array;
+}
+const SIDE_H = 0.1,
+  SIDES = new WeakMap<GroupShape, Sides>();
+function sidesOf(th: Thuluth, S: GroupShape): Sides {
+  let f = SIDES.get(S);
+  if (f) return f;
+  const k0 = Math.floor(S.y0 / SIDE_H) - 1,
+    n = Math.ceil(S.y1 / SIDE_H) + 2 - k0,
+    lo = new Float64Array(n).fill(Infinity),
+    hi = new Float64Array(n).fill(-Infinity),
+    // (an outline's extremes in a band lie on its edges: each edge walked in steps well under a band)
+    walk = (polys: readonly (readonly (readonly number[])[])[], a: Float64Array, b: Float64Array) => {
+      for (const q of polys)
+        for (let i = 0; i < q.length; i++) {
+          const [ax, ay] = q[i],
+            [bx, by] = q[(i + 1) % q.length],
+            m = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / (SIDE_H * 0.4)));
+          for (let t = 0; t <= m; t++) {
+            const x = ax + ((bx - ax) * t) / m,
+              k = Math.floor((ay + ((by - ay) * t) / m) / SIDE_H) - k0;
+            if (k < 0 || k >= n) continue;
+            if (x < a[k]) a[k] = x;
+            if (x > b[k]) b[k] = x;
+          }
+        }
+    };
+  for (const st of S.b.strokes) if (!st.mark) walk(th.strokePolys(st), lo, hi);
+  const dlo = lo.slice(),
+    dhi = hi.slice();
+  for (const [x, y, sc, rot] of S.b.dots) walk(th.dotPolysAt(x, y, sc ?? 1, rot ?? 0), dlo, dhi);
+  f = { k0, n, lo, hi, dlo, dhi };
+  SIDES.set(S, f);
+  return f;
+}
+/** How far to the right a shape B, its ink lying to the left of A's on the same baseline, can move before less than
+ *  `c` is left between the two (pen units; Infinity when it could pass A by): the first place where any of B's ink
+ *  seen from the right comes within c of any of A's seen from the left. Heights are taken band by band, two bands
+ *  counted a band nearer than they are, so it errs by at most that on the side of more space. */
+function slideRoom(lo: Float64Array, k0a: number, hi: Float64Array, k0b: number, c: number): number {
+  const reach = Math.ceil(c / SIDE_H) + 1,
+    near = new Float64Array(reach + 1);
+  for (let d = 0; d <= reach; d++) {
+    const dy = Math.max(0, d - 1) * SIDE_H;
+    near[d] = dy < c ? Math.sqrt(c * c - dy * dy) : -1;
+  }
+  let room = Infinity;
+  for (let b = 0; b < hi.length; b++) {
+    const xb = hi[b];
+    if (xb === -Infinity) continue;
+    const at = b + k0b - k0a;
+    for (let a = Math.max(0, at - reach), e = Math.min(lo.length - 1, at + reach); a <= e; a++) {
+      const w = near[Math.abs(a - at)];
+      if (w >= 0 && lo[a] - xb - w < room) room = lo[a] - xb - w;
+    }
+  }
+  return room;
 }
 
 /** Each row's first and one-past-last nonzero column of a W × H bitmap (an empty row gives [W, 0]). */
@@ -459,11 +535,27 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
   const DK = discKernel(rims.flat(), n);
   // How a piece sits against the piece before it in its word, for each pair of their variants: measured once and kept
   // for every try (each depends on the two shapes alone), in a table per piece (a piece always follows the same one).
-  const touchMax = o.kernTouch ?? 3,
+  const IG = o.innerGap && o.innerGap > 0 ? o.innerGap : 0,
+    touchMax = o.kernTouch ?? 3,
     tableOf = <T>(tables: (T | undefined)[][], i: number, j: number) => (tables[j] ??= new Array<T | undefined>(shapes[i].length * shapes[j].length)), // prettier-ignore
     kernT: (number | undefined)[][] = new Array(n),
     nestT: ([number, number] | undefined)[][] = new Array(n),
     stackT: ([number, number] | undefined)[][] = new Array(n);
+  // innerGap: how far to the left of a piece A's place the place of a piece B on its baseline must stay for that much
+  // space to be left between their letters (half of it where a dot is the nearer), kept for each pair of shapes
+  const reaches = new WeakMap<GroupShape, WeakMap<GroupShape, number>>(),
+    reachOf = (A: GroupShape, B: GroupShape): number => {
+      let forA = reaches.get(A);
+      if (!forA) reaches.set(A, (forA = new WeakMap()));
+      let v = forA.get(B);
+      if (v === undefined) {
+        const fa = sidesOf(th, A),
+          fb = sidesOf(th, B);
+        v = Math.min(slideRoom(fa.lo, fa.k0, fb.hi, fb.k0, IG), slideRoom(fa.dlo, fa.k0, fb.dhi, fb.k0, IG / 2));
+        forA.set(B, v);
+      }
+      return v;
+    };
   // inside a word, a break after a non-joining letter is kerned: the next piece slides right until it would touch
   const kernOf = (i: number, vi: number, j: number, vj: number): number => {
     const tb = tableOf(kernT, i, j),
@@ -472,6 +564,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     if (kept !== undefined) return kept;
     const A = shapes[i][vi],
       B = shapes[j][vj];
+    // innerGap: in until that much is left between the two, and no further than B's right edge reaching A's (pieces
+    // that never face each other). (B's box stands GAP to the left of A's before it slides: layoutWord.)
+    if (IG) return (tb[at] = Math.min(reachOf(A, B) + B.x1 - A.x0 + GAP * (groups[i].sc || 1), A.x1 - A.x0));
     let k = 0;
     for (let s = 0.25; s <= 4.01; s += 0.25) {
       const bx = -B.x1 + A.x0 - GAP + s;
@@ -553,7 +648,13 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           const [sx, dy] = nestOf(prev, lv[prev], gi, lv[gi]);
           x += sx;
           y = gpos[prev].y + dy;
-        } else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, lv[prev], gi, lv[gi]) - 0.15); // prettier-ignore
+        } else if (IG && prev >= 0 && !groups[gi].newWord) {
+          x += kernOf(prev, lv[prev], gi, lv[gi]);
+          // and clear of the pieces further back on its baseline (the tail of a waw two pieces before)
+          for (let p = q - 2; p >= 0 && !groups[ws[p + 1]].newWord; p--)
+            if (gpos[ws[p]].y === y) x = Math.min(x, gpos[ws[p]].x + reachOf(shapes[ws[p]][lv[ws[p]]], S));
+        }
+        else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, lv[prev], gi, lv[gi]) - 0.15); // prettier-ignore
         gpos[gi] = { x, y };
         cur = x + S.x0 - GAP * (groups[gi].sc || 1);
         prev = gi;

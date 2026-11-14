@@ -92,6 +92,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   orderFirm: { text: BASMALA, set: { orderFirm: 15 }, with: { path: RISING } },
   orderSlack: { text: BASMALA, set: { orderSlack: 6 }, with: { path: RISING } },
   wordGap: { text: BASMALA, set: { wordGap: 2.4 }, with: { ruled: true } },
+  innerGap: { text: BASMALA, set: { innerGap: 0.7 }, with: { ruled: true } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {
