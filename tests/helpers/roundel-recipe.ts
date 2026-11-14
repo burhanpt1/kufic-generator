@@ -91,6 +91,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   // on a path that climbs as it is read, so every word is above the one before
   orderFirm: { text: BASMALA, set: { orderFirm: 15 }, with: { path: RISING } },
   orderSlack: { text: BASMALA, set: { orderSlack: 6 }, with: { path: RISING } },
+  wordGap: { text: BASMALA, set: { wordGap: 2.4 }, with: { ruled: true } },
 };
 
 const draw = (text: string, r: RoundelRecipe) => {

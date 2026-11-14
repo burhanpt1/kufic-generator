@@ -5,8 +5,12 @@
 //   strayDots: a dot group nearer another letter than its own is misread;
 //   doubled: ink run twice along the same course by two different letters. A letter's own overlaps are its design,
 //   and a redraw cannot leave old ink behind (redraw() replaces it).
+//   wordClear, wordsRunOn: words that follow each other on a line standing so close that the line reads as one run of
+//   letters (the tightest gap between two such words; how many pairs stand no further apart than the pieces inside
+//   one of them do).
 import type { Thuluth } from '../engine';
 import { STEM_LETTERS } from '../shape';
+import type { Poly } from '../types';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
 import type { Finished } from './finish';
@@ -72,6 +76,15 @@ export interface RoundelChecks {
   /** Dots and marks left lying on ink once the marks are placed (Finished.marksUnplaced): the measure the score's
    *  "marks without room" was meant to be, which with the solver on is always 0. A candidate for the score. */
   marksUnplaced: number;
+  /** Words that follow each other on a line (wordGaps()): how many such pairs there are; the tightest gap between
+   *  two of them, ink edge to ink edge (pen units, and in nibs; 0 when they touch, null when no two words share a
+   *  line); the widest gap between the pieces inside any of those words (pen units); and how many pairs stand no
+   *  further apart than the widest gap inside either of their two words (a pair that touches always counts). */
+  wordPairs: number;
+  wordClear: number | null;
+  wordClearNibs: number | null;
+  wordInner: number;
+  wordsRunOn: number;
   /** Alignment (alignment()). */
   baselines: number;
   stemRhythm: number;
@@ -120,6 +133,170 @@ export function alignment(r: Roundel, nib: number): { baselines: number; stemRhy
     baselines,
     stemRhythm: counted ? rhythm / counted : 0,
     topLevels: tops.length ? Math.sqrt(twoLevels(tops) / tops.length) / nib : 0,
+  };
+}
+
+/** The ink of each piece as the pen draws it (a quad for each step of each letter stroke; no vowels or dots, which are
+ *  placed afterwards and have their own checks), in composition coordinates, with each quad's box. */
+interface Quad {
+  p: Poly;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+function inkQuads(th: Thuluth, r: Roundel): Quad[][] {
+  return r.shapes.map((S, g) =>
+    S.b.strokes
+      .filter(s => !s.mark)
+      .flatMap(s => th.strokePolys(s))
+      .map(q => {
+        const p: Poly = q.map(([x, y]) => [x + r.st[g].x, y + r.st[g].y]),
+          xs = p.map(v => v[0]),
+          ys = p.map(v => v[1]);
+        return { p, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+      }),
+  );
+}
+const segPoint = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
+  const dx = bx - ax,
+    dy = by - ay,
+    l2 = dx * dx + dy * dy,
+    t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+};
+const inside = (P: Poly, x: number, y: number) => {
+  let c = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++)
+    if (P[i][1] > y !== P[j][1] > y && x < ((P[j][0] - P[i][0]) * (y - P[i][1])) / (P[j][1] - P[i][1]) + P[i][0])
+      c = !c;
+  return c;
+};
+/** The distance between two polygons (0 when they meet). */
+function polyGap(P: Poly, Q: Poly): number {
+  let d = Infinity;
+  for (let i = 0; i < P.length; i++) {
+    const [ax, ay] = P[i],
+      [bx, by] = P[(i + 1) % P.length];
+    for (let j = 0; j < Q.length; j++) {
+      const [cx, cy] = Q[j],
+        [ex, ey] = Q[(j + 1) % Q.length],
+        den = (ey - cy) * (bx - ax) - (ex - cx) * (by - ay);
+      if (den) {
+        const u = ((ex - cx) * (ay - cy) - (ey - cy) * (ax - cx)) / den,
+          v = ((bx - ax) * (ay - cy) - (by - ay) * (ax - cx)) / den;
+        if (u >= 0 && u <= 1 && v >= 0 && v <= 1) return 0;
+      }
+      d = Math.min(d, segPoint(ax, ay, cx, cy, ex, ey), segPoint(cx, cy, ax, ay, bx, by));
+    }
+  }
+  return inside(Q, P[0][0], P[0][1]) || inside(P, Q[0][0], Q[0][1]) ? 0 : d;
+}
+/** The gap between two sets of quads, ink edge to ink edge (0 when they touch). */
+function inkGap(A: Quad[], B: Quad[]): number {
+  let d = Infinity;
+  for (const a of A)
+    for (const b of B) {
+      // (apart by more than the least found so far: no need to look closer)
+      if (Math.hypot(Math.max(0, a.x0 - b.x1, b.x0 - a.x1), Math.max(0, a.y0 - b.y1, b.y0 - a.y1)) >= d) continue;
+      d = Math.min(d, polyGap(a.p, b.p));
+      if (d === 0) return 0;
+    }
+  return d;
+}
+
+/** The words that follow each other on a line, as pairs (the earlier first). The composer's own lines where it has
+ *  them: a ruled composition's (a word riding on another is not on the line: its place is its host's to give); fitted
+ *  lanes', found again as the split of the words, in reading order, into that many runs whose baselines agree best.
+ *  Otherwise two words in turn whose baselines (their first letters') lie within 3 pens of each other. A companion
+ *  text's words are not counted. */
+export function linePairs(r: Roundel, nib: number): [number, number][] {
+  const first: number[] = [];
+  r.groups.forEach((g, i) => !g.comp && first[g.word] === undefined && (first[g.word] = i));
+  const ws = first.map((_, w) => w).filter(w => first[w] !== undefined),
+    base = (w: number) => r.st[first[w]].y + headOf(r.shapes[first[w]]).y,
+    out: [number, number][] = [];
+  if (r.ruled) {
+    const rides = new Set(r.ruled.anchored),
+      lineOf = (w: number) => r.ruled!.breaks.reduce((l, b, k) => (b <= w ? k : l), 0);
+    let prev = -1;
+    for (const w of ws) {
+      if (rides.has(w)) continue;
+      if (prev >= 0 && lineOf(prev) === lineOf(w)) out.push([prev, w]);
+      prev = w;
+    }
+    return out;
+  }
+  if (r.lanes && ws.length > 1) {
+    // the split into n runs with the least spread of baselines inside the runs
+    const n = Math.min(r.lanes.n, ws.length),
+      m = ws.length,
+      ys = ws.map(base),
+      sse = (a: number, b: number) => {
+        const v = ys.slice(a, b),
+          mu = v.reduce((s, y) => s + y, 0) / v.length;
+        return v.reduce((s, y) => s + (y - mu) ** 2, 0);
+      },
+      best = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(Infinity)),
+      cut = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    best[0][0] = 0;
+    for (let k = 1; k <= n; k++)
+      for (let e = k; e <= m; e++)
+        for (let s = k - 1; s < e; s++) {
+          const c = best[k - 1][s] + sse(s, e);
+          if (c < best[k][e]) {
+            best[k][e] = c;
+            cut[k][e] = s;
+          }
+        }
+    for (let k = n, e = m; k >= 1; e = cut[k][e], k--)
+      for (let i = cut[k][e] + 1; i < e; i++) out.push([ws[i - 1], ws[i]]);
+    return out.sort((a, b) => a[0] - b[0]);
+  }
+  for (let i = 1; i < ws.length; i++)
+    if (Math.abs(base(ws[i]) - base(ws[i - 1])) < 3 * nib) out.push([ws[i - 1], ws[i]]);
+  return out;
+}
+
+export interface WordGaps {
+  /** Each pair of words that follow each other on a line: the gap between their inks (pen units, 0 when they touch),
+   *  and the widest gap between the pieces inside either word. */
+  pairs: { a: number; b: number; clear: number; inner: number }[];
+  wordPairs: number;
+  wordClear: number | null;
+  wordClearNibs: number | null;
+  wordInner: number;
+  wordsRunOn: number;
+}
+/** The space between words that follow each other on a line, against the space inside them: a reader finds the words
+ *  by the gaps between them being wider than the gaps within them (after ر, د, و, ا). */
+export function wordGaps(th: Thuluth, r: Roundel): WordGaps {
+  const nib = th.style.nib,
+    quads = inkQuads(th, r),
+    lines = linePairs(r, nib),
+    ofWord = (w: number) => r.groups.flatMap((g, i) => (g.word === w && !g.comp ? quads[i] : [])),
+    // the widest gap between a piece and the piece before it in its word
+    innerOf = new Map<number, number>(),
+    inner = (w: number) => {
+      let v = innerOf.get(w);
+      if (v === undefined) {
+        v = 0;
+        for (let i = 1; i < r.groups.length; i++)
+          if (r.groups[i].word === w && r.groups[i - 1].word === w && !r.groups[i].newWord && !r.groups[i].comp)
+            v = Math.max(v, inkGap(quads[i - 1], quads[i]));
+        innerOf.set(w, v);
+      }
+      return v;
+    },
+    pairs = lines.map(([a, b]) => ({ a, b, clear: inkGap(ofWord(a), ofWord(b)), inner: Math.max(inner(a), inner(b)) })),
+    wordClear = pairs.length ? Math.min(...pairs.map(p => p.clear)) : null;
+  return {
+    pairs,
+    wordPairs: pairs.length,
+    wordClear,
+    wordClearNibs: wordClear == null ? null : wordClear / nib,
+    wordInner: Math.max(0, ...pairs.map(p => p.inner)),
+    wordsRunOn: pairs.filter(p => p.clear <= p.inner).length,
   };
 }
 
@@ -188,7 +365,8 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
         [bx, by] = tangent(twin);
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
-  return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, ...alignment(r, nib) };
+  const { wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn } = wordGaps(th, r);
+  return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn, ...alignment(r, nib) }; // prettier-ignore
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */

@@ -2,7 +2,7 @@
 // dots, ink drawn twice. Reported, not scored.
 import { describe, expect, it } from 'vitest';
 import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { buildRoundel, composeRoundel, crossings, roundelChecks } from '../src/script/thuluth/roundel';
+import { buildRoundel, composeRoundel, crossings, linePairs, roundelChecks, wordGaps } from '../src/script/thuluth/roundel'; // prettier-ignore
 
 const th = thuluth(ROUNDEL_PEN),
   build = () => buildRoundel(th, { text: 'حَسَن رَسُول عَلِيّ', compose: { elongate: true, cross: true, kern: true, tries: 1, iters: 1500, seed: 5 } })!; // prettier-ignore
@@ -44,6 +44,53 @@ describe('roundel checks', () => {
     // the first group's stroke laid again as the second group's, on the same ink
     b.r.shapes[1].b.strokes.push({ ...s, s: s.s.map(q => ({ ...q, x: q.x + d0.x - d1.x, y: q.y + d0.y - d1.y })), own: s.own?.slice() }); // prettier-ignore
     expect(roundelChecks(th, b.r, b.f).doubled).toBeGreaterThan(3);
+  });
+});
+
+describe('the space between words on a line', () => {
+  // an alif, then a word of teeth, set by hand: on one baseline, on two, and run together
+  const at = (wp: { x: number; y: number }[]) => composeRoundel(th, 'ا ببب', { fixed: { lv: [0, 0], wp }, tries: 1 })[0],
+    nib = th.style.nib; // prettier-ignore
+  it('is the gap between their inks, edge to edge', () => {
+    const near = wordGaps(th, at([{ x: 0, y: 0 }, { x: -6, y: 0 }])), // prettier-ignore
+      far = wordGaps(th, at([{ x: 0, y: 0 }, { x: -8, y: 0 }])); // prettier-ignore
+    expect(near.wordPairs).toBe(1);
+    expect(near.wordClear).toBeGreaterThan(0);
+    // moved 2 pen units further off along the line, the gap is at most 2 wider, and nearly that
+    expect(far.wordClear! - near.wordClear!).toBeGreaterThan(1.2);
+    expect(far.wordClear! - near.wordClear!).toBeLessThanOrEqual(2 + 1e-9);
+    expect(far.wordClearNibs).toBeCloseTo(far.wordClear! / nib, 12);
+    expect(far.wordsRunOn).toBe(0);
+  });
+  it('is nothing when they touch, and they run on', () => {
+    const g = wordGaps(th, at([{ x: 0, y: 0 }, { x: 2, y: 0 }])); // prettier-ignore
+    expect(g.wordClear).toBe(0);
+    expect(g.wordsRunOn).toBe(1);
+  });
+  it('is not measured between words on different lines', () => {
+    const r = at([{ x: 0, y: 0 }, { x: -6, y: -12 }]); // prettier-ignore
+    expect(linePairs(r, nib)).toEqual([]);
+    expect(wordGaps(th, r)).toMatchObject({ wordPairs: 0, wordClear: null, wordClearNibs: null, wordsRunOn: 0 });
+  });
+  it('counts a pair standing closer than the pieces inside one of the words', () => {
+    // دار breaks after its dal and its alif: its dal pulled away to the right opens a gap inside the word wider
+    // than the one between the two words
+    const r = composeRoundel(th, 'دار نور', { kern: true, fixed: { lv: [0, 0, 0, 0, 0], wp: [{ x: 0, y: 0 }, { x: -14, y: 0 }] }, tries: 1 })[0], // prettier-ignore
+      whole = wordGaps(th, r);
+    expect(whole.wordPairs).toBe(1);
+    expect(whole.wordClear).toBeGreaterThan(0);
+    r.st[0].x += whole.wordClear! + 3;
+    const g = wordGaps(th, r);
+    expect(g.wordClear).toBeCloseTo(whole.wordClear!, 9);
+    expect(g.wordInner).toBeGreaterThan(g.wordClear!);
+    expect(g.wordsRunOn).toBe(1);
+  });
+  it('is reported with the other checks', () => {
+    const { r, f } = build(),
+      c = roundelChecks(th, r, f),
+      g = wordGaps(th, r);
+    expect([c.wordPairs, c.wordClear, c.wordClearNibs, c.wordInner, c.wordsRunOn]).toEqual([g.wordPairs, g.wordClear, g.wordClearNibs, g.wordInner, g.wordsRunOn]); // prettier-ignore
+    expect(c.wordsRunOn).toBeLessThanOrEqual(c.wordPairs);
   });
 });
 
