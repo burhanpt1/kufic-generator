@@ -216,12 +216,12 @@ export function groupShape(
       // every stacked join's ends (the lab exempted only the first, so a second or third stack always collided)
       ends = b.placed.flatMap(p => ('conn' in p ? [p.from, p.to] : []));
     const farFromJoin = (q: { x: number; y: number }) => ends.every(([ex, ey]) => Math.hypot(q.x - ex, q.y - ey) > 1.4);
+    // (the upper letters' points far from a join, found once and not for each lower point)
+    let upper: typeof B2 | null = null;
     for (const a of A) {
       if (!farFromJoin(a)) continue;
-      for (const c of B2) {
-        if (!farFromJoin(c)) continue;
-        if (Math.hypot(a.x - c.x, a.y - c.y) < nib * 1.15) return null;
-      }
+      upper ??= B2.filter(farFromJoin);
+      for (const c of upper) if (Math.hypot(a.x - c.x, a.y - c.y) < nib * 1.15) return null;
     }
   }
   let x0 = 1e9,
@@ -557,9 +557,11 @@ function groupShapeCollides(th: Thuluth, g: RGroup, level: number, o: StackOptio
     B2 = pts(true),
     ends = b.placed.flatMap(p => ('conn' in p ? [p.from, p.to] : []));
   const far = (q: { x: number; y: number }) => ends.every(([ex, ey]) => Math.hypot(q.x - ex, q.y - ey) > 1.4);
+  let upper: typeof B2 | null = null;
   for (const a of A) {
     if (!far(a)) continue;
-    for (const c of B2) if (far(c) && Math.hypot(a.x - c.x, a.y - c.y) < nib * 1.15) return true;
+    upper ??= B2.filter(far);
+    for (const c of upper) if (Math.hypot(a.x - c.x, a.y - c.y) < nib * 1.15) return true;
   }
   return false;
 }
