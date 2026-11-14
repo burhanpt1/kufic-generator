@@ -10,6 +10,7 @@ import { isLetter } from '../engine';
 import { gapKernel } from '../../../kernels/roundel';
 import { ALIF_ANG, ALIF_PEN, ALIF_SCALE, MARK_PEN, MARK_SHAPES, MARK_SIZE, SIGN_PEN } from '../marks';
 import { sampleStroke } from '../pen';
+import { parkMiller } from '../rng';
 import { Alpha, toPixels } from '../raster';
 import type { MarkName } from '../shape';
 import { BELOW } from '../shape';
@@ -451,8 +452,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   };
   const energy = () => items.reduce((a, it) => a + itemCost(it), 0) + pairCost() + orderCost() + 8 * gapCost();
   // start from the plain positions, nudged into free space, then search
-  let sd = 12345;
-  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const R = parkMiller(12345);
   items.forEach(v => {
     if (v.kind !== 'mark') return;
     const d = items.find(q => q.kind === 'dots' && q.key === v.key && q.side === v.side);

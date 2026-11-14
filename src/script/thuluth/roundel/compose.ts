@@ -6,6 +6,7 @@ import { discKernel } from '../../../kernels/roundel';
 import type { Thuluth } from '../engine';
 import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
+import { parkMiller } from '../rng';
 import { ligate, parseVowels, splitGroups } from '../shape';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
@@ -348,8 +349,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
   );
   const results: Roundel[] = [];
   for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
-    let sd = seed + t * 7919;
-    const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const R = parkMiller(seed + t * 7919);
     const lv = groups.map((_, i) => Math.floor(R() * shapes[i].length)),
       wp = words.map(() => ({ x: 0, y: 0 })),
       gpos: { x: number; y: number }[] = new Array(n),
