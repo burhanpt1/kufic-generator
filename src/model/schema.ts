@@ -3,6 +3,8 @@
 // saved files, mutated genomes) against them.
 import { z } from 'zod';
 import type { Outline } from '../geometry/outlines';
+import { MONO_LIMITS, clampMonoParams } from '../monogram/params';
+import type { MonoLimit } from '../monogram/params';
 import type { LetterStyle } from '../script/types';
 
 export type { Outline };
@@ -127,6 +129,7 @@ export type FillerNode =
       type: 'lines';
       text: string;
       lineGap: number;
+      /** Reserved: validated and kept, but the lines filler does not read it (nor did the lab's). */
       minWords?: number;
       /** Variable line height, 0–1: lines shrink where the region narrows (0 = one letter size throughout). */
       vary?: number;
@@ -516,9 +519,15 @@ const StyleOverrideSchema = z
   .partial();
 
 const point = z.tuple([z.number(), z.number()]);
+/** A polygon's rotation in degrees: ten turns either way (beyond about 1e17 the corners' angles round to one point). */
+const MAX_ROTATION = 3600;
 export const OutlineSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('circle') }),
-  z.object({ kind: z.literal('polygon'), sides: z.number().int().min(3).max(24), rotation: z.number().optional() }),
+  z.object({
+    kind: z.literal('polygon'),
+    sides: z.number().int().min(3).max(24),
+    rotation: z.number().min(-MAX_ROTATION).max(MAX_ROTATION).optional(),
+  }),
   z.object({ kind: z.literal('star'), points: z.number().int().min(3).max(24), depth: z.number().min(0.2).max(0.95) }),
   z.object({ kind: z.literal('preset'), name: z.enum(['teardrop', 'heart', 'mihrab']) }),
   z.object({ kind: z.literal('svg'), path: z.string().min(1).max(200_000) }),
@@ -565,7 +574,20 @@ const features = z.object({
   tips: z.enum(['finial', 'diamond', 'none']).optional(),
   corners: z.enum(['diamond', 'star', 'none']).optional(),
 });
-const param = z.union([z.number(), z.string().max(64), z.boolean()]);
+/** A monogram's parameters, each within its range (monogram/params.ts); unknown keys are dropped. */
+const monoParam = (l: MonoLimit) =>
+  l.kind === 'bool'
+    ? z.boolean()
+    : l.kind === 'enum'
+      ? z.enum(l.values as [string, ...string[]])
+      : l.kind === 'seed'
+        ? z.number()
+        : l.kind === 'int'
+          ? z.number().int().min(l.min).max(l.max)
+          : z.number().min(l.min).max(l.max);
+const monoParams = z.object(
+  Object.fromEntries(Object.entries(MONO_LIMITS).map(([k, l]) => [k, monoParam(l).optional()])),
+);
 
 export const RegionSchema: z.ZodType<RegionNode> = z.lazy(() =>
   z.object({
@@ -619,7 +641,7 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
         'tughra',
         'seal',
       ]),
-      params: z.record(z.string(), param),
+      params: monoParams,
     }),
     z.object({ type: z.literal('abjad'), text: slotName }),
     z.object({ type: z.literal('strapwork'), text: slotName, tiling: z.enum(['square', '488', 'hex', '31212']) }),
@@ -678,7 +700,7 @@ export const CompositionSchema = z
   .superRefine((c, ctx) => {
     // every text reference must name a slot
     const check = (name: string, path: (string | number)[]) => {
-      if (!(name in c.texts)) ctx.addIssue({ code: 'custom', message: `unknown text slot "${name}"`, path });
+      if (!Object.hasOwn(c.texts, name)) ctx.addIssue({ code: 'custom', message: `unknown text slot "${name}"`, path });
     };
     const region = (r: RegionNode, path: (string | number)[]) => {
       r.borders.forEach((b, i) => b.type === 'textBorder' && check(b.text, [...path, 'borders', i, 'text']));
@@ -699,10 +721,64 @@ export class CompositionError extends Error {
   }
 }
 
-/** Validate untrusted JSON as a composition (migrating older versions when there are any). */
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const sameValues = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+  Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(k => a[k] === b[k]);
+function migrateFiller(f: unknown): unknown {
+  if (!isObj(f)) return f;
+  if (f.type === 'monogram' && isObj(f.params)) {
+    // parameters were once free-form: out-of-range numbers are clamped, the rest dropped
+    const p = clampMonoParams(f.params) as Record<string, unknown>;
+    return sameValues(p, f.params) ? f : { ...f, params: p };
+  }
+  if (f.type === 'region') {
+    const node = migrateRegion(f.node);
+    return node === f.node ? f : { ...f, node };
+  }
+  return f;
+}
+function migrateRegion(r: unknown): unknown {
+  if (!isObj(r)) return r;
+  let out = r;
+  const o = r.outline;
+  // rotation was once unbounded: a whole number of turns is taken off
+  if (isObj(o) && o.kind === 'polygon' && typeof o.rotation === 'number' && Math.abs(o.rotation) > MAX_ROTATION)
+    out = { ...out, outline: { ...o, rotation: o.rotation % 360 } };
+  const fill = migrateFiller(r.fill);
+  if (fill !== r.fill) out = { ...out, fill };
+  return out;
+}
+/**
+ * Bring a saved composition (a link, a favourite, a file) up to the current model, before it is validated. Every
+ * reader of stored JSON goes through here (parseComposition, readComposition), so this is the one place a change to
+ * the model is bridged:
+ *  - version 1 is the only version so far; a version 2 gets its upgrade from 1 here;
+ *  - ranges tightened within version 1 (a monogram's parameters, a polygon's rotation) are met by bringing old values
+ *    into range instead of rejecting what used to be valid.
+ * The input is not changed; it is returned as it is when nothing needs doing. Anything it cannot make sense of is
+ * left for the schema to reject.
+ */
+export function migrate(json: unknown): unknown {
+  if (!isObj(json) || !isObj(json.root)) return json;
+  const root = json.root,
+    child = migrateRegion(root.child),
+    spandrels = migrateFiller(root.spandrels);
+  if (child === root.child && spandrels === root.spandrels) return json;
+  const out: Record<string, unknown> = { ...root, child };
+  if (spandrels !== root.spandrels) out.spandrels = spandrels;
+  return { ...json, root: out };
+}
+
+/** Validate untrusted JSON as a composition, migrated first; throws a CompositionError naming what is wrong. */
 export function parseComposition(json: unknown): Composition {
-  const r = CompositionSchema.safeParse(json);
+  const r = CompositionSchema.safeParse(migrate(json));
   if (!r.success) throw new CompositionError(r.error.issues.map(i => ({ path: i.path.join('.'), message: i.message })));
   return r.data as Composition;
 }
+/** The same for stored data that may simply be stale or broken: null instead of an error. */
+export function readComposition(json: unknown): Composition | null {
+  const r = CompositionSchema.safeParse(migrate(json));
+  return r.success ? (r.data as Composition) : null;
+}
+/** Is this a composition as the current model has it (strict: nothing is migrated)? */
 export const isValidComposition = (json: unknown) => CompositionSchema.safeParse(json).success;

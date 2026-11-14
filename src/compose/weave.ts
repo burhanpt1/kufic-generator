@@ -7,6 +7,7 @@ import { bounds, inside } from '../geometry/poly';
 import type { Pt } from '../geometry/types';
 import { partition, repeatSegs } from '../layout/solvers';
 import type { FillerNode, Style } from '../model/schema';
+import { parkMiller } from '../model/seed';
 import type { Segs } from '../types';
 import type { Ctx, RegionResult } from './resolve';
 import { layoutOpts } from './resolve';
@@ -34,8 +35,7 @@ export interface Pass {
 
 /** The knot: closed loops over a lattice of nodes where `on` says a node fits the region. */
 export function knot(S: number, on: (i: number, j: number) => boolean, seed: number, pCross: number): Pass[][] {
-  let rs = seed % 2147483647 || 1;
-  const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+  const rnd = parkMiller(seed);
   const alive = new Uint8Array(S * S);
   for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) alive[j * S + i] = on(i, j) ? 1 : 0;
   // edges between neighbouring nodes: edge[k*4+p] says node k's port p is connected

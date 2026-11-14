@@ -4,6 +4,7 @@ import { bounds, inside } from '../geometry/poly';
 import type { Pt } from '../geometry/types';
 import { partition, repeatSegs } from '../layout/solvers';
 import type { FillerNode, RegionNode, Style } from '../model/schema';
+import { parkMiller } from '../model/seed';
 import type { CellGrid } from '../monogram/grid';
 import { G, markEnds, trimAt } from '../monogram/grid';
 import { buildMonogram } from '../monogram/methods';
@@ -19,9 +20,8 @@ import { weaveFill } from './weave';
  *  by height so each query only looks at nearby edges (the results are the same as scanning every edge). */
 export function crossingsOf(pts: Pt[]): (y: number) => [number, number][] {
   const n = pts.length,
-    ys = pts.map(p => p[1]),
-    Y0 = Math.min(...ys),
-    Y1 = Math.max(...ys),
+    Y0 = pts.reduce((m, p) => Math.min(m, p[1]), Infinity),
+    Y1 = pts.reduce((m, p) => Math.max(m, p[1]), -Infinity),
     K = Math.max(1, Math.min(512, n >> 1)),
     h = (Y1 - Y0) / K || 1;
   const slab = (y: number) => Math.min(K - 1, Math.max(0, Math.floor((y - Y0) / h)));
@@ -297,8 +297,7 @@ function mazeCycle(S: number, ok: (i: number, j: number) => boolean, straight: n
     }
   }
   if (bestN < 2) return null;
-  let sd = seed;
-  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const R = parkMiller(seed);
   // random tree that tends to keep going straight (longer corridors)
   const inT = new Uint8Array(S * S),
     tree: [number, number][] = [];

@@ -6,7 +6,7 @@ import { bounds, inside } from '../geometry/poly';
 import type { Pt, Ring } from '../geometry/types';
 import type { FillerNode, RegionNode, Style } from '../model/schema';
 import type { Ctx, RegionResult } from './resolve';
-import { resolveRegion, styleId } from './resolve';
+import { TEXT_TILE_BUDGET, TILE_BUDGET, note, overTileBudget, resolveRegion, styleId, textProblem } from './resolve';
 import { patternTextItems, WORD_LINE } from './patternText';
 import { translateItem } from './transform';
 
@@ -45,7 +45,7 @@ export function fitInside(U: Pt[], P: Pt[], centres: Pt[]): { c: Pt; s: number }
   return best;
 }
 
-const farthest = (P: Pt[], c: Pt) => Math.max(...P.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])));
+const farthest = (P: Pt[], c: Pt) => P.reduce((m, p) => Math.max(m, Math.hypot(p[0] - c[0], p[1] - c[1])), -Infinity);
 
 export type FillerImpl = (
   f: FillerNode,
@@ -62,10 +62,26 @@ export const registerFiller = (type: FillerNode['type'], impl: FillerImpl) => (E
 export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ctx: Ctx, region: RegionNode) {
   const sid = styleId(ctx, style),
     inner = res.inner;
+  ctx.dead = false;
   if (!inner || inner.area < 1) {
     ctx.fill = { type: f.type, ok: false, note: 'no room left inside the borders' };
     return;
   }
+  // a text with nothing to write fails here, at once, whatever would have written it (the abjad of no letters is 0)
+  const slot = 'text' in f && f.type !== 'abjad' && f.text ? f.text : null,
+    why = slot !== null && Object.hasOwn(ctx.comp.texts, slot) ? textProblem(ctx, slot, style.letter) : null;
+  if (why) {
+    note(ctx, why);
+    ctx.fill = { type: f.type, ok: false, note: why };
+    ctx.dead = true;
+    return;
+  }
+  const tooFine = (what: string, radius: number, scale: number, budget?: number) => {
+    if (!overTileBudget(ctx, what, radius, scale, budget)) return false;
+    ctx.fill = { type: f.type, ok: false, note: 'the tiles are too small for this size' };
+    ctx.dead = true;
+    return true;
+  };
   const area = [inner.pts];
   switch (f.type) {
     case 'abjad': {
@@ -87,6 +103,9 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
     }
     case 'pattern': {
       const cr = centreOf(res)!;
+      const inWords = !!f.text && !!ctx.comp.texts[f.text],
+        budget = inWords ? TEXT_TILE_BUDGET : TILE_BUDGET;
+      if (tooFine('the pattern', farthest(inner.pts, cr.c) * 1.05, f.pattern.scale, budget)) return;
       if (f.text && ctx.comp.texts[f.text]) {
         // the lines written in the text, in the accent colour, one colour throughout
         const ws = styleId(ctx, {
@@ -110,7 +129,7 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
             ws,
             ++ctx.ring,
           );
-        ctx.items.push(...items);
+        for (const it of items) ctx.items.push(it);
         ctx.fill = { type: 'pattern', ok: items.length > 0, note: `${items.length} lines in words` };
         return;
       }
@@ -140,6 +159,7 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
     case 'iznik': {
       const cr = centreOf(res),
         c: Pt = cr?.c ?? boundsCentre(inner.pts);
+      if (tooFine('the tilework', farthest(inner.pts, c), f.iznik.scale)) return;
       ctx.items.push({ type: 'tilework', style: sid, area, centre: c, radius: farthest(inner.pts, c), iznik: f.iznik });
       ctx.fill = { type: 'iznik', ok: true };
       return;
@@ -153,7 +173,7 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
       const cr = centreOf(res);
       if (!cr) break;
       const unit = unitRing(f.node.outline),
-        reach = Math.max(...unit.pts.map(([x, y]) => Math.hypot(x, y)));
+        reach = unit.pts.reduce((m, [x, y]) => Math.max(m, Math.hypot(x, y)), -Infinity);
       // the largest size at which the nested outline itself fits the space left inside (an arch in an arch fills it),
       // never smaller than its circle fitting the largest clear circle
       const circle = { c: cr.c, s: (cr.r * 0.96) / reach };
@@ -186,6 +206,8 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
         place(circle);
       }
       const innerFill = ctx.fill as { type: string } | null;
+      // whether the nested region's own fill could be helped by size is its business, not this region's
+      ctx.dead = false;
       ctx.fill = { type: 'region', ok: true, note: innerFill ? `inner fill: ${innerFill.type}` : undefined };
       return;
     }
