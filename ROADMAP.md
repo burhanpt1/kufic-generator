@@ -87,6 +87,17 @@ What is already done is listed at the end only as milestones; the commit history
 - [~] **The handover's last test is still missing: "dots and vowels don't overlap ink"**, at every pen and in
   roundels. The lab found شيخ at 0.32 overlap (lab HANDOVER §9; refresh/HANDOVER.md).
 
+- [r] **Drafted alternatives behind `style.alts`** (`src/script/thuluth/alts.ts`), off by default, for the owner to
+  judge on sheets (`LETTERS=sheets npx vitest run tests/letters.test.ts`):
+  - `stems: 'a' | 'b' | 'c'`: one clean head for every tall stem (a pointed tarwis, a plain cut, a fuller jali head).
+    All three make the alif the lam's height and weight.
+  - `muhammad: 'a' | 'b' | 'c'`: the letters of محمد redrawn everywhere, the jali ligature in the name only, or both.
+    The ligature's roof passes under the mim; check against a master. Initial hah is not redrawn.
+  - `fixes`: medial and isolated kaf, final dal, final qaf, fa/qaf dots.
+  - With the recommended set, initial mim/heh and final alif/lam come closer in the confusion matrix (0.51 to 0.37,
+    0.60 to 0.37), still above 0.3; three medial pairs leave the under-0.3 list.
+  - The audit's weakest forms not yet redrawn: final ain, medial ain, final hah, final waw's neck, final lam-alif.
+
 ## Thuluth composition and roundels
 
 - [ ] **Tughra-style thuluth composition.** The stacked, interlocked pieces of a tughra, beyond the Kufic tughra
@@ -110,6 +121,15 @@ What is already done is listed at the end only as milestones; the commit history
   - hairline piercing (`e06c0d0`)
   - nesting, drawn-out tails, rising stems and `stackAt` (`d77fd76`, `1d7f561`, `8727be9`)
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
+  - `wordGap` and `innerGap`: a clear space between words on a line, and a set space between the unjoined pieces
+    inside a word (the kern stopped at 4 pen units, which left 2.5 nibs between ر and ح in الرحمن). Suggested for
+    rating: lanes `wordGap: 2.4`, ruled `wordGap: 1.6`, both with `innerGap: 0.7`. On vocalised texts innerGap leaves
+    1–2 more marks without room: the vowel solver does not yet use the space over a hah's head. Sheets:
+    `WORDGAP=1` and `INNERGAP=1` (`tests/word-gap-sheet.test.ts`, `tests/inner-gap-sheet.test.ts`).
+- [ ] **The straight-line engine spaces unjoined pieces by their boxes** (5.55 pen units in الرحمن; `setLine` in
+      `engine.ts`). Set the next piece by first ink contact at a clearance, as `innerGap` does in roundels.
+- [ ] **With wordGap on ruled lines, the line count is chosen by a tuned weight** (`largestLetters`,
+      `roundel/index.ts`), checked on four texts only.
 - [r] **The Timurid band (Kufic over jali thuluth)** becomes a preset only once it rates well (`bd147de`). It is not
   in round 2, so it stays a showpiece until a later round.
 
