@@ -31,12 +31,22 @@ export interface BowlOptions {
   free?: boolean;
 }
 
+/** The default clearance below the lowest letter, beyond the pen's width and a gap that every letter keeps from the
+ *  bowl (with the roundel pen, 5.6: the clearance the lab's recipes ask for). */
+const BOWL_ROOM = 3;
+/** How deep in the bowl a letter may reach, as a share of the inner ellipse's depth: the bowl is deepened to keep
+ *  every letter above this, so its half-widths stay within 2.3 times a letter's distance from the centre. */
+const BOWL_DEPTH_MAX = 0.9;
+
 const letters = (r: Roundel, i: number) => r.shapes[i].b.placed.filter(isLetter);
 
 /** The oval of a great final bowl (a returning ya or a final nun going deep): the lower half of an ellipse that clears
  *  the other letters, as wide as the composition, before it is drawn. Null when there is no such letter. */
 export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
-  const clear = o.clear ?? 2.6,
+  // every letter below the centre line stays inside the bowl by a pen's width and a gap; the bowl's bottom lies
+  // deeper than that below the lowest letter by default, so the letters sit well inside the curve
+  const gap = th.style.nib + 1.0,
+    clear = o.clear ?? gap + BOWL_ROOM,
     side = o.side ?? 1.0;
   let gi = -1,
     P: PlacedLetter | null = null;
@@ -90,18 +100,20 @@ export function bowlOval(th: Thuluth, r: Roundel, o: BowlOptions = {}) {
     aL = free ? cx - X0 + side : Math.max(cx - (J.x - lead), cx - X0 + side),
     aR = X1 - cx + side;
   const size0 = aL + aR + b;
-  // every letter below the centre line stays inside the bowl by a pen's width and a gap: a descending tail (a ra's)
-  // low at the side, where the bowl rises, widens that side, and anything too deep lowers the bottom
-  const gap = th.style.nib + 1.0;
-  for (let pass = 0; pass < 3; pass++)
-    other.forEach(([x, y]) => {
-      const dy = cy - y;
-      if (dy <= 0) return;
-      if (dy > b - gap) b = dy + gap + 0.01;
-      const need = gap + Math.abs(x - cx) / Math.sqrt(1 - (dy / (b - gap)) ** 2);
-      if (x < cx) aL = Math.max(aL, need);
-      else aR = Math.max(aR, need);
-    });
+  // a descending tail (a ra's) low at the side, where the bowl rises, widens that side, and anything too deep lowers
+  // the bottom. The bottom is settled first, over every letter: a letter standing right on the bottom of the inner
+  // ellipse (a clearance no larger than the gap) would ask for a bowl of unbounded width
+  other.forEach(([, y]) => {
+    const dy = cy - y;
+    if (dy > 0) b = Math.max(b, gap + dy / BOWL_DEPTH_MAX);
+  });
+  other.forEach(([x, y]) => {
+    const dy = cy - y;
+    if (dy <= 0) return;
+    const need = gap + Math.abs(x - cx) / Math.sqrt(1 - Math.min(BOWL_DEPTH_MAX, dy / (b - gap)) ** 2);
+    if (x < cx) aL = Math.max(aL, need);
+    else aR = Math.max(aR, need);
+  });
   if (free) {
     // the letter moves to the head of its bowl
     const dx = cx - aL + 0.6 - J.x;
