@@ -577,9 +577,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     // ruled: the lines as the field's chords, scaled so their length is about the text's (pathFill)
     let brk: number[] = [0],
       pk = 1,
-      wk = 1,
-      lineFit: { over: number; loose: number }[] = [];
-    const anc = new Uint8Array(W),
+      wk = 1;
+    const lineFit: { over: number; loose: number }[] = [],
+      anc = new Uint8Array(W),
       chord: { x: number; y: number; half: number }[] = [],
       lineOf = (w: number) => {
         let l = 0;
