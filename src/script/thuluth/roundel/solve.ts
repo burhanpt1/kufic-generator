@@ -283,13 +283,13 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
         items.push({ kind: 'orn', m: sign, side: -1, w, h, x: L.lx, y: ay, ax: L.lx, ay, lx0: L.x0, lx1: L.x1, top: L.top, bot: L.bot, sc }); // prettier-ignore
       });
   });
-  // (a dots item's box is kept until its arrangement changes: the same numbers, without measuring again)
+  // (an item's box is kept, a dots item's until its arrangement changes: the same numbers, without measuring again;
+  // a mark's or a sign's size is set once, when the item is made)
   const boxes = new WeakMap<Item, { arr: unknown; n: number; sc: number; box: [number, number] }>();
   const boxOf = (it: Item): [number, number] => {
-    if (it.kind !== 'dots') return [it.w!, it.h!];
     const kept = boxes.get(it);
-    if (kept && kept.arr === it.arr && kept.n === it.n && kept.sc === it.sc) return kept.box;
-    const box = measure(it);
+    if (kept && (it.kind !== 'dots' || (kept.arr === it.arr && kept.n === it.n && kept.sc === it.sc))) return kept.box;
+    const box: [number, number] = it.kind !== 'dots' ? [it.w!, it.h!] : measure(it);
     boxes.set(it, { arr: it.arr, n: it.n!, sc: it.sc, box });
     return box;
   };
@@ -389,8 +389,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     let e2 = 0;
     for (let k = 0; k < nI; k++) {
       const it = items[k],
-        [w, h] = boxOf(it),
-        r = Math.hypot(w, h) / 2;
+        r = Math.hypot(boxW[k], boxH[k]) / 2;
       if (it.x === rowX[k] && it.y === rowY[k] && r === rowR[k]) continue;
       rowX[k] = it.x;
       rowY[k] = it.y;
@@ -422,37 +421,79 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       (0.5 * ((it.x - it.ax) ** 2 + (it.y - it.ay) ** 2)) / (it.sc * it.sc)
     );
   };
-  const pairCost = () => {
-    let c = 0;
-    for (let a = 0; a < items.length; a++)
-      for (let b = a + 1; b < items.length; b++) {
-        const A2 = items[a],
-          B = items[b],
-          [wa, ha] = boxOf(A2),
-          [wb, hb] = boxOf(B);
-        const m = Math.max(0.4, clear),
-          ox2 = Math.min(A2.x + wa / 2, B.x + wb / 2) - Math.max(A2.x - wa / 2, B.x - wb / 2) + m,
-          oy2 = Math.min(A2.y + ha / 2, B.y + hb / 2) - Math.max(A2.y - ha / 2, B.y - hb / 2) + m;
-        if (ox2 > 0 && oy2 > 0) c += (clear ? 200 : 40) * ox2 * oy2;
-      }
-    return c;
+  // what two items pay for lying over each other (a before b in the list), or 0
+  const pairTerm = (a: number, b: number) => {
+    const A2 = items[a],
+      B = items[b],
+      wa = boxW[a],
+      ha = boxH[a],
+      wb = boxW[b],
+      hb = boxH[b];
+    const m = Math.max(0.4, clear),
+      ox2 = Math.min(A2.x + wa / 2, B.x + wb / 2) - Math.max(A2.x - wa / 2, B.x - wb / 2) + m,
+      oy2 = Math.min(A2.y + ha / 2, B.y + hb / 2) - Math.max(A2.y - ha / 2, B.y - hb / 2) + m;
+    return ox2 > 0 && oy2 > 0 ? (clear ? 200 : 40) * ox2 * oy2 : 0;
   };
-  // a vowel on the same side of the same letter as its dots sits beyond them, further from the letter
+  // a vowel on the same side of the same letter as its dots sits beyond them, further from the letter (the pairs of
+  // a vowel and such dots, found once: neither changes letter or side)
+  const beyond: [number, number][] = [];
+  items.forEach((v, a) => {
+    if (v.kind !== 'mark') return;
+    items.forEach((d, b) => {
+      if (d.kind === 'dots' && d.key === v.key && d.side === v.side) beyond.push([a, b]);
+    });
+  });
   const orderCost = () => {
     let c = 0;
-    items.forEach(v => {
-      if (v.kind !== 'mark') return;
-      items.forEach(d => {
-        if (d.kind !== 'dots' || d.key !== v.key || d.side !== v.side) return;
-        const [, hv] = boxOf(v),
-          [, hd] = boxOf(d),
-          gap = v.side > 0 ? v.y - hv / 2 - (d.y + hd / 2) : d.y - hd / 2 - (v.y + hv / 2);
-        if (gap < 0.2) c += 60 * (0.2 - gap) + 20;
-      });
-    });
+    for (let q = 0; q < beyond.length; q++) {
+      const a = beyond[q][0],
+        b = beyond[q][1],
+        v = items[a],
+        d = items[b],
+        hv = boxH[a],
+        hd = boxH[b],
+        gap = v.side > 0 ? v.y - hv / 2 - (d.y + hd / 2) : d.y - hd / 2 - (v.y + hv / 2);
+      if (gap < 0.2) c += 60 * (0.2 - gap) + 20;
+    }
     return c;
   };
-  const energy = () => items.reduce((a, it) => a + itemCost(it), 0) + pairCost() + orderCost() + 8 * gapCost();
+  // The energy: each item's own cost, each pair's, the order of vowels and dots, and the gaps. A step of the search
+  // moves one item, so each item's cost and each pair's is kept until one of its items moves or changes its
+  // arrangement, and the sums add the same terms in the same order as when every one was measured each time (a pair
+  // that pays nothing adds a zero).
+  const seenX = new Float64Array(nI).fill(NaN),
+    seenY = new Float64Array(nI),
+    seenArr = new Array<string | undefined>(nI),
+    boxW = new Float64Array(nI),
+    boxH = new Float64Array(nI),
+    own = new Float64Array(nI),
+    pairs = new Float64Array(nI * nI),
+    changed: number[] = [];
+  const energy = () => {
+    changed.length = 0;
+    for (let k = 0; k < nI; k++) {
+      const it = items[k];
+      if (it.x === seenX[k] && it.y === seenY[k] && it.arr === seenArr[k]) continue;
+      const box = boxOf(it);
+      seenX[k] = it.x;
+      seenY[k] = it.y;
+      seenArr[k] = it.arr;
+      boxW[k] = box[0];
+      boxH[k] = box[1];
+      own[k] = itemCost(it);
+      changed.push(k);
+    }
+    for (let q = 0; q < changed.length; q++) {
+      const k = changed[q];
+      for (let j = 0; j < k; j++) pairs[j * nI + k] = pairTerm(j, k);
+      for (let j = k + 1; j < nI; j++) pairs[k * nI + j] = pairTerm(k, j);
+    }
+    let e = 0,
+      c = 0;
+    for (let k = 0; k < nI; k++) e += own[k];
+    for (let a = 0; a < nI; a++) for (let b = a + 1; b < nI; b++) c += pairs[a * nI + b];
+    return e + c + orderCost() + 8 * gapCost();
+  };
   // start from the plain positions, nudged into free space, then search
   const R = parkMiller(12345);
   items.forEach(v => {
@@ -496,24 +537,31 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     const density = o.density ?? o.markDensity ?? 0.5,
       thresh = 3.2 - 1.6 * density,
       maxN = Math.round(2 + 10 * density);
-    for (let n2 = 0; n2 < maxN; n2++) {
-      let best: [number, number, number] | null = null;
-      for (const [gx, gy, d0] of cells) {
-        let d = d0;
-        for (const it of [...items, ...fillers]) {
-          const [w, h] = 'kind' in it ? boxOf(it) : [it.w, it.h];
-          d = Math.min(d, Math.max(0, Math.hypot(gx - it.x, gy - it.y) - Math.hypot(w, h) / 2));
-        }
-        // in a shaped field an ornament keeps its whole size inside the outline (its pointed or narrow parts)
-        if (D.field) d = Math.min(d, FT.room(gx, gy));
-        if (!best || d > best[2]) best = [gx, gy, d];
+    // each cell's room: the least of its clearance to the ink, to every item, and to the ornaments set so far (a
+    // least value is the same in whatever order it is taken, so it is kept and each new ornament only lowers it)
+    const room = new Float64Array(nC),
+      lower = (c: number, x: number, y: number, w: number, h: number) =>
+        (room[c] = Math.min(room[c], Math.max(0, Math.hypot(CX[c] - x, CY[c] - y) - Math.hypot(w, h) / 2)));
+    for (let c = 0; c < nC; c++) {
+      room[c] = CB[c];
+      for (const it of items) {
+        const [w, h] = boxOf(it);
+        lower(c, it.x, it.y, w, h);
       }
-      if (!best || best[2] < thresh) break;
+      // in a shaped field an ornament keeps its whole size inside the outline (its pointed or narrow parts)
+      if (D.field) room[c] = Math.min(room[c], FT.room(CX[c], CY[c]));
+    }
+    for (let n2 = 0; n2 < maxN; n2++) {
+      let at = -1;
+      for (let c = 0; c < nC; c++) if (at < 0 || room[c] > room[at]) at = c;
+      if (at < 0 || room[at] < thresh) break;
       // only the trefoil or plume: the tirnak looked like a stray fatha; ornaments stay about a vowel's size
       const m: Ornament = o.ornStyle === 'trefoil' ? 'tirfil' : 'plume',
         [w, h] = ORN_SIZE[m],
-        sz = Math.min(0.85, best[2] / 2.8);
-      fillers.push({ m, x: best[0], y: best[1], w: w * sz, h: h * sz, sz });
+        sz = Math.min(0.85, room[at] / 2.8),
+        f = { m, x: CX[at], y: CY[at], w: w * sz, h: h * sz, sz };
+      fillers.push(f);
+      for (let c = 0; c < nC; c++) lower(c, f.x, f.y, f.w, f.h);
     }
   }
   // the shadda and the dagger alif over one letter (as in الله) are one compound mark: the alif stands on the shadda
