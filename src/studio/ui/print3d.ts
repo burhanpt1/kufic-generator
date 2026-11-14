@@ -32,7 +32,14 @@ export function wirePrint3d(app: App) {
     source = $<HTMLSelectElement>('p3Source'),
     file = $<HTMLInputElement>('p3File'),
     info = $('p3Info'),
-    num = (id: string) => Number($<HTMLInputElement>(id).value);
+    // a number field's value, kept within the field's own min and max (0 for anything that is not a number)
+    num = (id: string) => {
+      const e = $<HTMLInputElement>(id),
+        v = Number(e.value),
+        lo = e.min ? Number(e.min) : -Infinity,
+        hi = e.max ? Number(e.max) : Infinity;
+      return Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : 0));
+    };
   let image: HTMLImageElement | null = null,
     pixels: Pixels | null = null,
     key = '';
@@ -126,7 +133,13 @@ export function wirePrint3d(app: App) {
     try {
       image = await loadImage(url);
     } catch (e) {
-      info.textContent = String((e as Error).message);
+      image = null;
+      key = '';
+      info.textContent = `Could not read ${f.name} as an image.`;
+      console.error(e);
+      return;
+    } finally {
+      URL.revokeObjectURL(url); // the decoded image no longer needs it
     }
     refresh();
   };
@@ -138,20 +151,28 @@ export function wirePrint3d(app: App) {
     if (!px) return void (info.textContent = 'Pick an image.');
     info.textContent = 'Meshing…';
     await new Promise(r => setTimeout(r, 20));
-    const hm = heightmap(px),
-      size = { widthMM: num('p3Width'), baseMM: num('p3Base'), reliefMM: num('p3Relief') },
-      mesh = surface()
-        ? heightmapToMesh(hm, { ...size, resolution: num('p3Res') / 4 })
-        : terraceMesh(hm, { ...size, levels: levelsOf(hm) }),
-      stl = meshToSTL(mesh),
-      tris = mesh.triangles.length / 3;
-    if (!tris) return void (info.textContent = 'Nothing left to print: everything is cut away.');
-    saveSTL(
-      document,
-      source.value === 'design' ? 'kufic' : (file.files?.[0]?.name.replace(/\.[^.]+$/, '') ?? 'image'),
-      stl,
-    );
-    info.textContent = `Saved: ${tris.toLocaleString()} triangles, ${(stl.length / 1e6).toFixed(1)} MB.`;
+    try {
+      const hm = heightmap(px),
+        size = { widthMM: num('p3Width'), baseMM: num('p3Base'), reliefMM: num('p3Relief') },
+        flat = surface() ? null : terraceMesh(hm, { ...size, levels: levelsOf(hm) }),
+        mesh = flat ?? heightmapToMesh(hm, { ...size, resolution: num('p3Res') / 4 }),
+        stl = meshToSTL(mesh),
+        tris = mesh.triangles.length / 3,
+        open = flat?.failedFaces ?? 0;
+      if (!tris) return void (info.textContent = 'Nothing left to print: everything is cut away.');
+      saveSTL(
+        document,
+        source.value === 'design' ? app.fileName : (file.files?.[0]?.name.replace(/\.[^.]+$/, '') ?? 'image'),
+        stl,
+      );
+      info.textContent =
+        `Saved: ${tris.toLocaleString()} triangles, ${(stl.length / 1e6).toFixed(1)} MB.` +
+        (open
+          ? ` Warning: ${open} flat face${open === 1 ? '' : 's'} could not be closed cleanly, so the solid may have small holes. Check it in your slicer, or try another Detail or Smooth setting.`
+          : '');
+    } catch (e) {
+      info.textContent = 'Could not make the STL: ' + String((e as Error)?.message ?? e);
+    }
   };
 
   return {

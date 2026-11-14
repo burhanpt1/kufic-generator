@@ -8,6 +8,7 @@ import type { Composition, FillerNode, SpandrelNode } from '../../model/schema';
 import { CompositionSchema } from '../../model/schema';
 import { SILHOUETTE_NAMES, SILHOUETTES } from '../../model/silhouettes';
 import type { SilhouetteName } from '../../model/silhouettes';
+import { shape } from '../../engine';
 import { abjadTable, valueOf } from '../chronogram';
 import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt } from '../tree';
 import type { Path } from '../tree';
@@ -15,7 +16,7 @@ import { svgOutline } from './editor-outline';
 import { pathPad } from './editor-path';
 import { valueLabel } from './labels';
 import type { App } from './main';
-import { $, h } from './main';
+import { $, h, keepFocus } from './main';
 
 const GROUPS: [string, Trait[]][] = [
   ['Shape', ['outline', 'sides', 'points', 'depth', 'spread']],
@@ -71,6 +72,7 @@ export function wireEditor(app: App) {
         const ta = h('textarea', {
           class: 'ar',
           dir: 'rtl',
+          lang: 'ar',
           rows: 2,
           id: 'slot-' + name,
           'aria-label': `Text ${name}`,
@@ -81,13 +83,18 @@ export function wireEditor(app: App) {
           h('option', { value: 'fill', textContent: 'repeat to fill' }),
           h('option', { value: 'once', textContent: 'once' }),
         );
+        // typing replaces the composition as it goes; the one from before the edit is its undo step (one per edit)
+        let editing = false;
         ta.oninput = () => {
           const n = structuredClone(app.comp);
           n.texts[name].text = ta.value;
           const v = valid(n);
-          if (v) app.set(v, { replace: true });
+          if (!v) return;
+          if (!editing) app.checkpoint();
+          editing = true;
+          app.set(v, { replace: true });
         };
-        ta.onchange = () => app.set(structuredClone(app.comp)); // one undo step per edit
+        ta.onchange = ta.onblur = () => (editing = false);
         rep.onchange = () => {
           const n = structuredClone(app.comp);
           n.texts[name].repeat = rep.value as 'fill';
@@ -97,7 +104,7 @@ export function wireEditor(app: App) {
           h(
             'div',
             { class: 'slot' },
-            h('div', { class: 'meta' }, h('span', {}, name), h('span', { id: 'abjad-' + name })),
+            h('div', { class: 'meta' }, h('span', {}, name), h('span', { id: 'abjad-' + name, 'aria-live': 'polite' })),
             ta,
             h('div', { class: 'bar' }, rep),
           ),
@@ -108,7 +115,10 @@ export function wireEditor(app: App) {
       const ta = $<HTMLTextAreaElement>('slot-' + name);
       if (document.activeElement !== ta && ta.value !== s.text) ta.value = s.text;
       (ta.nextElementSibling!.firstElementChild as HTMLSelectElement).value = s.repeat;
-      $('abjad-' + name).textContent = `abjad ${valueOf(s.text, T)}`;
+      // characters no letter is drawn for (Latin, emoji, digits) are named rather than dropped silently
+      const lost = shape(s.text).unsupported;
+      $('abjad-' + name).textContent =
+        `abjad ${valueOf(s.text, T)}` + (lost.length ? ` · not drawn: ${lost.slice(0, 12).join(' ')}` : '');
     }
   }
 
@@ -116,7 +126,7 @@ export function wireEditor(app: App) {
   function select(trait: Trait, cur: string | number | boolean | undefined) {
     const vals = [...(TRAITS[trait].values as readonly (string | number | boolean)[])];
     if (cur !== undefined && !vals.includes(cur)) vals.unshift(cur);
-    const s = h('select', { 'aria-label': TRAITS[trait].label });
+    const s = h('select', { 'aria-label': TRAITS[trait].label, 'data-k': trait });
     vals.forEach((v, i) =>
       s.append(h('option', { value: String(i), textContent: valueLabel(trait, v), selected: v === cur })),
     );
@@ -125,7 +135,7 @@ export function wireEditor(app: App) {
       applyTrait(n, trait, vals[+s.value], new Rng(n.seed || 1));
       const v = valid(n);
       if (v) app.set(v);
-      else drawGuided();
+      else redrawGuided();
     };
     return h('label', {}, TRAITS[trait].label, s);
   }
@@ -136,7 +146,11 @@ export function wireEditor(app: App) {
       box = $('guided');
     box.innerHTML = '';
     for (const [name, traits] of GROUPS) {
-      const d = h('details', { class: 'group', open: open.has(name) }, h('summary', {}, name));
+      const d = h(
+        'details',
+        { class: 'group', open: open.has(name) },
+        h('summary', { 'data-k': 'group ' + name }, name),
+      );
       d.ontoggle = () => (d.open ? open.add(name) : open.delete(name));
       const f = h('div', { class: 'fields' });
       for (const k of traits) if (rel.has(k)) f.append(select(k, t[k]));
@@ -149,7 +163,7 @@ export function wireEditor(app: App) {
   function shapeExtras(c: Composition) {
     const canvas = h(
       'select',
-      { 'aria-label': 'Canvas' },
+      { 'aria-label': 'Canvas', 'data-k': 'canvas' },
       ...(['square', 'portrait', 'landscape'] as const).map(v =>
         h('option', { value: v, textContent: v[0].toUpperCase() + v.slice(1), selected: c.canvas.shape === v }),
       ),
@@ -159,7 +173,7 @@ export function wireEditor(app: App) {
       n.canvas.shape = canvas.value as 'square';
       app.set(n);
     };
-    const seed = h('input', { type: 'number', value: String(c.seed), 'aria-label': 'Seed' });
+    const seed = h('input', { type: 'number', value: String(c.seed), 'aria-label': 'Seed', 'data-k': 'seed' });
     seed.onchange = () => {
       const n = structuredClone(app.comp);
       n.seed = Math.max(0, Math.floor(+seed.value || 0));
@@ -173,10 +187,19 @@ export function wireEditor(app: App) {
       const n = setAt(app.comp, [...target(), 'outline'], { kind: 'svg', path });
       if (n) app.set(n);
     };
-    const lib = h('select', { 'aria-label': 'Silhouette' }, h('option', { value: '', textContent: 'Choose…' }));
+    const lib = h(
+      'select',
+      { 'aria-label': 'Silhouette', 'data-k': 'silhouette' },
+      h('option', { value: '', textContent: 'Choose…' }),
+    );
     for (const [k, name] of Object.entries(SILHOUETTE_NAMES)) lib.append(h('option', { value: k, textContent: name }));
     lib.onchange = () => lib.value && setOutline(SILHOUETTES[lib.value as SilhouetteName]);
-    const file = h('input', { type: 'file', accept: '.svg,image/svg+xml', 'aria-label': 'Outline from an SVG file' });
+    const file = h('input', {
+      type: 'file',
+      accept: '.svg,image/svg+xml',
+      'aria-label': 'Outline from an SVG file',
+      'data-k': 'outline file',
+    });
     file.onchange = async () => {
       const f = file.files?.[0];
       if (!f) return;
@@ -195,14 +218,14 @@ export function wireEditor(app: App) {
   function countingFields(c: Composition) {
     const sys = h(
       'select',
-      { 'aria-label': 'Abjad values' },
+      { 'aria-label': 'Abjad values', 'data-k': 'abjad system' },
       h('option', { value: 'mashriqi', textContent: 'Eastern (Mashriqi)' }),
       h('option', { value: 'maghribi', textContent: 'Western (Maghribi)' }),
     );
     sys.value = c.style.abjad.system;
     const tm = h(
       'select',
-      { 'aria-label': 'ة counts' },
+      { 'aria-label': 'ة counts', 'data-k': 'ta marbuta' },
       h('option', { value: '5', textContent: '5 (as ه)' }),
       h('option', { value: '400', textContent: '400 (as ت)' }),
     );
@@ -230,21 +253,25 @@ export function wireEditor(app: App) {
     const box = $('layers');
     box.innerHTML = '';
     for (const l of ls) {
-      const row = h(
-        'div',
-        { class: 'layer' + (same(l.path, sel) ? ' sel' : ''), style: `padding-left:${6 + l.depth * 14}px` },
-        h('span', { class: 'name', title: l.label }, l.label),
-      );
+      const on = same(l.path, sel),
+        k = l.path.join('/'),
+        // the name is the row's button, so a layer can be chosen from the keyboard
+        row = h(
+          'div',
+          { class: 'layer' + (on ? ' sel' : ''), style: `padding-left:${6 + l.depth * 14}px` },
+          h('button', { class: 'name', title: l.label, 'aria-current': on, 'data-k': k }, l.label),
+        );
       row.onclick = () => {
         sel = l.path;
-        drawLayers();
-        drawGuided(); // the outline controls follow the selected region
+        redrawLayers();
+        redrawGuided(); // the outline controls follow the selected region
       };
       const btn = (label: string, tip: string, f: () => void) =>
         h('button', {
           textContent: label,
           title: tip,
-          'aria-label': tip,
+          'aria-label': `${tip}: ${l.label}`,
+          'data-k': `${k} ${tip}`,
           onclick: (e: Event) => {
             e.stopPropagation();
             f();
@@ -261,8 +288,13 @@ export function wireEditor(app: App) {
         row.append(btn('×', 'Remove', () => apply(removeAt(c, l.path))));
       box.append(row);
     }
-    drawNode();
   }
+  // every change rebuilds these controls; the keyboard focus goes back to the control it was on
+  const redrawGuided = () => keepFocus($('guided'), drawGuided);
+  const redrawLayers = () => {
+    keepFocus($('layers'), drawLayers, '.layer.sel .name');
+    keepFocus($('nodeEdit'), drawNode);
+  };
   function drawNode() {
     const c = app.comp,
       node = getAt(c, sel) as { type?: string } | undefined,
@@ -272,16 +304,32 @@ export function wireEditor(app: App) {
     const bar = h('div', { class: 'bar' });
     if (node.type === 'region') {
       bar.append(
-        h('button', { textContent: '+ text border', onclick: () => apply(addBorder(c, sel, 'textBorder')) }),
-        h('button', { textContent: '+ ornament band', onclick: () => apply(addBorder(c, sel, 'ornamentBorder')) }),
+        h('button', {
+          textContent: '+ text border',
+          'data-k': 'add text',
+          onclick: () => apply(addBorder(c, sel, 'textBorder')),
+        }),
+        h('button', {
+          textContent: '+ ornament band',
+          'data-k': 'add band',
+          onclick: () => apply(addBorder(c, sel, 'ornamentBorder')),
+        }),
       );
-      const fs = h('select', { 'aria-label': 'Fill' }, h('option', { value: '', textContent: 'Set fill…' }));
+      const fs = h(
+        'select',
+        { 'aria-label': 'Fill', 'data-k': 'fill' },
+        h('option', { value: '', textContent: 'Set fill…' }),
+      );
       FILL_TYPES.forEach(t => fs.append(h('option', { value: t, textContent: valueLabel('fill', t) })));
       fs.onchange = () => fs.value && apply(setAt(c, [...sel, 'fill'], defaultFill(fs.value as FillerNode['type'], c)));
       bar.append(fs);
     }
     if (node.type === 'frame') {
-      const ss = h('select', { 'aria-label': 'Corners' }, h('option', { value: '', textContent: 'Set corners…' }));
+      const ss = h(
+        'select',
+        { 'aria-label': 'Corners', 'data-k': 'corners' },
+        h('option', { value: '', textContent: 'Set corners…' }),
+      );
       SPANDREL_TYPES.forEach(t => ss.append(h('option', { value: t, textContent: valueLabel('spandrels', t) })));
       ss.onchange = () => {
         if (!ss.value) return;
@@ -313,10 +361,12 @@ export function wireEditor(app: App) {
       spellcheck: false,
       value: JSON.stringify(shown, null, 1),
       'aria-label': 'Node as JSON',
+      'data-k': 'json',
     });
     const msg = h('span', { class: 'note' });
     const applyJson = h('button', {
       textContent: 'Apply',
+      'data-k': 'apply',
       onclick: () => {
         let v: Record<string, unknown>;
         try {
@@ -340,7 +390,7 @@ export function wireEditor(app: App) {
 
   app.onChange(() => {
     drawTexts();
-    drawGuided();
-    drawLayers();
+    redrawGuided();
+    redrawLayers();
   });
 }

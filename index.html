@@ -8,6 +8,8 @@
       name="description"
       content="Compose square Kufic calligraphy: breed compositions, edit their borders and fills, write chronograms, and export SVG or PNG."
     />
+    <meta name="theme-color" content="#f2f3ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#162626" media="(prefers-color-scheme: dark)" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 2h12v12H2zM5 5v6h6V5z%22 fill=%22%2317807e%22 fill-rule=%22evenodd%22/%3E%3C/svg%3E"
@@ -39,6 +41,7 @@
         </select>
       </div>
     </header>
+    <div id="notices" class="notices" role="status"></div>
 
     <main>
       <!-- Gallery: presets, breeding, favourites -->
@@ -47,7 +50,7 @@
         <div class="cards small" id="presets"></div>
         <h2>Breed</h2>
         <div class="bar">
-          <input type="text" id="breedText" class="ar" dir="rtl" aria-label="Text to breed with" />
+          <input type="text" id="breedText" class="ar" dir="rtl" lang="ar" aria-label="Text to breed with" />
           <button id="fresh" class="primary">New generation</button>
           <button id="breed">Breed from picks</button>
           <button id="vary">Vary current</button>
@@ -72,7 +75,7 @@
         <div class="split">
           <div class="side">
             <div class="lab">Rate what you see</div>
-            <input type="text" id="trText" class="ar" dir="rtl" aria-label="Text to train with" />
+            <input type="text" id="trText" class="ar" dir="rtl" lang="ar" aria-label="Text to train with" />
             <div class="rate" role="group" aria-label="Rating">
               <button id="trVeto" title="Veto (3 or ←)">Veto <kbd>3</kbd></button
               ><button id="trMeh" title="Meh (2 or ↓)">Meh <kbd>2</kbd></button
@@ -89,6 +92,8 @@
             <div class="bar">
               <button id="trCopy">Copy ratings</button><button id="trForget" class="quiet">Forget ratings</button>
             </div>
+            <!-- the owner's working pages, which visitors cannot open: shown with ?owner (trainer.ts) -->
+            <div id="trOwner" class="hidden">
             <h3>Thuluth roundels</h3>
             <p class="note">
               Roundel rounds are rated side by side on their own page, which keeps every vote for the critic's refit. The
@@ -111,10 +116,12 @@
                 >Tune the basmala</a
               >
             </div>
+            </div>
             <details class="group">
               <summary>Paste lab ratings</summary>
               <textarea
                 id="trLab"
+                aria-label="Lab ratings to import"
                 rows="5"
                 spellcheck="false"
                 placeholder="Paste the Kufic Lab's exported ratings (a JSON array of { g, text, r, m })."
@@ -123,7 +130,7 @@
               <p id="trImportNote" class="note"></p>
             </details>
           </div>
-          <div class="stage"><div id="trPic" class="preview" aria-live="polite"></div></div>
+          <div class="stage pic"><div id="trPic" class="preview" aria-live="polite"></div></div>
         </div>
       </section>
 
@@ -139,7 +146,7 @@
             <div id="layers" class="layers"></div>
             <div id="nodeEdit" class="nodeedit"></div>
           </div>
-          <div class="stage">
+          <div class="stage pic">
             <div id="preview" class="preview" aria-live="polite"></div>
             <p id="info" class="note"></p>
             <details class="group critic" id="critic">
@@ -180,11 +187,11 @@
           <div class="side">
             <p id="chHelp" class="note"></p>
             <label for="chPhrase" class="lab" id="chPhraseLab">Your phrase</label>
-            <input id="chPhrase" class="ar" dir="rtl" type="text" value="ولد علي" />
+            <input id="chPhrase" class="ar" dir="rtl" lang="ar" type="text" value="ولد علي" />
             <div id="chTargetRow" class="bar">
               <label for="chYear" class="lab">Target</label
               ><input id="chYear" type="number" value="2026" style="width: 7em" />
-              <select id="chCal">
+              <select id="chCal" aria-label="What the target is">
                 <option value="g">Gregorian year</option>
                 <option value="h">Hijri year</option>
                 <option value="n">Exact number</option>
@@ -213,12 +220,14 @@
               id="chBank"
               class="ar"
               dir="rtl"
+              lang="ar"
+              aria-label="Your own words for the word bank"
               rows="2"
               placeholder="Your own words, separated by spaces"
             ></textarea>
             <p class="note" id="chBankCount"></p>
             <div id="chFindOpts" class="bar hidden">
-              <label>Must include <input id="chMust" class="ar" dir="rtl" type="text" style="width: 8em" /></label>
+              <label>Must include <input id="chMust" class="ar" dir="rtl" lang="ar" type="text" style="width: 8em" /></label>
               <label
                 >Up to
                 <select id="chMax">
@@ -263,16 +272,18 @@
             <textarea
               id="edJson"
               class="hidden"
+              aria-label="Letter set as JSON"
               rows="4"
               spellcheck="false"
               placeholder="Paste a letter set here, then press Paste set again."
             ></textarea>
+            <p id="edNote" class="note" aria-live="polite"></p>
             <p class="note">
               Click cells to draw. The accent line marks the baseline. Edits apply to every composition and are kept in
               this browser.
             </p>
           </div>
-          <div class="stage"><div id="letterPreview" class="preview"></div></div>
+          <div class="stage pic"><div id="letterPreview" class="preview"></div></div>
         </div>
       </section>
     </main>

@@ -15,6 +15,22 @@ import { $, h } from './main';
 import { valueLabel } from './labels';
 
 type Shown = { comp: Composition; ev: Evaluated };
+const OWN_KEYS = 'input, textarea, select, button, a, summary, [tabindex], [contenteditable]';
+const OWNER = 'kufi-owner';
+/** The owner's own pages are linked only for the owner: `?owner` in the address turns the links on in this browser
+ *  (and `?owner=0` off again). */
+function isOwner(): boolean {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.has('owner')) {
+      if (q.get('owner') === '0') localStorage.removeItem(OWNER);
+      else localStorage.setItem(OWNER, '1');
+    }
+    return localStorage.getItem(OWNER) === '1';
+  } catch {
+    return new URLSearchParams(location.search).has('owner');
+  }
+}
 
 export function wireTrainer(app: App) {
   let pool: EvalPool | null = null,
@@ -126,7 +142,8 @@ export function wireTrainer(app: App) {
   $('trSkip').onclick = () => rate(null);
   document.addEventListener('keydown', e => {
     if ($('trainer').classList.contains('hidden') || e.ctrlKey || e.metaKey || e.altKey) return;
-    if ((e.target as HTMLElement).matches('input, textarea, select')) return;
+    // keys that belong to the control they were pressed on stay there (Space presses a button, opens a summary)
+    if ((e.target as HTMLElement).closest?.(OWN_KEYS)) return;
     const r = ({ '3': 0, ArrowLeft: 0, '2': 0.5, ArrowDown: 0.5, '1': 1, ArrowRight: 1, ' ': null } as const)[
       e.key as '3'
     ];
@@ -193,5 +210,6 @@ export function wireTrainer(app: App) {
     showNext();
   };
   document.querySelector<HTMLButtonElement>('.tabs [data-tab="trainer"]')!.addEventListener('click', start);
+  $('trOwner').classList.toggle('hidden', !isOwner());
   drawLearned();
 }

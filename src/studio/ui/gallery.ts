@@ -35,7 +35,7 @@ export function wireGallery(app: App) {
     thumbs.run(
       todo.map(t => t.comp),
       (i, o) => {
-        if (!o.ok) return;
+        if (!o.ok) return void todo[i].el.replaceChildren(h('p', { class: 'note' }, 'Couldn’t draw this one.'));
         thumbCache.set(JSON.stringify(todo[i].comp), o.result.svg);
         todo[i].el.innerHTML = o.result.svg;
       },
@@ -116,6 +116,7 @@ export function wireGallery(app: App) {
   // ---- breeding ----
   let gen: Composition[] = [],
     results: (Evaluated | null)[] = [],
+    failed = new Set<number>(),
     picks = new Set<number>();
   const locks: Traits = {},
     rng = new Rng(Date.now() % 2147483646 || 1);
@@ -158,7 +159,7 @@ export function wireGallery(app: App) {
   function fillCard(i: number) {
     const r = results[i],
       c = cards[i];
-    c.innerHTML = r ? r.svg : '<p class="note">…</p>';
+    c.innerHTML = r ? r.svg : `<p class="note">${failed.has(i) ? 'Couldn’t draw this one.' : '…'}</p>`;
     if (!r) return;
     c.append(
       h('div', { class: 'cap' }, `${rank(i).toFixed(2)} · ${r.ms.toFixed(0)} ms`),
@@ -217,6 +218,7 @@ export function wireGallery(app: App) {
     }
     gen = comps;
     results = comps.map(() => null);
+    failed = new Set();
     picks = new Set();
     $('cands').innerHTML = '';
     makeCards();
@@ -224,17 +226,19 @@ export function wireGallery(app: App) {
     drawLocks();
     const t0 = performance.now();
     let n = 0;
-    status(`0 / ${N}`);
+    status(`0 / ${comps.length}`);
     await app.pool.run(comps, (i, o) => {
       n++;
       results[i] = o.ok ? o.result : null;
-      status(`${n} / ${N}`);
+      if (!o.ok) failed.add(i);
+      status(`${n} / ${comps.length}`);
       fillCard(i);
       drawCands();
     });
     if (n === comps.length)
       status(
-        `${N} candidates in ${((performance.now() - t0) / 1000).toFixed(1)} s` +
+        `${comps.length - failed.size} candidate${comps.length - failed.size === 1 ? '' : 's'} in ${((performance.now() - t0) / 1000).toFixed(1)} s` +
+          (failed.size ? ` · ${failed.size} couldn’t be drawn` : '') +
           (swapped ? ` · ${swapped} likely veto${swapped === 1 ? '' : 'es'} swapped out` : ''),
       );
   }

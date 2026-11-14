@@ -15,6 +15,7 @@ import {
 import type { PathD, PathsD } from '@countertype/clipper2-ts';
 import earcut from 'earcut';
 import { clipper2, fromPathsD, toPathsD } from '../kernels/clipper2';
+import { MIN_BASE_MM } from './mesh';
 import type { Heightmap, Mesh } from './mesh';
 
 type Ring = [number, number][];
@@ -195,7 +196,7 @@ export function terraceMesh(hm: Heightmap, o: TerraceOptions = {}): Mesh & { fai
   const { width: W, height: H } = hm,
     widthMM = o.widthMM ?? 120,
     mmpp = widthMM / W,
-    base = o.baseMM ?? 2,
+    base = Math.max(MIN_BASE_MM, o.baseMM ?? 2),
     relief = Math.max(1e-3, o.reliefMM ?? 3),
     tol = (o.toleranceMM ?? 0.03) / mmpp,
     gap = 0.02,
@@ -248,12 +249,13 @@ export function terraceMesh(hm: Heightmap, o: TerraceOptions = {}): Mesh & { fai
 
   const positions: number[] = [],
     tris: number[] = [],
-    ids = new Map<number, number>(),
-    zs = new Map<number, number>();
-  // coordinates sit on the 0.1 µm grid, so a vertex's key is exact: x and y in grid steps, and which height
+    zs = new Map<number, Map<number, number>>();
+  // coordinates sit on the 0.1 µm grid, so a vertex's key is exact: x and y in grid steps, in a table per height
+  // (however many heights there are)
   const vert = (x: number, y: number, z: number) => {
-    if (!zs.has(z)) zs.set(z, zs.size);
-    const k = (Math.round(x * 1e4) * 2 ** 24 + Math.round(y * 1e4)) * 16 + zs.get(z)!;
+    let ids = zs.get(z);
+    if (!ids) zs.set(z, (ids = new Map()));
+    const k = Math.round(x * 1e4) * 2 ** 24 + Math.round(y * 1e4);
     let v = ids.get(k);
     if (v === undefined) {
       v = positions.length / 3;
