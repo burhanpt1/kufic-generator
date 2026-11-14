@@ -224,6 +224,39 @@ function spans(m: Uint8Array, W: number, H: number): Int32Array {
   return r;
 }
 
+/** The points of a hull that can be the farthest of it from anywhere: those on its convex outline, or within a hair
+ *  (a millionth of a pen unit) of it, in their order. The enclosing disc is the same number with only these: a point
+ *  left out lies inside the outline by that margin, so from any centre, in any oval's metric, a point kept is farther
+ *  by a margin far beyond rounding, and the box of the points is the box of the outline. */
+const RIMS = new WeakMap<readonly (readonly [number, number])[], [number, number][]>();
+function rimOf(hull: [number, number][]): [number, number][] {
+  let rim = RIMS.get(hull);
+  if (rim) return rim;
+  rim = hull;
+  if (hull.length > 6 && hull.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1]))) {
+    const cross = (o: readonly number[], a: readonly number[], b: readonly number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); // prettier-ignore
+    const sorted = [...hull].sort((a, b) => a[0] - b[0] || a[1] - b[1]),
+      H: [number, number][] = [];
+    for (const p of sorted) {
+      while (H.length >= 2 && cross(H[H.length - 2], H[H.length - 1], p) <= 0) H.pop();
+      H.push(p);
+    }
+    const lower = H.length + 1;
+    for (let k = sorted.length - 2; k >= 0; k--) {
+      while (H.length >= lower && cross(H[H.length - 2], H[H.length - 1], sorted[k]) <= 0) H.pop();
+      H.push(sorted[k]);
+    }
+    H.pop();
+    // (the outline runs anticlockwise, so inside is to the left of each edge)
+    if (H.length >= 3) {
+      const len = H.map((a, k) => Math.hypot(H[(k + 1) % H.length][0] - a[0], H[(k + 1) % H.length][1] - a[1]));
+      rim = hull.filter(p => H.some((a, k) => !(cross(a, H[(k + 1) % H.length], p) >= 1e-6 * len[k])));
+    }
+  }
+  RIMS.set(hull, rim);
+  return rim;
+}
+
 /** A text's groups as the composer arranges them (with a companion text's, and each group's marks, as the pen with
  *  this style writes them), and the options its group variants are built with; null when the text has no letters. */
 export function roundelGroups(
@@ -344,10 +377,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     return c;
   };
   // the enclosing disc in WebAssembly (src/kernels/roundel.c), with every variant's hull registered once
-  const DK = discKernel(
-    shapes.flatMap(vs => vs.map(v => v.hull)),
-    n,
-  );
+  // (of each hull, only the points that can be the farthest: rimOf)
+  const rims = shapes.map(vs => vs.map(v => rimOf(v.hull)));
+  const DK = discKernel(rims.flat(), n);
   const results: Roundel[] = [];
   for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
     const R = parkMiller(seed + t * 7919);
@@ -676,7 +708,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         groups.forEach((_, i) => {
           const S = shapes[i][lv[i]];
           sw += S.ink;
-          DK.place(i, gpos[i].x, gpos[i].y, S.hull);
+          DK.place(i, gpos[i].x, gpos[i].y, rims[i][lv[i]]);
         });
         const [cx, cy, r] = DK.run(n, OVAL)!;
         return { cx, cy, r: r + 0.8, ink: sw, oval: OVAL, field: o.field };
@@ -684,17 +716,18 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       let sw = 0,
         m = 0;
       groups.forEach((_, i) => {
-        const S = shapes[i][lv[i]];
+        const S = shapes[i][lv[i]],
+          rim = rims[i][lv[i]];
         sw += S.ink;
-        if (m + S.hull.length > px.length) {
-          const nx = new Float64Array(2 * (m + S.hull.length)),
-            ny = new Float64Array(2 * (m + S.hull.length));
+        if (m + rim.length > px.length) {
+          const nx = new Float64Array(2 * (m + rim.length)),
+            ny = new Float64Array(2 * (m + rim.length));
           nx.set(px);
           ny.set(py);
           px = nx;
           py = ny;
         }
-        for (const [hx, hy] of S.hull) {
+        for (const [hx, hy] of rim) {
           px[m] = gpos[i].x + hx;
           py[m++] = gpos[i].y + hy;
         }
