@@ -22,8 +22,9 @@ What is already done is listed at the end only as milestones; the commit history
 
 1. **[~] A second round of ratings, on today's engine.** Published 30 October (`tests/ratings/rounds/2026-10-30`);
    waiting on votes. Most of the open composition work is a built option waiting
-   on ratings, and the critic is not yet good enough to stand in for them. Dense roundels fit at 78%, mirrored at 75%
-   and single names at 87%; the target is 85% (`10f7d0f`, `719cd4a`).
+   on ratings, and the critic is not yet good enough to stand in for them. On real votes, with both compositions held
+   out, it gets dense roundels right 61% of the time, mirrored 69% and single names 76%; the target is 85%
+   (`npm run refit` prints the table; `tests/ratings/README.md` says what each figure means).
    - **Contents (owner, 30 October):**
      - ruled roundels, against free and lanes, on the same texts;
      - each built option as an on/off pair: girift, learned stacking, towers, mark spacing, nesting.
@@ -55,7 +56,7 @@ What is already done is listed at the end only as milestones; the commit history
    Candidate venues: Bridges, Nexus Network Journal, the Eurographics expressive track.
 
 7. **[ ] Housekeeping:**
-   - Bring CLAUDE.md up to date. Its migration plan is finished, and its roadmap now points here.
+   - (none open)
 
 ---
 
@@ -142,10 +143,17 @@ What is already done is listed at the end only as milestones; the commit history
 
 ## Evolution, critic and ratings
 
-- [~] **The critic's accuracy on the current engine is below target:** dense 78%, mirrored 75%, single 87%, against
-  85%. Dislikes flatter it (`844ad32`, `10f7d0f`).
+- [~] **The critic's accuracy on the current engine is well below target:** dense 61% (95% interval 50–71%), mirrored
+  69% (54–81%), single 76% (53–90%), against 85%. These are real votes with both compositions held out; the older
+  78/75/87% counted the made-up rows for dislikes, which predict each other. For dense, one feature alone gets 56%.
+- [ ] **The made-up rows for a dislike always use the first few winners in vote order,** so the fit depends on the
+      order of voting. Use every winner, weighted 1/n (`tests/refit.test.ts`).
+- [ ] **The single and mirrored fits look overfitted** (large weights on features with a tiny spread;
+      `roundel/fits.data.ts`). Shrink them towards the dense fit until each has about 100 real votes.
 - [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment) are
-  candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`).
+  candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`). The with/without
+  comparison the refit prints differs by one row at most, so it cannot decide a promotion; it needs more votes or a
+  paired test.
 - [~] **Single-name roundels are their own genre.** Per-genre fits exist (`18ca2a7`). Check the Husayn master now
   scores well.
 - [ ] **Check whether the monogram critic still over-rewards four-fold symmetry.** Its weights are fixed
@@ -167,8 +175,6 @@ What is already done is listed at the end only as milestones; the commit history
 ## Docs and process
 
 - [~] **Finish the istif write-up** (see Next up).
-- [ ] **Bring CLAUDE.md up to date.** Its migration plan is finished, and it still names retired paths such as
-      `src/ui`.
 - [~] **Chronogram Hijri/CE conversion uses the lab's approximations** (`src/studio/chronogram.ts`).
 
 ## Decisions

@@ -28,42 +28,49 @@ Renderer / UI — after CORE END:
 
 Artifact-only code to replace: the `claude.use('downloads')` block at the end. In the standalone app, use a Blob + `<a download>` for SVG/PNG. `localStorage` (key `kufi-glyphs`) is fine to keep.
 
-## Target structure
+## Where things are now
 
-Plain ES modules + TypeScript, Vite for dev/build, Vitest for tests, no UI framework. Deploy with GitHub Pages.
+Plain ES modules + TypeScript, Vite for dev/build, Vitest for tests, no UI framework. Deployed with GitHub Pages
+(`.github/workflows/ci.yml`).
 
 ```
 src/
-  glyphs/      tables.ts (D, VARIANTS, knots), marks.ts (S, DOTS, COMB...), overrides.ts
-  shaping/     shape.ts, buildGlyph.ts, prepare.ts
-  layout/      strip.ts (justify + rhythm), solvers.ts, geometry.ts, compose.ts, terminals.ts
-  render/      prims.ts, letters.ts, square.ts, circle.ts, grid.ts
-  ornament/    numerals.ts, stars.ts, bands.ts, patterns/ (tilings.ts, pic.ts)
-  abjad.ts
-  ui/          controls.ts, editor.ts, presets.ts, export.ts, main.ts
-index.html
-tests/
+  glyphs/ shaping/ layout/ abjad.ts   the classic Kufic engine described above (cells, strips, rings)
+  render/ ornament/                   SVG: prims, letters, strokes, composition.ts (renderPlaced); bands, stars, patterns, palettes
+  model/                              the composition tree: schema.ts (zod), presets, styles, silhouettes
+  compose/                            the composition engine: resolve.ts, text borders, fills, flow, weave, strapwork, lattice, roundel
+  geometry/                           outlines, offsets (Clipper2), corners, SVG paths
+  script/                             the pluggable script engine: kufi.ts, registry.ts, thuluth/ (pen strokes; roundel/ is the roundel composer)
+  monogram/                           seals, word blocks, tughra and spiral monograms
+  kernels/                            C sources, their embedded WebAssembly (*.wasm.ts, built by `npm run build:wasm`) and TypeScript ports
+  evolve/ critic/                     breeding, taste, the critic, the rating fit, worker pool
+  fabricate/                          plotter, laser, relief map and STL
+  studio/ app/                        Kufic Studio (index.html): tabs, URL state, storage, letter editor, export
+  showpiece/ mosque/ tune/            the showpieces, the mosque programme, the tuning page
+demos/        one page per feature, built with the site
+prototypes/   behavioural references only; nothing in src/ imports them
+tests/        golden/ (classic engine, byte-exact), golden-lab/ (pixel compare), golden-thuluth*/, ratings/ (rounds and votes)
 ```
-The engine (`glyphs`, `shaping`, `layout`, `abjad`) must not touch the DOM, so it can run in tests and later in a worker.
 
-## Migration plan — do these in order, one PR each
+The engine (everything but `studio`, `app`, `tune` and the demos) must not touch the DOM, so it runs in tests and in
+workers.
 
-1. **Golden snapshots first.** Before moving any code, add a script that loads the prototype's `KUFI` engine and renderers in Node (jsdom or by extracting the script) and writes SVG snapshots for a fixed set of cases into `tests/golden/`: each layout (square, circle, line, letters) × a few texts (basmala vocalised, basmala plain, "بسم الله الرحمن الرحيم\nمحمد علي فاطمة\nالحسن الحسين", "لا اله الا الله", "يا علي مدد") × key option combos (Fatimid preset, banded, by-repeat colour, each centre type, each corner type, each band style, each tiling). Also snapshot `compose()` JSON for the same cases.
-2. **Scaffold** Vite + TS + Vitest + ESLint/Prettier, GitHub Pages workflow. Copy `index.html` to `legacy/index.html` and keep it working.
-3. **Extract the engine** into the modules above with no behaviour change. Tests: `compose()` output must equal the golden JSON.
-4. **Extract the renderer and ornaments.** Tests: SVG must equal the golden SVGs (normalise number formatting if needed).
-5. **Rebuild the UI** as modules, same controls and copy, standalone export. Then retire `legacy/`.
-6. **Unit tests** for shaping (joining forms, lam-alif, harakat attachment, unsupported chars), abjad (786 for the basmala, 165 for لا اله الا الله), `partition()` invariants, `strip()` width = target.
-7. **State in the URL** (all options + text, compressed) so compositions are shareable links.
+The classic engine's `compose()` and `renderSquare`/`renderCircle` are still used by the spiral monogram, the letters
+view and `tests/golden/`; new work goes through `compose/resolve.ts` and `renderPlaced`.
 
-Only after step 5: performance (move compose to a Web Worker if needed) and the roadmap.
+## History
+
+The migration from the single-file prototype (golden snapshots, scaffold, engine, renderer, UI, unit tests, state in
+the URL) is finished, and so are COMPOSITION_ENGINE.md's phases; the commit history has the detail.
 
 ## Roadmap
-Open work is listed in `ROADMAP.md`, by area, with sources and status. The migration plan above is finished; it is kept
-as the history of how `src/` came to be.
+Open work is listed in `ROADMAP.md`, by area, with sources and status.
 
 ## Conventions
 - Strip coordinates: x left→right (text reads right to left, so the first glyph is at the right), y up with row 0 at the bottom of the band; `base` = baseline row.
 - Square grids: y down. Circle: baseline outward, letters point to the centre, reading clockwise from the bottom.
 - Keep the engine deterministic (the rhythm search uses a seeded PRNG). Same input → same SVG.
 - Don't change letter designs in refactor PRs.
+- Seeds, sizes and counts that reach a search loop are bounded in `model/schema.ts`; a composition from a URL is
+  untrusted input.
+- A change to a kernel's C needs `npm run build:wasm` (`tests/kernels-fresh.test.ts` fails otherwise).
