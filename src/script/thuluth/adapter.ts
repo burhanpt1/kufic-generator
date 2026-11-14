@@ -10,7 +10,7 @@ import { DEFAULT_THULUTH, thuluth } from './engine';
 import { lineMarks } from './marks';
 import { outline } from './outline';
 import type { WordMark } from './shape';
-import { allahSpan, FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
+import { allahSpan, endsGroup, FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
 import type { Family, Poly, ThuluthStyle } from './types';
 
 /** Room kept above the tallest ink for vowels, and below the lowest for marks under it (pen units). */
@@ -48,6 +48,8 @@ export interface ThuluthPrepared extends Prepared {
   ascent: number;
   descent: number;
   vowels: boolean;
+  /** Characters of the line that the script cannot write, and left out. */
+  unsupported: string[];
 }
 
 const polysBox = (polys: Poly[]) => {
@@ -97,7 +99,7 @@ function groupsOf(w: ThuluthWord): ThuluthWord[] {
     start = 0;
   cs.forEach((c, i) => {
     cur += c;
-    if (NONJOIN.has(c) || !FAM[c] || i === cs.length - 1) {
+    if (endsGroup(cs, i)) {
       const n = [...cur].length,
         s0 = start;
       // the group's text keeps the ligature's letters (لا), so its marks keep their positions
@@ -164,6 +166,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       ascent: up,
       descent: -down,
       vowels,
+      unsupported: p.dropped,
     }));
   }
 
@@ -171,6 +174,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
     id: 'thuluth',
     th,
     shape: text => ({ text }),
+    unsupported: text => parseVowels(text).dropped,
     prepare: (shaped, letter) => prepareLines([(shaped as { text: string }).text], letter)[0],
     prepareLines,
     segments(prepared, mode, wordGap) {

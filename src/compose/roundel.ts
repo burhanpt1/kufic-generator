@@ -6,6 +6,7 @@ import type { Pt } from '../geometry/types';
 import type { FillerNode, RoundelColours, RoundelRecipe, Style } from '../model/schema';
 import { thuluthStyleOf } from '../script/registry';
 import { thuluth } from '../script/thuluth/engine';
+import { unsupportedChars } from '../script/thuluth/shape';
 import { FIELDS, fieldPolygon } from '../script/thuluth/roundel/fields';
 import type { Thuluth } from '../script/thuluth/engine';
 import type { BuiltRoundel, FinishOptions, Roundel, RoundelOptions, RoundelSpec } from '../script/thuluth/roundel';
@@ -271,7 +272,8 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     ctx.fill = { type: 'roundel', ok: false, note: 'الله is not mirrored' };
     return;
   }
-  const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters, f.colours?.pair);
+  const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters, f.colours?.pair),
+    dropped = unsupportedChars(slot.text);
   if (!art) {
     ctx.fill = { type: 'roundel', ok: false, note: f.recipe?.mirror ? 'no tall stroke to share on the axis: not mirrored' : 'no letters' }; // prettier-ignore
     return;
@@ -299,7 +301,8 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     type: 'roundel',
     scale: s,
     ok: art.missing === 0,
-    note: art.missing ? `${art.missing} marks found no room` : undefined,
+    // what the script could not write is left out of the roundel: said here, not left as a gap
+    note: art.missing ? `${art.missing} marks found no room` : dropped.length ? `not written: ${dropped.join(' ')}` : undefined, // prettier-ignore
     metrics: { marks: art.marks, missing: art.missing, grow: art.grow, overlap: art.overlap, tails: art.tails, levels: art.levels, order: art.order, clash: art.clash, ...art.deco, ...art.checks }, // prettier-ignore
   };
 }

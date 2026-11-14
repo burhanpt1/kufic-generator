@@ -125,6 +125,16 @@ const sinEnd = (teeth: LetterForm): LetterForm => {
 const SIN_FIN = sinEnd(LETTERS.sin.med!),
   SIN_ISO = sinEnd(LETTERS.sin.ini!);
 
+/** The hamza written on the line (ء in شيء, ماء, جزء), which the lab had no letter for: the hamza of the marks
+ *  (marks.ts MARK_SHAPES.hamza, the same points) at a letter's size, its foot a little above the baseline. It joins
+ *  nothing on either side. */
+const HAMZA_K = 2.3;
+export const HAMZA: LetterForm = {
+  src: 'hand',
+  exit: null,
+  s: [{ pts: ([[0.45, 0.55, 0.4], [-0.15, 0.7], [-0.45, 0.25], [0.05, -0.05], [0.55, 0.05, 0.8], [-0.5, -0.55, 0.3]] as SkelPt[]).map(([x, y, w]) => [(x - 0.55) * HAMZA_K, (y + 0.55) * HAMZA_K + 0.3, w] as SkelPt) }],
+}; // prettier-ignore
+
 export const LETTER_FIXES: Partial<Record<Family, Partial<Record<Form, LetterForm>>>> = {
   kaf: { med: KAF_MED, fin: KAF_END, iso: KAF_END },
   lam: { ini: LAM_INI, med: LAM_MED },

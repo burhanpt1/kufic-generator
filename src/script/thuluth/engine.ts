@@ -1,7 +1,7 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, LETTER_FIXES } from './fixes';
+import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
 import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
@@ -133,6 +133,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     if (!st.labLetters)
       for (const [fam, fs] of Object.entries(LETTER_FIXES) as [Family, Partial<Record<Form, GlyphDef>>][])
         t[fam] = { ...t[fam], ...fs };
+    // the hamza on the line, which the lab's table has no letter for (so no lab reference holds one)
+    t.hamza = { iso: HAMZA };
     t.ha = { ...t.ha, fin: HEH_FIN[st.heh] || HEH_FIN.round };
     const gr = st.great;
     if (gr?.nun) t.nun = { ...t.nun, fin: clone(GREAT.nunFin) };
