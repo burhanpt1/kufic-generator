@@ -6,7 +6,15 @@ import { describe, expect, it } from 'vitest';
 import { thuluthScript } from '../src/script/thuluth/adapter';
 import { isLetter, ROUNDEL_PEN, thuluth } from '../src/script/thuluth/engine';
 import { roundelPieces } from '../src/script/thuluth/roundel';
-import { forms, LAM_ALIF, ligate, parseVowels, splitGroups, unsupportedChars } from '../src/script/thuluth/shape';
+import {
+  forms,
+  LAM_ALIF,
+  ligate,
+  parseVowels,
+  splitGroups,
+  STEM_LETTERS,
+  unsupportedChars,
+} from '../src/script/thuluth/shape';
 
 const th = thuluth(ROUNDEL_PEN);
 /** Every letter of the shaped text has a glyph (none is a hole in the line). */
@@ -112,6 +120,12 @@ describe('the hamza on the line', () => {
     const p = roundelPieces(th, 'شيء', {})!;
     expect(p.groups.map(g => g.s)).toEqual(['شي', 'ء']);
     expect(p.shapes.every(vs => vs.length > 0)).toBe(true);
+  });
+});
+
+describe('the letters with a tall stem', () => {
+  it("are one set (it was written out three times: the roundel's stem tops, crossings and the mirror's axis)", () => {
+    expect([...STEM_LETTERS]).toEqual(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', LAM_ALIF]);
   });
 });
 

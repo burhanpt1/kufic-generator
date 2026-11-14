@@ -17,6 +17,8 @@ export const FORM_FAM: Record<string, Family> = {
 /** Letters that never join the next one, and the one that the letter before never joins either. */
 export const NONJOIN = new Set([...'اأإآٱدذرزوؤةء', LAM_ALIF]);
 const ALONE = 'ء';
+/** Letters with a tall stem (the lam-alif ligature among them). */
+export const STEM_LETTERS: ReadonlySet<string> = new Set([...'اأإآٱلكطظ', LAM_ALIF]);
 /** Dots per letter: [side (1 above, −1 below), count]. */
 export const DOTS: Record<string, [number, number][]> = {
   'ف': [[1, 1]], 'ق': [[1, 2]], 'ض': [[1, 1]], 'ظ': [[1, 1]], 'غ': [[1, 1]], 'ب': [[-1, 1]], 'ت': [[1, 2]], 'ث': [[1, 3]],

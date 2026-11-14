@@ -10,7 +10,7 @@
 // every rating and are not ported.
 import type { Thuluth } from '../engine';
 import { dotPolys } from '../pen';
-import { allahSpan } from '../shape';
+import { allahSpan, STEM_LETTERS } from '../shape';
 import type { Poly, Sample } from '../types';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel } from './compose';
@@ -150,9 +150,6 @@ export interface MusennaArt {
   shared: { dots: number; marks: number; strokes: number; dropped: number };
 }
 
-/** Letters with a stem that can stand on the axis. */
-const STEMS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
-
 const mirrorPoly = (q: Poly, ax: number): Poly => q.map(([x, y]) => [2 * ax - x, y] as [number, number]).reverse();
 
 /** Draw a candidate as one design (renderMusennaCombined), with `shareStrokes` (on by default) fusing narrow letter
@@ -218,7 +215,7 @@ export function musennaArt(th: Thuluth, c: MusennaCandidate, o: { shareStrokes?:
     const S = u.gi != null ? c.r.shapes[u.gi] : null;
     if (!S || !u.own) return false;
     const letter = new Map(S.b.placed.flatMap(p => ('g' in p ? [[p.li, p.c] as [number, string]] : []))),
-      mine = u.own.filter(li => STEMS.has(letter.get(li) ?? '')).length,
+      mine = u.own.filter(li => STEM_LETTERS.has(letter.get(li) ?? '')).length,
       ys = u.s!.map(q => q.y),
       xs = u.s!.map(q => q.x);
     return mine > u.own.length / 2 && Math.max(...ys) - Math.min(...ys) > 2 * (Math.max(...xs) - Math.min(...xs));

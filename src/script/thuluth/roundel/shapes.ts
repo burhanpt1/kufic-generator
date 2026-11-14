@@ -6,7 +6,7 @@ import { isLetter } from '../engine';
 import { nibPolys, sampleStroke, dotPolys } from '../pen';
 import { Alpha } from '../raster';
 import type { MarkName } from '../shape';
-import { FAM, forms } from '../shape';
+import { FAM, forms, STEM_LETTERS } from '../shape';
 import type { Poly, SkelPt, ThuluthStyle } from '../types';
 
 /** A letter group in a composition, with its vowel marks (k = letter index in the group). */
@@ -96,8 +96,6 @@ export interface StackOptions {
 
 /** Letters whose final bowl can hold a short word. */
 export const NEST_BOWLS = new Set(['ر', 'ز', 'و', 'ن', 'ي', 'ى', 'ق', 'س', 'ش', 'ص', 'ض']);
-/** Letters with a tall stem. */
-const STEM_LETTERS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
 
 /** At most this many tower variants per group and stretch level (the first found, in join and offset order). */
 const MAX_TOWERS = 12;
