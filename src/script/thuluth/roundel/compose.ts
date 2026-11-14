@@ -499,14 +499,16 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         x1 = -1e9,
         y0 = 1e9,
         y1 = -1e9;
-      words[w].forEach(g2 => {
-        const S = shapes[g2][lv[g2]],
+      const ws = words[w];
+      for (let q = 0; q < ws.length; q++) {
+        const g2 = ws[q],
+          S = shapes[g2][lv[g2]],
           p = gpos[g2];
         x0 = Math.min(x0, p.x + S.x0);
         x1 = Math.max(x1, p.x + S.x1);
         y0 = Math.min(y0, p.y + S.y0);
         y1 = Math.max(y1, p.y + S.y1);
-      });
+      }
       return { x0, x1, y0, y1 };
     };
     // on a reading path, words start at their targets (essential for the search to converge)
@@ -555,12 +557,21 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const recompute = (a: number) => {
       for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = wordOverlap(a, b);
     };
-    // a word's overlaps as they are, to put back when a move is undone (the same numbers recompute would give)
+    // a word's overlaps and its pieces' places as they are, to put back when a move is undone (the same numbers as
+    // laying the word out and measuring it again would give; a layout replaces a piece's place and never writes into it)
+    const heldRow = new Float64Array(W),
+      heldAt: { x: number; y: number }[] = [];
+    let held = 0;
+    const back = () => {
+      const ws = words[held];
+      for (let q = 0; q < ws.length; q++) gpos[ws[q]] = heldAt[q];
+      for (let b = 0; b < W; b++) if (b !== held) ov[held][b] = ov[b][held] = heldRow[b];
+    };
     const keep = (a: number) => {
-      const row = ov[a].slice();
-      return () => {
-        for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = row[b];
-      };
+      const ws = words[a];
+      held = a;
+      heldRow.set(ov[a]);
+      for (let q = 0; q < ws.length; q++) heldAt[q] = gpos[ws[q]];
     };
     for (let a = 0; a < W; a++) recompute(a);
     // ruled: the lines as the field's chords, scaled so their length is about the text's (pathFill)
@@ -688,16 +699,17 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             main.push(w);
           }
           // the line's slack shared evenly between its words, and the line centred on its chord
-          const bs = main.map(w => wbox(w)),
-            right = bs[0].x1,
-            P = right - Math.min(...bs.map(q => q.x0)),
+          let left = Infinity;
+          for (let i = 0; i < main.length; i++) left = Math.min(left, wbox(main[i]).x0);
+          const right = wbox(main[0]).x1,
+            P = right - left,
             target = 2 * chord[l].half * wk,
             e = main.length > 1 ? Math.max(0, (target - P) / (main.length - 1)) : 0,
             dx = chord[l].x * wk - (right - (P + e * (main.length - 1)) / 2);
-          main.forEach((w, i) => {
-            wp[w].x += dx - i * e;
-            layoutWord(w);
-          });
+          for (let i = 0; i < main.length; i++) {
+            wp[main[i]].x += dx - i * e;
+            layoutWord(main[i]);
+          }
           lineFit[l] = { over: Math.max(0, P - target), loose: Math.max(0, e - (RU!.maxGap ?? 2)) };
           // riders: over their host's shelf, centred on it, or down in its bowl
           riders.forEach(([w, host]) => {
@@ -1037,6 +1049,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
                 const T = shapes[j][lv[j]],
                   lx = Math.round((gx - gpos[j].x - T.x0) * K) + 1;
                 if (lx < 0 || lx >= T.W) continue;
+                // (the rows looked at run from the one 5.5 above the shelf down to the one 1 above: none in the
+                // bitmap, no ink to find)
+                if (Math.round((gpos[j].y + T.y1 - (gy + 1.0)) * K) + 1 < 0 || Math.round((gpos[j].y + T.y1 - (gy + 5.5)) * K) + 1 >= T.H) continue; // prettier-ignore
                 for (let dd = 1.0; dd <= 5.5; dd += 0.75) {
                   const ly = Math.round((gpos[j].y + T.y1 - (gy + dd)) * K) + 1;
                   if (ly >= 0 && ly < T.H && T.mask[ly * T.W + lx]) {
@@ -1255,13 +1270,12 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         // lift a piece onto the one before it, or set it back down
         const gi = stackable[Math.floor(R() * stackable.length)],
           w = groups[gi].word;
-        const back = keep(w);
+        keep(w);
         up[gi] ^= 1;
         layoutWord(w);
         recompute(w);
         undo = () => {
           up[gi] ^= 1;
-          layoutWord(w);
           back();
         };
       } else if ((o.emph || o.elongate) && !PP && W > 1 && mv > (o.cradle ? 0.75 : 0.9)) {
@@ -1274,8 +1288,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             sh = shs.find(s2 => s2.cradle) || shs[0],
             others = words.map((_, w) => w).filter(w => w !== groups[gi].word),
             w = others[Math.floor(R() * others.length)];
+          keep(w);
           const old = { ...wp[w] },
-            back = keep(w),
             bxw = wbox(w),
             sx0 = gpos[gi].x + sh.x0,
             sy = gpos[gi].y + sh.y;
@@ -1285,22 +1299,20 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           recompute(w);
           undo = () => {
             wp[w] = old;
-            layoutWord(w);
             back();
           };
         } else still = true;
       } else if (mv < 0.6 && W > 1) {
         const w = Math.floor(R() * W),
           old = { ...wp[w] },
-          back = keep(w),
           s = T > 2 ? 1 : 0.35;
+        keep(w);
         wp[w].x += (R() - 0.5) * 8 * s;
         wp[w].y += (R() - 0.5) * 8 * s;
         layoutWord(w);
         recompute(w);
         undo = () => {
           wp[w] = old;
-          layoutWord(w);
           back();
         };
       } else {
@@ -1310,12 +1322,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         lv[g2] = Math.floor(R() * shapes[g2].length);
         if (lv[g2] === old) still = true;
         else {
-          const back = keep(w);
+          keep(w);
           layoutWord(w);
           recompute(w);
           undo = () => {
             lv[g2] = old;
-            layoutWord(w);
             back();
           };
         }
