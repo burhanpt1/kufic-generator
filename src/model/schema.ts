@@ -305,6 +305,9 @@ export interface RoundelRecipe {
   readW?: number;
   orderFirm?: number;
   orderSlack?: number;
+  /** The clear space kept between words that follow each other on a line (pen units, ink edge to ink edge; the
+   *  roundel pen's nib is 1.6): without it words may touch, and a line reads as one run of letters. */
+  wordGap?: number;
 }
 export interface RoundelColours {
   field?: string;
@@ -518,6 +521,8 @@ const roundelRecipe = z
     readW: z.number().min(0).max(10),
     orderFirm: z.number().min(0).max(20),
     orderSlack: z.number().min(0).max(10),
+    // (the distance fields it is measured on grow with its square)
+    wordGap: z.number().min(0).max(6),
   })
   .partial();
 const abjadOpts = z.object({

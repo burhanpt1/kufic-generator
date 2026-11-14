@@ -95,6 +95,13 @@ export interface RoundelOptions extends StackOptions {
   /** Ruled composition, the constrained mode (true for the defaults): see RuledOptions. Replaces path and lanes. */
   ruled?: boolean | RuledOptions;
   fixed?: Layout;
+  /** The clear space kept between words that follow each other on a line (pen units, ink edge to ink edge; a nib is
+   *  the pen's `nib`; absent or 0: none asked, and words may touch). Ruled: a word slides in after the one before
+   *  only until this much space is left between them, instead of until they touch. On a path or in lanes: two words
+   *  in turn on the same stretch of the path pay for standing closer; with neither, two words in turn on about the
+   *  same baseline do, unless one lies over the other (riding on its shelf or in its bowl, which sets its own space).
+   *  The pieces of one word are not held apart by it: stacking, nesting and kerning place those. */
+  wordGap?: number;
 }
 /** Ruled composition: the structure is fixed and the search only fills it. The baselines are ruled as the field's
  *  chords, read from the top down; each word sits exactly on its line, the words of a line in reading order from the
@@ -205,6 +212,48 @@ export function twoLevels(ys: readonly number[]): number {
   let best = sse(0, v.length);
   for (let k = 1; k < v.length; k++) best = Math.min(best, sse(0, k) + sse(k, v.length));
   return best;
+}
+
+/** For the clear space between words (wordGap): how far each pixel round a shape's ink lies from it (pixels, up to
+ *  `P` away, P + 1 beyond; the bitmap grown by P on every side), and the ink's edge pixels (x, y in turn). */
+interface Near {
+  P: number;
+  W: number;
+  H: number;
+  d: Float32Array;
+  edge: Int32Array;
+}
+const NEARS = new WeakMap<GroupShape, Near>();
+function nearOf(S: GroupShape, P: number): Near {
+  const kept = NEARS.get(S);
+  if (kept && kept.P >= P) return kept;
+  const W = S.W + 2 * P,
+    H = S.H + 2 * P,
+    d = new Float32Array(W * H).fill(P + 1),
+    edge: number[] = [],
+    m = S.mask,
+    // the pixels within P of one, and how far each is
+    disc: number[] = [];
+  for (let dy = -P; dy <= P; dy++)
+    for (let dx = -P; dx <= P; dx++) {
+      const r = Math.hypot(dx, dy);
+      if (r <= P) disc.push(dy * W + dx, r);
+    }
+  for (let y = 0; y < S.H; y++)
+    for (let x = 0; x < S.W; x++) {
+      if (!m[y * S.W + x]) continue;
+      const at = (y + P) * W + x + P;
+      // ink with ink on every side is no nearer anything than its neighbours are
+      if (x > 0 && x + 1 < S.W && y > 0 && y + 1 < S.H && m[y * S.W + x - 1] && m[y * S.W + x + 1] && m[(y - 1) * S.W + x] && m[(y + 1) * S.W + x]) {
+        d[at] = 0;
+        continue;
+      } // prettier-ignore
+      edge.push(x, y);
+      for (let k = 0; k < disc.length; k += 2) if (disc[k + 1] < d[at + disc[k]]) d[at + disc[k]] = disc[k + 1];
+    }
+  const f = { P, W, H, d, edge: Int32Array.from(edge) };
+  NEARS.set(S, f);
+  return f;
 }
 
 /** Each row's first and one-past-last nonzero column of a W × H bitmap (an empty row gives [W, 0]). */
@@ -381,6 +430,29 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     return c;
   };
+  // wordGap: the clear space between two pieces (pen units, at most WG + a little), from the one's ink edge to the
+  // other's distance field, on the same pixels as pairOverlap. The raster is coarse (a pixel is 1 / K of a pen unit,
+  // each piece set on it to the nearest pixel, and a pixel is ink only when the pen covers enough of it), so the gap
+  // is taken as the distance between pixels less CLEAR_SLOP: it errs on the side of more space.
+  const WG = o.wordGap && o.wordGap > 0 ? o.wordGap : 0,
+    CLEAR_SLOP = 1.5,
+    NP = Math.ceil(WG * K + CLEAR_SLOP) + 1,
+    pairClear = (A: GroupShape, ax: number, ay: number, B: GroupShape, bx: number, by: number) => {
+      const f = nearOf(A, NP),
+        e = nearOf(B, NP).edge,
+        dx = Math.round((bx + B.x0 - (ax + A.x0)) * K) + f.P,
+        dy = Math.round((ay + A.y1 - (by + B.y1)) * K) + f.P;
+      let m = NP + 1;
+      if (dx + B.W >= 0 && dx <= f.W && dy + B.H >= 0 && dy <= f.H)
+        for (let k = 0; k < e.length; k += 2) {
+          const x = e[k] + dx,
+            y = e[k + 1] + dy;
+          if (x < 0 || y < 0 || x >= f.W || y >= f.H) continue;
+          const v = f.d[y * f.W + x];
+          if (v < m) m = v;
+        }
+      return Math.max(0, m - CLEAR_SLOP) / K;
+    };
   // the enclosing disc in WebAssembly (src/kernels/roundel.c), with every variant's hull registered once
   // (of each hull, only the points that can be the farthest: rimOf)
   const rims = shapes.map(vs => vs.map(v => rimOf(v.hull)));
@@ -518,7 +590,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const pFill = o.pathFill ?? 0.7;
     if (!PP && !RU && o.lanes && W > 1) {
       const bx0 = words.map((_, w) => wbox(w)),
-        L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill, o.field ? (n, gap) => fieldLanes(o.field!, n, gap) : undefined); // prettier-ignore
+        // (wordGap: each word as wide as itself and its gap, so the lanes are fitted, and the words' targets set, with
+        // the gaps counted; a gap of 0 leaves every width as it is)
+        L = fitLanes(W, bx0.reduce((s2, q) => s2 + q.x1 - q.x0 + WG, 0), bx0.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W, o.lanes, pFill, o.field ? (n, gap) => fieldLanes(o.field!, n, gap) : undefined); // prettier-ignore
       PP = L.path;
       fitted = { n: L.n, gap: L.gap };
     }
@@ -526,7 +600,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       const bx0 = words.map((_, w) => wbox(w)),
         T0 = pathTargets(
           PP,
-          bx0.map(q => q.x1 - q.x0),
+          bx0.map(q => q.x1 - q.x0 + WG),
           pFill,
         );
       words.forEach((_, w) => {
@@ -554,6 +628,42 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       }
       return c;
     };
+    // wordGap: the clear space between two words as they stand (the least between their pieces)
+    const wordClear = (a: number, b: number) => {
+      let c = Infinity;
+      const wa = words[a],
+        wb = words[b];
+      for (let p = 0; p < wa.length; p++) {
+        const i = wa[p],
+          A = shapes[i][lv[i]],
+          ga = gpos[i];
+        for (let q = 0; q < wb.length; q++) {
+          const j = wb[q],
+            B = shapes[j][lv[j]],
+            gb = gpos[j];
+          // (boxes further apart than the gap: nothing to measure)
+          if (ga.x + A.x0 - (gb.x + B.x1) > WG + 1 || gb.x + B.x0 - (ga.x + A.x1) > WG + 1 || ga.y + A.y0 - (gb.y + B.y1) > WG + 1 || gb.y + B.y0 - (ga.y + A.y1) > WG + 1) continue; // prettier-ignore
+          c = Math.min(c, pairClear(A, ga.x, ga.y, B, gb.x, gb.y));
+        }
+      }
+      return c;
+    };
+    // and what a word and the next were last found to leave, kept while neither has moved or changed (a move undone
+    // puts both back as they were, so the two last measures are kept)
+    const clearKept = Array.from({ length: W }, () => [{ k: '', v: 0 }, { k: '', v: 0 }]), // prettier-ignore
+      clearNext = (a: number) => {
+        let k = '';
+        for (const w of [a, a + 1]) for (const g of words[w]) k += gpos[g].x + ',' + gpos[g].y + ',' + lv[g] + ';';
+        const kept = clearKept[a];
+        if (kept[0].k === k) return kept[0].v;
+        if (kept[1].k === k) {
+          kept.reverse();
+          return kept[0].v;
+        }
+        kept[1] = kept[0];
+        kept[0] = { k, v: wordClear(a, a + 1) };
+        return kept[0].v;
+      };
     const recompute = (a: number) => {
       for (let b = 0; b < W; b++) if (b !== a) ov[a][b] = ov[b][a] = wordOverlap(a, b);
     };
@@ -618,6 +728,23 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           },
           shift = (d: number) => words[b].forEach(j => (gpos[j].x += d));
         let off = A.x0 - B.x1 - 1.2;
+        if (WG) {
+          // wordGap: from boxes that far apart, in only while that much clear space is left between the two words
+          // (by 0.4, then by 0.1), and no deeper: a tail may still run under the next word, the gap all round it
+          off -= WG;
+          shift(off);
+          for (const step of [0.4, 0.1])
+            for (let s = step; s <= cap + WG; s += step) {
+              shift(step);
+              if (wordClear(a, b) < WG || touch() > touchMax) {
+                shift(-step);
+                break;
+              }
+              off += step;
+            }
+          forA.set(kb, off);
+          return off;
+        }
         shift(off);
         for (let s = 0.4; s <= cap; s += 0.4) {
           shift(0.4);
@@ -870,27 +997,30 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       stemY: number[] = [],
       wordOfG = Int32Array.from(groups, g => g.word);
     // the path's stretches, as pathTargets (paths.ts) measures them
-    const segs: { a: [number, number]; b: [number, number]; L: number; s0: number }[] = [];
+    // (and which of the path's strokes each belongs to: its lane)
+    const segs: { a: [number, number]; b: [number, number]; L: number; s0: number; lane: number }[] = [],
+      tgLane = new Int32Array(W);
     let pathLen = 0;
     const measurePath = (path: ReadingPath) => {
       segs.length = 0;
       pathLen = 0;
-      for (const sp of path)
+      path.forEach((sp, lane) => {
         for (let i = 0; i + 1 < sp.length; i++) {
           const L = Math.hypot(sp[i + 1][0] - sp[i][0], sp[i + 1][1] - sp[i][1]);
-          segs.push({ a: sp[i], b: sp[i + 1], L, s0: pathLen });
+          segs.push({ a: sp[i], b: sp[i + 1], L, s0: pathLen, lane });
           pathLen += L;
         }
+      });
     };
     if (PP) measurePath(PP);
     // each word's target along the path, by the words' widths (pathTargets, into tgX and tgY)
     const targets = () => {
       let Wt = 0;
-      for (let w = 0; w < W; w++) Wt += bX1[w] - bX0[w];
+      for (let w = 0; w < W; w++) Wt += bX1[w] - bX0[w] + WG;
       const sc = (Wt * pFill) / Math.max(1e-6, pathLen);
       let cum = 0;
       for (let w = 0; w < W; w++) {
-        const wd = bX1[w] - bX0[w],
+        const wd = bX1[w] - bX0[w] + WG,
           u = ((cum + wd / 2) / Wt) * pathLen;
         cum += wd;
         let g = segs[segs.length - 1];
@@ -902,6 +1032,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         const f = Math.max(0, Math.min(1, (u - g.s0) / Math.max(1e-9, g.L)));
         tgX[w] = sc * (g.a[0] + (g.b[0] - g.a[0]) * f);
         tgY[w] = sc * (g.a[1] + (g.b[1] - g.a[1]) * f);
+        tgLane[w] = g.lane;
       }
     };
     // (orderFault, on the boxes above)
@@ -920,6 +1051,9 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       }
       return f;
     };
+    // what a pen unit of missing space between two words costs, squared (at 25, a word out of reading order's price,
+    // lanes kept about 0.8 of the gap asked: the words' targets along the path pull them together)
+    const GAP_W = 60;
     const pathTol = o.pathTol ?? 1.4,
       pathW = o.pathW ?? 0.6,
       readW = o.readW ?? 1.5,
@@ -1174,10 +1308,34 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         ruled =
           (RU.justify ?? 4) * just + (RU.rhythm ?? 1) * 12 * rhy + (RU.axis ?? 1) * 20 * (Math.abs(ax - d.cx) / d.r);
       }
-      return (
+      const E0 =
         ruled + 90 * sil + 0.6 * ceil + 3 * o2 + 25 * order + 20 * stackOrder() + 30 * Math.abs(Math.log((bx1 - bx0) / (by1 - by0) / OVAL)) +
-        110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise
-      ); // prettier-ignore
+        110 * Math.max(0, (o.fillTarget || 0.36) - fill) + 25 * bal + cost - (o.emph ? 14 : 8) * shelf + 4 * rise; // prettier-ignore
+      // wordGap: two words in turn on a line standing closer than the gap (ruled lines keep it as they are laid out)
+      if (!WG || RU) return E0;
+      let tight = 0,
+        rowH = 0;
+      if (!PP) {
+        for (let w = 0; w < W; w++) rowH = rowH + bY1[w] - bY0[w];
+        rowH = (rowH / W) * 0.45;
+      }
+      for (let w = 0; w + 1 < W; w++) {
+        if (groups[words[w][0]].comp || groups[words[w + 1][0]].comp) continue;
+        let share = 1;
+        if (PP) {
+          // on a path: the two on the same stroke of it
+          if (tgLane[w] !== tgLane[w + 1]) continue;
+        } else {
+          // free: on about the same baseline, and beside each other (a word over another rides on it)
+          const dy = Math.abs(hdY[w + 1] - hdY[w]),
+            ox2 = Math.min(bX1[w], bX1[w + 1]) - Math.max(bX0[w], bX0[w + 1]);
+          if (dy >= rowH || ox2 > 0.35 * Math.min(bX1[w] - bX0[w], bX1[w + 1] - bX0[w + 1])) continue;
+          share = 1 - dy / rowH;
+        }
+        const v = WG - clearNext(w);
+        if (v > 0) tight += share * v * v;
+      }
+      return E0 + GAP_W * tight;
     };
     let E = energy(),
       T = 20;

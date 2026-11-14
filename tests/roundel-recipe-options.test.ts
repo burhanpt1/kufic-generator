@@ -62,6 +62,7 @@ describe('the composer’s finer options in a recipe', () => {
     readW: { ok: [0, 1.5, 10], bad: [-1, 11] },
     orderFirm: { ok: [0, 3, 20], bad: [-1, 21] },
     orderSlack: { ok: [0, 1, 10], bad: [-1, 11, 1e9] },
+    wordGap: { ok: [0, 1.6, 2.4, 6], bad: [-0.1, 6.1, NaN, '2'] },
   };
   it('are accepted within bounds and refused outside them', () => {
     for (const [k, { ok, bad }] of Object.entries(FIELDS)) {
