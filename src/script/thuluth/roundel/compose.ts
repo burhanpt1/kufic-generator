@@ -380,6 +380,76 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
   // (of each hull, only the points that can be the farthest: rimOf)
   const rims = shapes.map(vs => vs.map(v => rimOf(v.hull)));
   const DK = discKernel(rims.flat(), n);
+  // How a piece sits against the piece before it in its word, for each pair of their variants: measured once and kept
+  // for every try (each depends on the two shapes alone), in a table per piece (a piece always follows the same one).
+  const touchMax = o.kernTouch ?? 3,
+    tableOf = <T>(tables: (T | undefined)[][], i: number, j: number) => (tables[j] ??= new Array<T | undefined>(shapes[i].length * shapes[j].length)), // prettier-ignore
+    kernT: (number | undefined)[][] = new Array(n),
+    nestT: ([number, number] | undefined)[][] = new Array(n),
+    stackT: ([number, number] | undefined)[][] = new Array(n);
+  // inside a word, a break after a non-joining letter is kerned: the next piece slides right until it would touch
+  const kernOf = (i: number, vi: number, j: number, vj: number): number => {
+    const tb = tableOf(kernT, i, j),
+      at = vi * shapes[j].length + vj,
+      kept = tb[at];
+    if (kept !== undefined) return kept;
+    const A = shapes[i][vi],
+      B = shapes[j][vj];
+    let k = 0;
+    for (let s = 0.25; s <= 4.01; s += 0.25) {
+      const bx = -B.x1 + A.x0 - GAP + s;
+      if (pairOverlap(A, 0, 0, B, bx, 0, true) > touchMax) break;
+      k = s;
+    }
+    return (tb[at] = k);
+  };
+  // a piece after a ra or zay nests in its tail: of the places where it does not touch (with its margin), the one
+  // furthest over the tail, a drop costing as much as half its length in slide
+  const nestOf = (i: number, vi: number, j: number, vj: number): [number, number] => {
+    const tb = tableOf(nestT, i, j),
+      at = vi * shapes[j].length + vj,
+      kept = tb[at];
+    if (kept) return kept;
+    const A = shapes[i][vi],
+      B = shapes[j][vj];
+    let best: [number, number] = [0, 0],
+      bs = -1e9;
+    for (let dy = 0; dy >= -3.01; dy -= 0.25)
+      for (let sx = 0; sx <= 8.01; sx += 0.25) {
+        const bx = -B.x1 + A.x0 - GAP + sx;
+        if (pairOverlap(A, 0, 0, B, bx, dy) > touchMax) break;
+        const sc = sx + dy * 0.5;
+        if (sc > bs) {
+          bs = sc;
+          best = [sx, dy];
+        }
+      }
+    return (tb[at] = best);
+  };
+  const tailed = groups.map(g => /[رزوي]$/.test(g.s));
+  // a stacked piece: lifted above the one before by the least that clears it, slid back over it as far as it goes
+  const stackOf = (i: number, vi: number, j: number, vj: number): [number, number] => {
+    const tb = tableOf(stackT, i, j),
+      at = vi * shapes[j].length + vj,
+      kept = tb[at];
+    if (kept) return kept;
+    const A = shapes[i][vi],
+      B = shapes[j][vj],
+      lift0 = Math.max(1.5, A.y1 - B.y0 - 6);
+    let best: [number, number] = [0, A.y1 - B.y0 + 0.8],
+      bs = -1e9;
+    for (let dy = lift0; dy <= A.y1 - B.y0 + 0.8; dy += 0.5)
+      for (let sx = 0; sx <= A.x1 - A.x0 + 0.01; sx += 0.5) {
+        const bx = -B.x1 + A.x0 - GAP + sx;
+        if (pairOverlap(A, 0, 0, B, bx, dy) > touchMax) break;
+        const sc = sx - dy * 0.35;
+        if (sc > bs) {
+          bs = sc;
+          best = [sx, dy];
+        }
+      }
+    return (tb[at] = best);
+  };
   const results: Roundel[] = [];
   for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
     const R = parkMiller(seed + t * 7919);
@@ -388,90 +458,29 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       gpos: { x: number; y: number }[] = new Array(n),
       // stacked pieces (lifted above the piece before them)
       up = new Uint8Array(n);
-    // inside a word, a break after a non-joining letter is kerned: the next piece slides right until it would touch
-    const kern = new Map<string, number>(),
-      kernOf = (i: number, j: number) => {
-        const key = i + ':' + lv[i] + '|' + j + ':' + lv[j];
-        if (kern.has(key)) return kern.get(key)!;
-        const A = shapes[i][lv[i]],
-          B = shapes[j][lv[j]];
-        let k = 0;
-        for (let s = 0.25; s <= 4.01; s += 0.25) {
-          const bx = -B.x1 + A.x0 - GAP + s;
-          if (pairOverlap(A, 0, 0, B, bx, 0, true) > (o.kernTouch ?? 3)) break;
-          k = s;
-        }
-        kern.set(key, k);
-        return k;
-      };
-    // a piece after a ra or zay nests in its tail: of the places where it does not touch (with its margin), the one
-    // furthest over the tail, a drop costing as much as half its length in slide
-    const nests = new Map<string, [number, number]>(),
-      nestOf = (i: number, j: number): [number, number] => {
-        const key = i + ':' + lv[i] + '|' + j + ':' + lv[j];
-        if (nests.has(key)) return nests.get(key)!;
-        const A = shapes[i][lv[i]],
-          B = shapes[j][lv[j]];
-        let best: [number, number] = [0, 0],
-          bs = -1e9;
-        for (let dy = 0; dy >= -3.01; dy -= 0.25)
-          for (let sx = 0; sx <= 8.01; sx += 0.25) {
-            const bx = -B.x1 + A.x0 - GAP + sx;
-            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
-            const sc = sx + dy * 0.5;
-            if (sc > bs) {
-              bs = sc;
-              best = [sx, dy];
-            }
-          }
-        nests.set(key, best);
-        return best;
-      };
-    const tailed = (i: number) => /[رزوي]$/.test(groups[i].s);
-    // a stacked piece: lifted above the one before by the least that clears it, slid back over it as far as it goes
-    const stacks = new Map<string, [number, number]>(),
-      stackOf = (i: number, j: number): [number, number] => {
-        const key = i + ':' + lv[i] + '|' + j + ':' + lv[j];
-        if (stacks.has(key)) return stacks.get(key)!;
-        const A = shapes[i][lv[i]],
-          B = shapes[j][lv[j]],
-          lift0 = Math.max(1.5, A.y1 - B.y0 - 6);
-        let best: [number, number] = [0, A.y1 - B.y0 + 0.8],
-          bs = -1e9;
-        for (let dy = lift0; dy <= A.y1 - B.y0 + 0.8; dy += 0.5)
-          for (let sx = 0; sx <= A.x1 - A.x0 + 0.01; sx += 0.5) {
-            const bx = -B.x1 + A.x0 - GAP + sx;
-            if (pairOverlap(A, 0, 0, B, bx, dy) > (o.kernTouch ?? 3)) break;
-            const sc = sx - dy * 0.35;
-            if (sc > bs) {
-              bs = sc;
-              best = [sx, dy];
-            }
-          }
-        stacks.set(key, best);
-        return best;
-      };
     const layoutWord = (w: number) => {
       let cur = wp[w].x,
         prev = -1;
-      words[w].forEach(gi => {
-        const S = shapes[gi][lv[gi]];
+      const ws = words[w];
+      for (let q = 0; q < ws.length; q++) {
+        const gi = ws[q],
+          S = shapes[gi][lv[gi]];
         if (groups[gi].newWord) cur -= 1.4 * (groups[gi].sc || 1);
         let x = cur - S.x1,
           y = wp[w].y;
         if (up[gi] && prev >= 0 && !groups[gi].newWord) {
-          const [sx, dy] = stackOf(prev, gi);
+          const [sx, dy] = stackOf(prev, lv[prev], gi, lv[gi]);
           x += sx;
           y = gpos[prev].y + dy;
-        } else if (o.nest && prev >= 0 && !groups[gi].newWord && tailed(prev)) {
-          const [sx, dy] = nestOf(prev, gi);
+        } else if (o.nest && prev >= 0 && !groups[gi].newWord && tailed[prev]) {
+          const [sx, dy] = nestOf(prev, lv[prev], gi, lv[gi]);
           x += sx;
           y = gpos[prev].y + dy;
-        } else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, gi) - 0.15);
+        } else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, lv[prev], gi, lv[gi]) - 0.15); // prettier-ignore
         gpos[gi] = { x, y };
         cur = x + S.x0 - GAP * (groups[gi].sc || 1);
         prev = gi;
-      });
+      }
     };
     let cur = 0;
     words.forEach((ws, w) => {
@@ -523,13 +532,19 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     const ov = Array.from({ length: W }, () => new Float64Array(W));
     const wordOverlap = (a: number, b: number) => {
       let c = 0;
-      words[a].forEach(i =>
-        words[b].forEach(j => {
-          const A = shapes[i][lv[i]],
-            B = shapes[j][lv[j]];
-          c += pairOverlap(A, gpos[i].x, gpos[i].y, B, gpos[j].x, gpos[j].y) + pairOverlap(B, gpos[j].x, gpos[j].y, A, gpos[i].x, gpos[i].y); // prettier-ignore
-        }),
-      );
+      const wa = words[a],
+        wb = words[b];
+      for (let p = 0; p < wa.length; p++) {
+        const i = wa[p],
+          A = shapes[i][lv[i]],
+          ga = gpos[i];
+        for (let q = 0; q < wb.length; q++) {
+          const j = wb[q],
+            B = shapes[j][lv[j]],
+            gb = gpos[j];
+          c += pairOverlap(A, ga.x, ga.y, B, gb.x, gb.y) + pairOverlap(B, gb.x, gb.y, A, ga.x, ga.y);
+        }
+      }
       return c;
     };
     const recompute = (a: number) => {
@@ -555,12 +570,26 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         while (l + 1 < brk.length && brk[l + 1] <= w) l++;
         return l;
       },
-      wkey = (w: number) => words[w].map(g => lv[g] + (up[g] ? 'u' : '')).join(','),
+      // a word as it is written (the variant of each of its pieces, and which are stacked), as one number; as text
+      // for a word with more ways to be written than a number tells apart
+      wordWays = words.map(ws => ws.reduce((p, g) => p * 2 * shapes[g].length, 1)),
+      wkey = (w: number): number | string => {
+        const ws = words[w];
+        if (!(wordWays[w] < 2 ** 53)) return ws.map(g => lv[g] + (up[g] ? 'u' : '')).join(',');
+        let k = 0;
+        for (let q = 0; q < ws.length; q++) k = k * (2 * shapes[ws[q]].length) + 2 * lv[ws[q]] + up[ws[q]];
+        return k;
+      },
       // where a word sits when it slides in after the one before on a line, as an offset from that word's place
-      kerns = new Map<string, number>(),
+      // (kept for each pair of words, by how the two are written)
+      kerns: (Map<number | string, Map<number | string, number>> | undefined)[] = new Array(W * W),
       kernAfter = (a: number, b: number) => {
-        const key = a + ':' + wkey(a) + '|' + b + ':' + wkey(b);
-        if (kerns.has(key)) return kerns.get(key)!;
+        const ka = wkey(a),
+          kb = wkey(b),
+          forPair = (kerns[a * W + b] ??= new Map()),
+          forA = forPair.get(ka) ?? (forPair.set(ka, new Map()), forPair.get(ka)!),
+          kept = forA.get(kb);
+        if (kept !== undefined) return kept;
         wp[b] = { x: wp[a].x, y: wp[a].y };
         layoutWord(b);
         const A = wbox(a),
@@ -576,12 +605,12 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         shift(off);
         for (let s = 0.4; s <= cap; s += 0.4) {
           shift(0.4);
-          if (touch() > (o.kernTouch ?? 3)) break;
+          if (touch() > touchMax) break;
           off += 0.4;
         }
         // and back off a little, so words that interlock still read apart
         off -= off > A.x0 - B.x1 - 1.2 ? 0.8 : 0;
-        kerns.set(key, off);
+        forA.set(kb, off);
         return off;
       },
       // a word's best shelf (a bowl first, else the longest), in composition coordinates
@@ -595,20 +624,64 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         );
         return best as { x0: number; x1: number; y: number; cradle?: boolean } | null;
       },
+      // the words of the lines `ls`, in order, and each one's place in that order (-1: not among them)
+      lineWords: number[] = [],
+      turn = new Int32Array(W),
+      wordsOf = (ls: number[]) => {
+        lineWords.length = 0;
+        turn.fill(-1);
+        for (const l of ls)
+          for (let w = brk[l], e = l + 1 < brk.length ? brk[l + 1] : W; w < e; w++) {
+            if (turn[w] < 0) turn[w] = lineWords.length;
+            lineWords.push(w);
+          }
+      },
+      // what a move may change, as it was before the move: the places of the words of the lines it lays out again, of
+      // their pieces, their overlaps and how their lines fit (the layout replaces these and never writes into them)
+      was = {
+        ls: [] as number[],
+        words: [] as number[],
+        wp: new Array<{ x: number; y: number }>(W),
+        gp: new Array<{ x: number; y: number }>(n),
+        ov: Array.from({ length: W }, () => new Float64Array(W)),
+        lf: [] as { over: number; loose: number }[],
+      },
+      note = (ls: number[]) => {
+        wordsOf(ls);
+        was.ls = ls;
+        was.words = lineWords.slice();
+        for (const w of was.words) {
+          was.wp[w] = wp[w];
+          for (const g of words[w]) was.gp[g] = gpos[g];
+          was.ov[w].set(ov[w]);
+        }
+        for (const l of ls) was.lf[l] = lineFit[l];
+      },
+      putBack = () => {
+        for (const w of was.words) {
+          wp[w] = was.wp[w];
+          for (const g of words[w]) gpos[g] = was.gp[g];
+          const row = was.ov[w];
+          for (let b = 0; b < W; b++) if (b !== w) ov[w][b] = ov[b][w] = row[b];
+        }
+        for (const l of was.ls) lineFit[l] = was.lf[l];
+      },
       layoutRuled = (ls: number[]) => {
         for (const l of ls) {
-          const ws = words.map((_, w) => w).slice(brk[l], l + 1 < brk.length ? brk[l + 1] : W),
-            y = chord[l].y * pk,
+          const y = chord[l].y * pk,
             main: number[] = [],
             riders: [number, number][] = [];
-          ws.forEach(w => {
+          for (let w = brk[l], end = l + 1 < brk.length ? brk[l + 1] : W; w < end; w++) {
             const host = main[main.length - 1];
-            if (RU!.anchors && anc[w] && host != null && shelfOf(host)) return riders.push([w, host]);
+            if (RU!.anchors && anc[w] && host != null && shelfOf(host)) {
+              riders.push([w, host]);
+              continue;
+            }
             if (host == null) wp[w] = { x: 0, y };
             else wp[w] = { x: wp[host].x + kernAfter(host, w), y };
             layoutWord(w);
             main.push(w);
-          });
+          }
           // the line's slack shared evenly between its words, and the line centred on its chord
           const bs = main.map(w => wbox(w)),
             right = bs[0].x1,
@@ -631,8 +704,14 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             layoutWord(w);
           });
         }
-        const moved = new Set(ls.flatMap(l => words.map((_, w) => w).filter(w => lineOf(w) === l)));
-        moved.forEach(w => recompute(w));
+        // the overlaps of the words that moved, each pair measured once: between two that moved, as the later of
+        // them measures it (what measuring every pair from both sides in turn left standing)
+        wordsOf(ls);
+        for (let k = 0; k < lineWords.length; k++) {
+          const a = lineWords[k];
+          if (turn[a] !== k) continue;
+          for (let b = 0; b < W; b++) if (b !== a && turn[b] < k) ov[a][b] = ov[b][a] = wordOverlap(a, b);
+        }
       },
       allLines = () => brk.map((_, l) => l);
     if (RU) {
@@ -987,55 +1066,78 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     }
     // the pieces that can be stacked: not a word's first, not a companion's
     const stackable = o.stack ? groups.map((_, i) => i).filter(i => i > 0 && groups[i - 1].word === groups[i].word && !groups[i].newWord) : []; // prettier-ignore
-    // a ruled composition's state, to undo a move by
-    const save = () => ({ lv: lv.slice(), up: up.slice(), anc: anc.slice(), brk: brk.slice(), pk, wk, wp: wp.map(p => ({ ...p })), gp: gpos.map(p => ({ ...p })), ov: ov.map(r => r.slice()), lf: lineFit.map(f => ({ ...f })) }); // prettier-ignore
-    const restore = (k: ReturnType<typeof save>) => {
-      k.lv.forEach((v, i) => (lv[i] = v));
-      up.set(k.up);
-      anc.set(k.anc);
-      brk = k.brk;
-      pk = k.pk;
-      wk = k.wk;
-      k.wp.forEach((p, i) => (wp[i] = p));
-      k.gp.forEach((p, i) => (gpos[i] = p));
-      k.ov.forEach((r, i) => ov[i].set(r));
-      lineFit = k.lf;
+    // a ruled move: the lines it changes laid out again, what they were kept (note) for the move to be undone by
+    const relay = (ls: number[]) => {
+      note(ls);
+      layoutRuled(ls);
     };
     for (let it = 0; it < (o.fixed ? 0 : iters); it++) {
       const mv = R();
-      let undo: () => void;
+      // (a move that changes nothing leaves the energy as it is, to the bit, and so is taken without a draw; `still`
+      // marks one, and it is not laid out or measured again. An energy that is not a number is left to the long way.)
+      let undo: (() => void) | null = null,
+        still = false;
       if (RU) {
-        const k = save();
-        undo = () => restore(k);
         if (stackable.length && mv < 0.1) {
           // a stack lifted or set down
           const gi = stackable[Math.floor(R() * stackable.length)];
           up[gi] ^= 1;
-          layoutRuled([lineOf(groups[gi].word)]);
+          relay([lineOf(groups[gi].word)]);
+          undo = () => {
+            up[gi] ^= 1;
+            putBack();
+          };
         } else if (mv < 0.25 && brk.length > 1) {
           // a line break moved by a word, each line keeping one
           const l = 1 + Math.floor(R() * (brk.length - 1)),
-            nb = brk[l] + (R() < 0.5 ? -1 : 1);
+            ob = brk[l],
+            nb = ob + (R() < 0.5 ? -1 : 1);
           if (nb > brk[l - 1] && nb < (l + 1 < brk.length ? brk[l + 1] : W)) {
             brk[l] = nb;
-            layoutRuled([l - 1, l]);
-          }
+            relay([l - 1, l]);
+            undo = () => {
+              brk[l] = ob;
+              putBack();
+            };
+          } else still = true;
         } else if (RU.anchors && mv < 0.35) {
           // a word set to ride on the word before it, or back on the line
           const w = 1 + Math.floor(R() * (W - 1));
           if (!brk.includes(w)) {
             anc[w] ^= 1;
-            layoutRuled([lineOf(w)]);
-          }
+            relay([lineOf(w)]);
+            undo = () => {
+              anc[w] ^= 1;
+              putBack();
+            };
+          } else still = true;
         } else if (mv < 0.45) {
           // the lines drawn closer or apart, or made shorter or longer
+          const opk = pk,
+            owk = wk;
           if (R() < 0.5) pk = Math.max(0.6, Math.min(1.15, pk * Math.exp((R() - 0.5) * 0.2)));
           else wk = Math.max(0.6, Math.min(1.5, wk * Math.exp((R() - 0.5) * 0.2)));
-          layoutRuled(allLines());
+          if (pk === opk && wk === owk) still = true;
+          else {
+            relay(allLines());
+            undo = () => {
+              pk = opk;
+              wk = owk;
+              putBack();
+            };
+          }
         } else {
-          const g2 = Math.floor(R() * n);
+          const g2 = Math.floor(R() * n),
+            old = lv[g2];
           lv[g2] = Math.floor(R() * shapes[g2].length);
-          layoutRuled([lineOf(groups[g2].word)]);
+          if (lv[g2] === old) still = true;
+          else {
+            relay([lineOf(groups[g2].word)]);
+            undo = () => {
+              lv[g2] = old;
+              putBack();
+            };
+          }
         }
       } else if (stackable.length && mv < 0.1) {
         // lift a piece onto the one before it, or set it back down
@@ -1074,7 +1176,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
             layoutWord(w);
             back();
           };
-        } else undo = () => {};
+        } else still = true;
       } else if (mv < 0.6 && W > 1) {
         const w = Math.floor(R() * W),
           old = { ...wp[w] },
@@ -1092,20 +1194,25 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       } else {
         const g2 = Math.floor(R() * n),
           w = groups[g2].word,
-          old = lv[g2],
-          back = keep(w);
+          old = lv[g2];
         lv[g2] = Math.floor(R() * shapes[g2].length);
-        layoutWord(w);
-        recompute(w);
-        undo = () => {
-          lv[g2] = old;
+        if (lv[g2] === old) still = true;
+        else {
+          const back = keep(w);
           layoutWord(w);
-          back();
-        };
+          recompute(w);
+          undo = () => {
+            lv[g2] = old;
+            layoutWord(w);
+            back();
+          };
+        }
       }
-      const E2 = energy();
-      if (E2 <= E || R() < Math.exp((E - E2) / T)) E = E2;
-      else undo();
+      if (!still || E !== E) {
+        const E2 = energy();
+        if (E2 <= E || R() < Math.exp((E - E2) / T)) E = E2;
+        else undo?.();
+      }
       T = Math.max(0.03, T * Math.pow(0.03 / 20, 1 / iters));
     }
     let o2 = 0;
