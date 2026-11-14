@@ -58,12 +58,25 @@ export interface RoundelRequest {
 }
 const keyOf = (q: RoundelRequest) => JSON.stringify([q.text, q.recipe, q.pen ?? null, q.counters, q.pair ?? null]);
 
+/** The composer's options (RoundelOptions) that a recipe does not set. Every other option is passed through from the
+ *  recipe in setup(), which fails to compile if one is left out: an option added to the composer is either passed
+ *  through there (the recipe schema needs a field for it) or named here, never silently out of a recipe's reach. */
+export const ROUNDEL_OPTIONS_NOT_IN_RECIPE = {
+  /** Set by the composer itself for every roundel, or per variant of a group: not a recipe's to choose. */
+  internal: ['K', 'deep', 'tails', 'longFinal', 'kashMap', 'tail'],
+  /** Options the composer reads that the recipe schema (model/schema.ts RoundelRecipe) has no field for yet. */
+  noSchemaField: ['companion', 'companionScale', 'readW', 'orderFirm', 'orderSlack', 'pathW', 'kernTouch', 'stackMin', 'stackBowls', 'stackPull', 'levels', 'margin'],
+} as const satisfies Record<string, readonly (keyof RoundelOptions)[]>; // prettier-ignore
+type NotInRecipe = (typeof ROUNDEL_OPTIONS_NOT_IN_RECIPE)[keyof typeof ROUNDEL_OPTIONS_NOT_IN_RECIPE][number];
+/** The options passed through: all the rest. */
+type FromRecipe = Exclude<keyof RoundelOptions, NotInRecipe>;
 /** The pen, the composer's and the frame's options, and the build's spec, from a request. */
 function setup({ text, recipe, pen, pair }: RoundelRequest) {
   const base = thuluthStyleOf(pen?.preset === 'roundel' ? pen : { preset: 'roundel' }),
     th: Thuluth = thuluth({ ...base, great: recipe.great });
   const fx = recipe.fixed && structuredClone(recipe.fixed);
-  const compose: RoundelOptions = {
+  // every option of FromRecipe, and no other (the compile-time check: see ROUNDEL_OPTIONS_NOT_IN_RECIPE)
+  const compose: { [K in FromRecipe]-?: RoundelOptions[K] } = {
     elongate: recipe.elongate,
     cross: recipe.cross,
     merge: recipe.merge,
