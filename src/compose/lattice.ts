@@ -246,7 +246,7 @@ function lattice(f: LatticeNode, res: RegionResult, style: Style, ctx: Ctx, sid:
     ctx.fill = { type: 'lattice', ok: false, note: "the text doesn't fit this region's straps" };
     return;
   }
-  ctx.items.push(...latticeItems(L, pts, style, ctx.script, slot.wordGap, sid, ++ctx.ring));
+  for (const it of latticeItems(L, pts, style, ctx.script, slot.wordGap, sid, ++ctx.ring)) ctx.items.push(it);
   ctx.fill = { type: 'lattice', ok: true, scale: L.s, note: `${L.text.length} straps` };
 }
 

@@ -541,7 +541,7 @@ function strapwork(f: StrapNode, res: RegionResult, style: Style, ctx: Ctx, sid:
     ctx.fill = { type: 'strapwork', ok: false, note: "the text doesn't fit this region's straps" };
     return;
   }
-  ctx.items.push(...strapItems(L, pts, style, ctx.script, slot.wordGap, sid, ++ctx.ring));
+  for (const it of strapItems(L, pts, style, ctx.script, slot.wordGap, sid, ++ctx.ring)) ctx.items.push(it);
   ctx.fill = { type: 'strapwork', ok: true, scale: L.s, note: `${L.text.length} straps` };
 }
 
@@ -583,7 +583,7 @@ export function strapItems(
     // the text reads from the strip's far end (right to left): the start mark sits just beyond it
     if (mk) items.push({ type: 'star', style: sid, centre: add(P, t, off + (st.W + mk / 2) * s), r: 0.62 * L.half });
   });
-  items.push(...strapOrnaments(L.ornament, L.half, sid));
+  for (const it of strapOrnaments(L.ornament, L.half, sid)) items.push(it);
   // strap edges: both sides of every strand, cut where it passes under; open ends get a cap
   const lines: Pt[][] = [],
     holes: Pt[][] = [];

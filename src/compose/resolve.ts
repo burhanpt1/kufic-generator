@@ -21,7 +21,7 @@ import type {
 } from '../model/schema';
 import { inherit } from '../model/style';
 import { scriptFor } from '../script/registry';
-import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
+import type { LayoutOptions, LetterStyle, Prepared, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
 import { bandGeom, fitRing, fitsAtFullSize, layRing, placeMap } from './textBorder';
@@ -48,6 +48,63 @@ export interface Ctx {
   /** Next colour key for "by ring" colouring. */
   ring: number;
   fill: Placed['meta']['fill'];
+  /** Problems no outline size will cure (a text with nothing to write, a pattern too fine to draw). They are kept
+   *  apart from `warnings`, which the automatic sizing counts and rolls back, and join them when resolving ends. */
+  notes: string[];
+  /** The fill just placed failed for such a reason, so enlarging the region is pointless. */
+  dead: boolean;
+}
+
+/** Record a problem that no outline size will cure (once). */
+export function note(ctx: Ctx, message: string) {
+  if (!ctx.notes.includes(message)) ctx.notes.push(message);
+}
+
+/** Why a text slot has nothing to write in the current script (empty, or no letter the script knows: Latin, digits,
+ *  punctuation), or null when it has. Every solver would otherwise search every size for room for nothing. */
+export function textProblem(ctx: Ctx, name: string, letter: LetterStyle): string | null {
+  const text = ctx.comp.texts[name].text;
+  if (!text.trim()) return `text "${name}" is empty`;
+  const p = ctx.script.prepareLines([text.replace(/\n+/g, ' ').trim()], letter)[0];
+  return hasLetters(ctx.script, p) ? null : `no Arabic letters in text "${name}"`;
+}
+/** Does a prepared line hold anything the script can write? Kufi drops what it does not know when shaping, leaving
+ *  no words; thuluth keeps the words, which then have no ink and no width. */
+const hasLetters = (script: ScriptEngine, p: Prepared) =>
+  p.words.length > 0 && script.segments(p, 'words', 1).some(s => s.minW > 0);
+
+/** A border's lines, prepared together: those with letters to write. null (and a note) when there are none. */
+function borderLines(ctx: Ctx, name: string, letter: LetterStyle): { lines: string[]; prepared: Prepared[] } | null {
+  const all = textLines(ctx.comp.texts[name].text);
+  if (!all.length) {
+    note(ctx, `text "${name}" is empty`);
+    return null;
+  }
+  const prepared = ctx.script.prepareLines(all, letter);
+  if (prepared.every(p => hasLetters(ctx.script, p))) return { lines: all, prepared };
+  const lines = all.filter((_, i) => hasLetters(ctx.script, prepared[i]));
+  if (!lines.length) {
+    note(ctx, `no Arabic letters in text "${name}"`);
+    return null;
+  }
+  note(ctx, `text "${name}": lines without Arabic letters are left out`);
+  return { lines, prepared: ctx.script.prepareLines(lines, letter) };
+}
+
+/** Tiles (roughly) a pattern or tilework of this tile edge lays to cover a disc of this radius. */
+export const tileCount = (radius: number, scale: number) => (2 * radius) ** 2 / Math.max(1e-9, scale * scale);
+/** More tiles than this are not laid: the work and the drawing grow with their number (a pattern of one-cell tiles
+ *  over a region a thousand cells across is millions of tiles and hundreds of megabytes of SVG), and tiles that fine
+ *  are below anything visible. A pattern written in words costs a few hundred times more per tile (every line is a
+ *  justified strip: about ten seconds at its budget), so it has a budget of its own. The largest in the presets and
+ *  the tests lay 47,000 tiles, and 7,000 in words. */
+export const TILE_BUDGET = 400_000;
+export const TEXT_TILE_BUDGET = 40_000;
+/** True (and a note) when a pattern is too fine for the area it must cover. */
+export function overTileBudget(ctx: Ctx, what: string, radius: number, scale: number, budget = TILE_BUDGET): boolean {
+  if (tileCount(radius, scale) <= budget) return false;
+  note(ctx, `${what} left out: its tiles are too small for this size (raise the pattern's scale)`);
+  return true;
 }
 
 export function styleId(ctx: Ctx, s: Style): number {
@@ -82,11 +139,8 @@ function ringArea(shape: ShapeGeometry, size: number, inset: number) {
 }
 
 /** Smallest outline size at which the first text border holds its text once at full letter size. */
-function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Style): number | null {
+function autoSize(shape: ShapeGeometry, border: TextBorder, prepared: Prepared, ctx: Ctx, style: Style): number | null {
   const slot = ctx.comp.texts[border.text],
-    lines = textLines(slot.text);
-  if (!lines.length) return null;
-  const prepared = ctx.script.prepareLines(lines, style.letter)[0],
     sep = (border.separator ?? DEFAULT_SEPARATOR).width;
   const fits = (L: number) => {
     const bg0 = bandGeom(shape, L, sep),
@@ -174,10 +228,19 @@ export function resolveRegion(node: RegionNode, parentStyle: Style, ctx: Ctx, fi
 function resolveRegionIn(node: RegionNode, parentStyle: Style, ctx: Ctx, fixedSize?: number): RegionResult | null {
   const style = inherit(parentStyle, node.style),
     shape = shapeOf(node.outline);
-  const firstText = node.borders.find((b): b is TextBorder => b.type === 'textBorder');
   const fixed = fixedSize ?? (typeof node.size === 'number' ? node.size : null);
   if (fixed != null) return placeRegion(node, style, shape, ctx, fixed);
-  const auto = firstText ? autoSize(shape, firstText, ctx, style) : null;
+  // the first text border with something to write sets the size
+  let firstText: TextBorder | undefined, first: Prepared | undefined;
+  for (const b of node.borders) {
+    if (b.type !== 'textBorder') continue;
+    first = borderLines(ctx, b.text, style.letter)?.prepared[0];
+    if (first) {
+      firstText = b;
+      break;
+    }
+  }
+  const auto = firstText && first ? autoSize(shape, firstText, first, ctx, style) : null;
   if (auto == null && firstText) ctx.warnings.push(`text "${firstText.text}" doesn't fit this outline at any size`);
   const base = (auto ?? 30) * (node.spread ?? 1);
   let res: RegionResult | null = null;
@@ -194,6 +257,7 @@ function resolveRegionIn(node: RegionNode, parentStyle: Style, ctx: Ctx, fixedSi
     const fill = ctx.fill as Placed['meta']['fill'];
     const fillOk =
       !node.fill ||
+      ctx.dead ||
       // a nested region that found no room at all is a failed fill too
       (node.fill.type === 'region' && fill?.ok !== false) ||
       (fill && fill.ok && (fill.scale == null || fill.scale >= MIN_FILL_RATIO * (res?.lastScale ?? 1)));
@@ -235,9 +299,9 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
       continue;
     }
     const slot = ctx.comp.texts[b.text],
-      lines = textLines(slot.text);
-    if (!lines.length) continue;
-    const prepared = ctx.script.prepareLines(lines, style.letter),
+      usable = borderLines(ctx, b.text, style.letter);
+    if (!usable) continue;
+    const { lines, prepared } = usable,
       sep = b.separator ?? DEFAULT_SEPARATOR,
       meta: BorderMeta = { slot: b.text, rings: [] };
     for (let k = 0; k < lines.length; k++) {
@@ -298,8 +362,16 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         if (o && i) {
           const area: Area = [o, i],
             dp = deepestPoint(outer),
-            radius = Math.max(...outer.map(q => Math.hypot(q[0] - dp.p[0], q[1] - dp.p[1])));
-          if (b.ground.kind === 'iznik')
+            radius = outer.reduce((m, q) => Math.max(m, Math.hypot(q[0] - dp.p[0], q[1] - dp.p[1])), -Infinity),
+            tile =
+              b.ground.kind === 'iznik'
+                ? (b.ground.iznik ?? IZNIK).scale
+                : b.ground.kind === 'pattern'
+                  ? b.ground.pattern?.scale
+                  : undefined;
+          if (tile !== undefined && overTileBudget(ctx, `the ground of "${b.text}"`, radius, tile)) {
+            // too fine to draw: the band keeps a plain ground
+          } else if (b.ground.kind === 'iznik')
             ctx.items.push({
               type: 'tilework',
               style: sid,
@@ -464,6 +536,8 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
     warnings: [],
     ring: 0,
     fill: null,
+    notes: [],
+    dead: false,
   };
   const style = inherit(comp.style, comp.root.style);
   const region = resolveRegion(comp.root.child, style, ctx);
@@ -499,11 +573,13 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
       pockets
         .filter(p => p.r > 1.5)
         .forEach(p => ctx.items.push({ type: 'star', style: sid, centre: p.c, r: p.r * 0.92 }));
-    else if (sp.type === 'pattern')
-      ctx.items.push({ type: 'spandrels', style: sid, kind: 'pattern', area, pattern: sp.pattern, centre, radius });
-    else if (sp.type === 'iznik')
-      ctx.items.push({ type: 'tilework', style: sid, area, centre, radius, iznik: sp.iznik });
-    else if (sp.type === 'vine' || sp.type === 'solid')
+    else if (sp.type === 'pattern') {
+      if (!overTileBudget(ctx, 'the spandrel pattern', radius, sp.pattern.scale))
+        ctx.items.push({ type: 'spandrels', style: sid, kind: 'pattern', area, pattern: sp.pattern, centre, radius });
+    } else if (sp.type === 'iznik') {
+      if (!overTileBudget(ctx, 'the spandrel tilework', radius, sp.iznik.scale))
+        ctx.items.push({ type: 'tilework', style: sid, area, centre, radius, iznik: sp.iznik });
+    } else if (sp.type === 'vine' || sp.type === 'solid')
       ctx.items.push({ type: 'spandrels', style: sid, kind: sp.type, area, centre, radius });
     else ctx.warnings.push(`spandrels of type ${sp.type} are not supported`);
   }
@@ -518,7 +594,7 @@ export function resolve(input: Composition | unknown, opts: ResolveOptions = {})
       outline: outer,
       borders: ctx.borders,
       fill: ctx.fill,
-      warnings: ctx.warnings,
+      warnings: ctx.notes.length ? [...ctx.warnings, ...ctx.notes] : ctx.warnings,
       inner: region && region.inner ? Math.sqrt(region.inner.area / Math.max(1e-9, area(outer))) : 0,
     },
   };
