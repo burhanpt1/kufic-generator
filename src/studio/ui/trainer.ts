@@ -1,7 +1,7 @@
 // Taste trainer (lab port §3): rate one composition at a time (Veto, Meh, Like, Skip); two logistic models learn
 // from the ratings and steer what is shown next and how the gallery breeds. Ratings stay in this browser.
 import type { Evaluated } from '../../evolve/breed';
-import { METRIC_LABELS } from '../../evolve/critic';
+import { METRIC_LABELS } from '../../evolve/metricLabels';
 import { TRAITS } from '../../evolve/genes';
 import { EvalPool } from '../../evolve/pool';
 import { Rng } from '../../evolve/rng';

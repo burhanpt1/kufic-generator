@@ -3,7 +3,7 @@ import { loadClipper2 } from '../kernels/clipper2';
 import { loadSealWasmSync } from '../kernels/seal';
 import { preset } from '../model/presets';
 import type { Composition } from '../model/schema';
-import { evaluate } from './breed';
+import { evaluate } from './evaluate';
 
 loadSealWasmSync(); // workers may compile synchronously
 // Clipper2's module loads asynchronously: jobs wait for it, so every evaluation uses the same backend

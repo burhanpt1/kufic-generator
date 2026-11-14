@@ -4,7 +4,6 @@ import { EvalPool } from '../../evolve/pool';
 import type { Taste } from '../../evolve/taste';
 import { train } from '../../evolve/trainer';
 import type { Rating, TasteModel } from '../../evolve/trainer';
-import { loadKernels } from '../../kernels';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
 import { downloadName, saveSVG, savePNG } from '../../app/export';
@@ -88,9 +87,10 @@ export function keepFocus(box: HTMLElement, rebuild: () => void, fallback?: stri
     }
 }
 
-// the preview is composed on a background worker; only without one does this thread compose, and need the kernels
+// the preview is composed on a background worker; only without one does this thread compose, and fetch the kernels
+// (the engine itself comes with the first job: background.ts and the evaluation pool import it when they must)
 const background = new Background();
-if (!background.threaded) await loadKernels();
+if (!background.threaded) await (await import('../../kernels')).loadKernels();
 
 let comp: Composition = structuredClone(PRESETS[0].comp),
   svg = '',

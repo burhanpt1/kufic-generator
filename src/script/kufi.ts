@@ -8,6 +8,7 @@ import { markTerminals } from '../layout/terminals';
 import { breakSegs, prepare, wordSegs } from '../shaping/prepare';
 import { normalise, shape } from '../shaping/shape';
 import type { Seg, Segs, Shaped, Word } from '../types';
+import { CAPABILITIES } from './capabilities';
 import type { CellStrip, LayoutOptions, LetterStyle, ScriptEngine, Segments } from './types';
 
 const variants = (s: LetterStyle) => ({
@@ -77,7 +78,7 @@ export const kufi: ScriptEngine = {
     return { kind: 'cells', W: st.W, Hb, base, data: st.data, tag: st.tag };
   },
   abjad: abjadValue,
-  capabilities: { grid: true, seals: true, mazes: true },
+  capabilities: CAPABILITIES.kufi,
 };
 
 /** Repeat a segment list (whole repeats, each tagged with its repeat index). */

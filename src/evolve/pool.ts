@@ -1,8 +1,9 @@
 // A pool of evaluation workers that streams results as they finish (COMPOSITION_ENGINE.md §7). Without workers
-// (tests, old browsers) it evaluates in-thread, yielding between candidates so the page stays responsive.
+// (tests, old browsers) it evaluates in-thread, yielding between candidates so the page stays responsive; the
+// evaluator, and the composing engine with it, is loaded only then.
 import type { Composition } from '../model/schema';
-import { costOf, evaluate } from './breed';
-import type { Evaluated } from './breed';
+import { costOf } from './breed';
+import type { Evaluated } from './evaluate';
 
 export type Outcome = { ok: true; result: Evaluated } | { ok: false; error: string };
 type Job = { id: number; comp: Composition; prefix?: string; done: (o: Outcome) => void };
@@ -77,7 +78,7 @@ export class EvalPool {
         this.queue.sort((a, b) => cost.get(b)! - cost.get(a)! || a.id - b.id);
       }
       if (this.threaded) this.pump();
-      else this.inThread(gen);
+      else void this.inThread(gen);
     });
   }
   /** End the current run: its queue is dropped and its promise resolves. Jobs already on a worker get a short grace
@@ -151,13 +152,21 @@ export class EvalPool {
     const b = this.busy.get(w);
     if (b) this.finish(w, { id: b.job.id, ok: false, error: 'worker error' });
   }
-  private inThread(gen: number) {
+  private async inThread(gen: number) {
+    let evaluate: (typeof import('./evaluate'))['evaluate'] | null = null,
+      broken = '';
+    try {
+      ({ evaluate } = await import('./evaluate'));
+    } catch (err) {
+      broken = String((err as Error)?.message ?? err); // the engine could not be fetched: every job says so
+    }
     const step = () => {
       if (gen !== this.generation) return;
       const job = this.queue.shift();
       if (!job) return;
       let o: Outcome;
       try {
+        if (!evaluate) throw new Error(broken);
         o = { ok: true, result: evaluate(job.comp, job.prefix) };
       } catch (err) {
         o = { ok: false, error: String((err as Error)?.message ?? err) };

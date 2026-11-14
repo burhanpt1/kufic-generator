@@ -2,9 +2,8 @@
 import { alphabet, compose } from '../../engine';
 import type { ComposeOptions, Grid } from '../../engine';
 import type { Style } from '../../model/schema';
-import { renderGrid } from '../../render';
+import { renderGrid } from '../../render/grid';
 import type { RenderOptions } from '../../render/svg';
-import { clearMonogramCache } from '../../monogram/methods';
 import type { EditorState } from '../../app/letterEditor';
 import { loadOverrides, lookup, wireEditor as wireLetterEditor } from '../../app/letterEditor';
 import { mainSlot } from './gallery';
@@ -65,7 +64,7 @@ export function wireLetters(app: App) {
     document,
     state,
     () => {
-      clearMonogramCache();
+      // whatever composes next takes the letters with its job (compute.ts), and drops what it built with the old ones
       app.glyphs = state.ovr;
       draw();
       app.glyphsChanged();
