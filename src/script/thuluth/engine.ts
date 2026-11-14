@@ -1,11 +1,11 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { allahForms, altForms, nameForms } from './alts';
+import { allahForms, altForms, ledForms, nameForms } from './alts';
 import { HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
-import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms, muhammadAt } from './shape';
+import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms, muhammadAt, STEM_LETTERS } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
 export const DEFAULT_THULUTH: ThuluthStyle = {
@@ -85,6 +85,9 @@ export interface LineOptions {
   allahAlif?: boolean;
   /** Leave out the name's own shadda and small alif (a vowelled text sets its marks itself). */
   noAuto?: boolean;
+  /** For a piece of a word: the piece before it ends in a tall stem (an alif before the lam of ال), so a stem that
+   *  opens this one is the second of a run (alts.stems c gives it the lesser head). */
+  afterStem?: boolean;
 }
 /** A dot: position, then (in compositions) its scale, the nib's rotation and a tint. */
 export type Dot = [x: number, y: number, sc?: number, rot?: number, tint?: string];
@@ -150,13 +153,19 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       t.ya = { ...t.ya, fin: g as unknown as GlyphDef };
     }
     // drafted alternatives, over everything else
-    if (st.alts && !st.labLetters)
-      for (const [fam, fs] of Object.entries(altForms(st.alts, t)) as [Family, Partial<Record<Form, GlyphDef>>][])
-        t[fam] = { ...t[fam], ...fs };
+    if (st.alts && !st.labLetters) {
+      const over = altForms(st.alts, t, st.nib, st.body) as Partial<Record<Family, Partial<Record<Form, GlyphDef>>>>;
+      for (const fam of Object.keys(over) as Family[]) t[fam] = { ...t[fam], ...over[fam] };
+    }
     return t;
   })();
-  const NAME = allahForms(st.labLetters ? undefined : st.alts),
-    MUHAMMAD = nameForms(st.labLetters ? undefined : st.alts);
+  const ALTS = st.labLetters ? undefined : st.alts,
+    NAME = allahForms(ALTS, st.nib),
+    MUHAMMAD = nameForms(ALTS),
+    // alts.stems c: a lam after another stem carries the lesser head, and two joined stems stand a little further
+    // apart, so that their heads keep the room their shafts have
+    LED = ledForms(ALTS, table, st.nib),
+    STEM_JOIN = LED ? 0.45 * (st.nib / 1.6) : 0;
 
   function glyphRaw(c: string, form: Form): GlyphDef | null {
     const fam = FORM_FAM[c + '|' + form] || FAM[c],
@@ -201,6 +210,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
         if (mu >= 0 && i >= mu) g = scaleGlyph(MUHAMMAD!.letters[i - mu], st.body);
+        if (LED && (i ? STEM_LETTERS.has(fs[i - 1].c) : wi === 0 && o.afterStem)) g = LED[FAM[f.c]]?.[f.form] ?? g;
         if (allah >= 0 && i === allah - 1) g = NAME.ini;
         if (allah >= 0 && i === allah) g = NAME.lam;
         if (allah >= 0 && i === allah + 1 && name!.final) g = scaleGlyph(NAME.heh, st.body);
@@ -240,6 +250,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             // the ligature keeps its own spacing: its lams are never drawn apart
             if (allah >= 0 && i >= allah - 1) kl = 0;
             if (mu >= 0 && (i === mu || i === mu + 1)) kl = 0;
+            // (and a lam from the tall loop of a sad that follows it)
+            if (STEM_JOIN && allah < 0 && STEM_LETTERS.has(f.c) && (STEM_LETTERS.has(fs[i + 1].c) || FAM[fs[i + 1].c] === 'sad')) kl = Math.max(kl, STEM_JOIN); // prettier-ignore
             // two joined loop letters need a stretch of baseline between them, or their loops run together
             if (LOOPY.includes(FAM[f.c]) && LOOPY.includes(FAM[fs[i + 1].c])) kl = Math.max(kl, st.loopGap * st.body);
             if (kl > 0) {

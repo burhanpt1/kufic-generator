@@ -7,7 +7,7 @@ import type { Thuluth } from '../engine';
 import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
 import { parkMiller } from '../rng';
-import { allahSpan, ligate, parseVowels, splitGroups } from '../shape';
+import { allahSpan, ligate, parseVowels, splitGroups, STEM_LETTERS } from '../shape';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
@@ -275,6 +275,8 @@ interface Sides {
   dlo: Float64Array;
   dhi: Float64Array;
 }
+/** The space a piece keeps from a tall stem it faces in its word, in nibs, with the drafted stems (alts.stems). */
+export const STEM_CLEAR = 0.6;
 const SIDE_H = 0.1,
   SIDES = new WeakMap<GroupShape, Sides>();
 function sidesOf(th: Thuluth, S: GroupShape): Sides {
@@ -435,6 +437,13 @@ export function roundelGroups(
       g.marks = g.marks.filter(m => m.k !== k);
     }
   });
+  // alts.stems c: a piece that follows a tall stem in its word opens with the lesser head
+  if (style.alts?.stems === 'c' && !style.labLetters)
+    groups.forEach((g, i) => {
+      const p = groups[i - 1];
+      if (p && p.word === g.word && !g.newWord && !g.comp === !p.comp && STEM_LETTERS.has([...p.s].pop()!))
+        g.led = true;
+    });
   return { groups, vopts: { ...o, deep: true, tails: true, levels: o.levels ?? [0, 2, 4, 7] } };
 }
 
@@ -543,19 +552,31 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
     stackT: ([number, number] | undefined)[][] = new Array(n);
   // innerGap: how far to the left of a piece A's place the place of a piece B on its baseline must stay for that much
   // space to be left between their letters (half of it where a dot is the nearer), kept for each pair of shapes
-  const reaches = new WeakMap<GroupShape, WeakMap<GroupShape, number>>(),
-    reachOf = (A: GroupShape, B: GroupShape): number => {
-      let forA = reaches.get(A);
-      if (!forA) reaches.set(A, (forA = new WeakMap()));
+  const reaches = new Map<number, WeakMap<GroupShape, WeakMap<GroupShape, number>>>(),
+    reachOf = (A: GroupShape, B: GroupShape, c = IG): number => {
+      let forC = reaches.get(c);
+      if (!forC) reaches.set(c, (forC = new WeakMap()));
+      let forA = forC.get(A);
+      if (!forA) forC.set(A, (forA = new WeakMap()));
       let v = forA.get(B);
       if (v === undefined) {
         const fa = sidesOf(th, A),
           fb = sidesOf(th, B);
-        v = Math.min(slideRoom(fa.lo, fa.k0, fb.hi, fb.k0, IG), slideRoom(fa.dlo, fa.k0, fb.dhi, fb.k0, IG / 2));
+        v = Math.min(slideRoom(fa.lo, fa.k0, fb.hi, fb.k0, c), slideRoom(fa.dlo, fa.k0, fb.dhi, fb.k0, c / 2));
         forA.set(B, v);
       }
       return v;
     };
+  // The drafted stems (alts.stems) carry a head that stands out to the right of the shaft, and are as heavy as the
+  // lams: where two pieces of a word face each other with a tall stem (the alif before the lam of ال, an alif before
+  // any letter, a lam after a waw), the piece slid in keeps STEM_CLEAR nibs of space from the stem's ink, measured
+  // on the pen's outlines as innerGap is, whether it is set by innerGap or by `kern` (which slides until the two
+  // touch: a hairline lead-in could touch a shaft and pass, a head cannot).
+  const stemClear = th.style.alts?.stems && !th.style.labLetters ? STEM_CLEAR * th.style.nib : 0,
+    facesStem = (i: number, j: number) =>
+      stemClear > 0 && (STEM_LETTERS.has([...groups[i].s].pop()!) || STEM_LETTERS.has([...groups[j].s][0])),
+    // how far B may slide in after A (as kernOf counts it) with c left between them
+    slideFor = (i: number, A: GroupShape, B: GroupShape, c: number) => reachOf(A, B, c) + B.x1 - A.x0 + GAP * (groups[i].sc || 1); // prettier-ignore
   // inside a word, a break after a non-joining letter is kerned: the next piece slides right until it would touch
   const kernOf = (i: number, vi: number, j: number, vj: number): number => {
     const tb = tableOf(kernT, i, j),
@@ -566,13 +587,15 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       B = shapes[j][vj];
     // innerGap: in until that much is left between the two, and no further than B's right edge reaching A's (pieces
     // that never face each other). (B's box stands GAP to the left of A's before it slides: layoutWord.)
-    if (IG) return (tb[at] = Math.min(reachOf(A, B) + B.x1 - A.x0 + GAP * (groups[i].sc || 1), A.x1 - A.x0));
+    if (IG) return (tb[at] = Math.min(slideFor(i, A, B, facesStem(i, j) ? Math.max(IG, stemClear) : IG), A.x1 - A.x0));
     let k = 0;
     for (let s = 0.25; s <= 4.01; s += 0.25) {
       const bx = -B.x1 + A.x0 - GAP + s;
       if (pairOverlap(A, 0, 0, B, bx, 0, true) > touchMax) break;
       k = s;
     }
+    // (layoutWord takes 0.15 off a kern: allowed for here, so the space kept is the space asked)
+    if (facesStem(i, j)) k = Math.min(k, slideFor(i, A, B, stemClear) + 0.15);
     return (tb[at] = k);
   };
   // a piece after a ra or zay nests in its tail: of the places where it does not touch (with its margin), the one
@@ -653,8 +676,11 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           // and clear of the pieces further back on its baseline (the tail of a waw two pieces before)
           for (let p = q - 2; p >= 0 && !groups[ws[p + 1]].newWord; p--)
             if (gpos[ws[p]].y === y) x = Math.min(x, gpos[ws[p]].x + reachOf(shapes[ws[p]][lv[ws[p]]], S));
+        } else if (o.kern && prev >= 0 && !groups[gi].newWord) {
+          const k = kernOf(prev, lv[prev], gi, lv[gi]) - 0.15;
+          // (a piece facing a stem may have to stand back from where its box put it)
+          x += facesStem(prev, gi) ? k : Math.max(0, k);
         }
-        else if (o.kern && prev >= 0 && !groups[gi].newWord) x += Math.max(0, kernOf(prev, lv[prev], gi, lv[gi]) - 0.15); // prettier-ignore
         gpos[gi] = { x, y };
         cur = x + S.x0 - GAP * (groups[gi].sc || 1);
         prev = gi;

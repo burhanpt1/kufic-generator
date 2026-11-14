@@ -24,6 +24,9 @@ export interface RGroup {
   newWord?: boolean;
   /** Its own colour. */
   tint?: string;
+  /** The piece before it in its word ends in a tall stem (LineOptions.afterStem; set only for a style whose stems
+   *  are drawn by rank, alts.stems c). */
+  led?: boolean;
 }
 
 export interface Shelf {
@@ -173,6 +176,7 @@ export function groupShape(
     // the ligature draws its own shadda and small alif even in a vowelled text (its other marks were dropped)
     allah: g.allah,
     allahAlif: g.alif,
+    afterStem: g.led,
     noAuto: hasMarks && !(g.allah && st.allah),
     gap: 0,
     wordGap: 0,
@@ -361,6 +365,7 @@ export function variantsKey(style: ThuluthStyle, g: RGroup, o: StackOptions, K: 
     g.alif ?? null,
     g.marks ?? null,
     g.sc ?? null,
+    g.led ?? null,
     K,
     {
       tail: o.tail,
@@ -548,7 +553,7 @@ function groupShapeOk(th: Thuluth, g: RGroup, level: number, o: StackOptions, st
 }
 function groupShapeCollides(th: Thuluth, g: RGroup, level: number, o: StackOptions, stacks: Stacks, sj: number) {
   const nib = th.style.nib;
-  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah, allahAlif: g.alif, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
+  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah, allahAlif: g.alif, afterStem: g.led, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
   const pts = (upper: boolean) =>
     b.placed
       .filter(p => isLetter(p) && (upper ? p.li >= sj : p.li < sj))
