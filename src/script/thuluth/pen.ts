@@ -80,9 +80,35 @@ const ccw = (q: Poly): Poly => {
   return ar < 0 ? q.reverse() : q;
 };
 
+/** Where a stroke begins, ends and turns sharply (by more than 60° from one sample to the next), as lengths along it,
+ *  with the length at which each sample stands. */
+function endsAndTurns(samples: readonly Sample[]): { along: number[]; at: number[] } {
+  const along = [0];
+  for (let i = 1; i < samples.length; i++)
+    along.push(along[i - 1] + Math.hypot(samples[i].x - samples[i - 1].x, samples[i].y - samples[i - 1].y));
+  const at = [0, along[along.length - 1]];
+  for (let i = 1; i + 1 < samples.length; i++) {
+    const ux = samples[i].x - samples[i - 1].x,
+      uy = samples[i].y - samples[i - 1].y,
+      vx = samples[i + 1].x - samples[i].x,
+      vy = samples[i + 1].y - samples[i].y;
+    if (ux * vx + uy * vy < 0.5 * Math.hypot(ux, uy) * Math.hypot(vx, vy)) at.push(along[i]);
+  }
+  return { along, at };
+}
+
 /** The nib's quadrilaterals along a sampled stroke (and the minimum-thickness quads, interleaved: each segment gives
- *  one quad, or two when floor > 0). Pen units, y up. */
-export function nibPolys(samples: readonly Sample[], nib: number, angDeg: number, floor: number): Poly[] {
+ *  one quad, or two when floor > 0). Pen units, y up. With `cleanEnds` (the drafted stems, ThuluthStyle.alts),
+ *  near a stroke's end or a sharp turn the minimum-thickness quad is drawn only where the nib alone would be thinner
+ *  than the floor: there its square end stands proud of the nib's slanted cut (the flat tab on a stem's top). */
+export function nibPolys(
+  samples: readonly Sample[],
+  nib: number,
+  angDeg: number,
+  floor: number,
+  cleanEnds = false,
+): Poly[] {
+  const ends = cleanEnds && floor > 0 ? endsAndTurns(samples) : null;
   const a = (angDeg * Math.PI) / 180,
     out: Poly[] = [];
   for (let i = 0; i + 1 < samples.length; i++) {
@@ -110,6 +136,12 @@ export function nibPolys(samples: readonly Sample[], nib: number, angDeg: number
         l = Math.hypot(dx, dy) || 1,
         fx = ((-dy / l) * nib * floor) / 2,
         fy = ((dx / l) * nib * floor) / 2;
+      // the nib across the stroke, as a share of its width, at each end of the segment
+      const across = (ac: number) => Math.abs(Math.cos(ac) * dy - Math.sin(ac) * dx) / l;
+      if (ends && across(ap) >= floor && across(aq) >= floor) {
+        const at = ends.along[i] + l / 2;
+        if (ends.at.some(e => Math.abs(e - at) < nib * 0.6)) continue;
+      }
       out.push(
         ccw([
           [p.x + fx * wp, p.y + fy * wp],

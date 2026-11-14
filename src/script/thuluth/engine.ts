@@ -1,10 +1,11 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, HAMZA, LETTER_FIXES } from './fixes';
+import { allahForms, altForms, nameForms } from './alts';
+import { HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
-import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
+import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms, muhammadAt } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
 export const DEFAULT_THULUTH: ThuluthStyle = {
@@ -148,8 +149,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       g.dotX = -0.9;
       t.ya = { ...t.ya, fin: g as unknown as GlyphDef };
     }
+    // drafted alternatives, over everything else
+    if (st.alts && !st.labLetters)
+      for (const [fam, fs] of Object.entries(altForms(st.alts, t)) as [Family, Partial<Record<Form, GlyphDef>>][])
+        t[fam] = { ...t[fam], ...fs };
     return t;
   })();
+  const NAME = allahForms(st.labLetters ? undefined : st.alts),
+    MUHAMMAD = nameForms(st.labLetters ? undefined : st.alts);
 
   function glyphRaw(c: string, form: Form): GlyphDef | null {
     const fam = FORM_FAM[c + '|' + form] || FAM[c],
@@ -187,11 +194,16 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       // the name of God as one ligature: its lams and its final heh in their own forms (`allah` is the second lam)
       const name = names[wi],
         allah = name ? name.lam + 1 : -1;
+      // the name محمد as a ligature (a drafted alternative): its first mim and its hah in their own forms, a storey
+      // above the line the rest stands on. Not when the caller stacks the word's joins itself.
+      const mu = MUHAMMAD && !(o.stacks && Object.keys(o.stacks).length) ? muhammadAt(w) : -1,
+        rise = mu >= 0 ? MUHAMMAD!.drop * st.body : 0;
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
-        if (allah >= 0 && i === allah - 1) g = ALLAH_LAM_INI;
-        if (allah >= 0 && i === allah) g = ALLAH_LAM;
-        if (allah >= 0 && i === allah + 1 && name!.final) g = scaleGlyph(ALLAH_HEH, st.body);
+        if (mu >= 0 && i >= mu) g = scaleGlyph(MUHAMMAD!.letters[i - mu], st.body);
+        if (allah >= 0 && i === allah - 1) g = NAME.ini;
+        if (allah >= 0 && i === allah) g = NAME.lam;
+        if (allah >= 0 && i === allah + 1 && name!.final) g = scaleGlyph(NAME.heh, st.body);
         if (!g) {
           x -= 2;
           joined = false;
@@ -207,7 +219,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         if (connects && joined) ox = x;
         else {
           // a new group starts after a gap: its right edge at the cursor
-          y = 0;
+          y = i === mu ? rise : 0;
           const xs = g.s.flatMap(s => s.pts.map(p => p[0]));
           ox = x - (Math.max(...xs) + nib * 0.5);
         }
@@ -215,6 +227,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         if (g.exit != null) {
           x = ox + g.exit;
           joined = true;
+          // the hah of محمد ends a storey down
+          if (mu >= 0 && i === mu + 1) y -= rise;
           const stk = o.stacks && o.stacks[i + 1];
           if (stk && i < fs.length - 1) {
             // a stacked join: the next letter is written below and to the right, and the pen comes down to it
@@ -225,6 +239,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             let kl = o.kashMap && o.kashMap[i + 1] != null ? o.kashMap[i + 1] : kashida;
             // the ligature keeps its own spacing: its lams are never drawn apart
             if (allah >= 0 && i >= allah - 1) kl = 0;
+            if (mu >= 0 && (i === mu || i === mu + 1)) kl = 0;
             // two joined loop letters need a stretch of baseline between them, or their loops run together
             if (LOOPY.includes(FAM[f.c]) && LOOPY.includes(FAM[fs[i + 1].c])) kl = Math.max(kl, st.loopGap * st.body);
             if (kl > 0) {
@@ -411,7 +426,10 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
   }
 
   /** The ink of a stroke and of a dot, as polygons in pen units. */
-  const strokePolys = (s: Stroke, nibScale = 1) => nibPolys(s.s, (s.nib || st.nib) * nibScale, s.ang, st.floor);
+  // any drafted alternative is drawn with clean stroke ends (pen.ts)
+  const CLEAN_ENDS = !!st.alts && Object.values(st.alts).some(Boolean) && !st.labLetters;
+  const strokePolys = (s: Stroke, nibScale = 1) =>
+    nibPolys(s.s, (s.nib || st.nib) * nibScale, s.ang, st.floor, CLEAN_ENDS);
   const dotPolysAt = (x: number, y: number, scale = 1, rot = 0) =>
     dotPolys(x, y, st.nib * scale, st.ang, st.floor, rot);
 
