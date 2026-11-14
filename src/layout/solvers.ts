@@ -9,10 +9,16 @@ export interface Partition {
   rep?: number;
 }
 
+/** `rep` copies of a line, each segment tagged with its copy. A line that was already repeated keeps its own copies
+ *  apart: copy r of a line holding n0 copies is numbered from r * n0. */
 export function repeatSegs(segs0: Segs, rep: number): Segs {
   const out: Segs = [];
+  let n0 = 1;
+  for (const s of segs0) n0 = Math.max(n0, (s.rep || 0) + 1);
   for (let r = 0; r < rep; r++)
-    segs0.forEach((s, i) => out.push({ ...s, rep: r, endsWord: i === segs0.length - 1 ? true : s.endsWord }));
+    segs0.forEach((s, i) =>
+      out.push({ ...s, rep: r * n0 + (s.rep || 0), endsWord: i === segs0.length - 1 ? true : s.endsWord }),
+    );
   out.wg = segs0.wg;
   return out;
 }
