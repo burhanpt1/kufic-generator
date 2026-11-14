@@ -107,7 +107,7 @@ export interface RoundelDrawing {
   deco: { texture: number; knots: number; unity: number; span: number; fill: number; noise: number; taste: number };
   /** Reported checks (roundel/checks.ts): pen units of too-wide gaps inside words, vowels and dot groups nearer
    *  another word's or letter's ink than their own, length of ink drawn twice. */
-  checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number; stemHorizontal?: number; curve?: number; eye?: number }; // prettier-ignore
+  checks: { wordSpace: number; strayMarks: number; strayDots: number; doubled: number; stemHorizontal?: number; curve?: number; eye?: number; marksUnplaced?: number }; // prettier-ignore
 }
 
 /** Draw order, back to front. */

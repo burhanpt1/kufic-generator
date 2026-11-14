@@ -10,6 +10,7 @@ import { SILHOUETTE_NAMES, SILHOUETTES } from '../../model/silhouettes';
 import type { SilhouetteName } from '../../model/silhouettes';
 import { shape } from '../../engine';
 import { abjadTable, valueOf } from '../chronogram';
+import { unsupportedChars } from '../../script/thuluth/shape';
 import { addBorder, defaultFill, getAt, layers, moveBorder, removeAt, setAt, slotScripts } from '../tree';
 import type { Path } from '../tree';
 import { svgOutline } from './editor-outline';
@@ -116,10 +117,15 @@ export function wireEditor(app: App) {
       const ta = $<HTMLTextAreaElement>('slot-' + name);
       if (document.activeElement !== ta && ta.value !== s.text) ta.value = s.text;
       (ta.nextElementSibling!.firstElementChild as HTMLSelectElement).value = s.repeat;
-      // characters no letter is drawn for (Latin, emoji, digits) are named rather than dropped silently. The list is
-      // the Kufic shaper's: a slot only thuluth writes shows none (its engine does not report what it leaves out)
-      const by = scripts.get(name),
-        lost = (by ? by.has('kufi') : c.style.script === 'kufi') ? shape(s.text).unsupported : [];
+      // characters no letter is drawn for (Latin, emoji, digits) are named rather than dropped silently: what every
+      // script that writes this slot leaves out (a character only one of them lacks is still named)
+      const by = scripts.get(name) ?? new Set([c.style.script]),
+        lost = [
+          ...new Set([
+            ...(by.has('kufi') ? shape(s.text).unsupported : []),
+            ...(by.has('thuluth') ? unsupportedChars(s.text) : []),
+          ]),
+        ];
       $('abjad-' + name).textContent =
         `abjad ${valueOf(s.text, T)}` + (lost.length ? ` · not drawn: ${lost.slice(0, 12).join(' ')}` : '');
     }
