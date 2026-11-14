@@ -14,6 +14,9 @@ const demos = Object.fromEntries(
 export default defineConfig({
   // relative asset URLs, so the build works under any GitHub Pages path
   base: './',
+  // workers as ES modules (they are started as module workers): what a worker loads only on occasion, such as the
+  // embedded copy of Clipper2's binary, stays out of its script
+  worker: { format: 'es' },
   build: {
     rollupOptions: { input: { main: resolve(here, 'index.html'), studio: resolve(here, 'studio.html'), ...demos } },
   },

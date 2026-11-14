@@ -13,11 +13,9 @@ import type { FabKind, Glyphs } from '../compute';
 import { compositionFromHash, hashFor } from '../state';
 import { loadRatings, loadTaste, saveTaste } from '../storage';
 import { wireChrono } from './chrono';
-import { wireCritic } from './critic';
 import { wireEditor } from './editor';
 import { mainSlot, wireGallery } from './gallery';
 import { wireLetters } from './letters';
-import { wirePrint3d } from './print3d';
 import { wireTrainer } from './trainer';
 
 export type Tab = 'gallery' | 'trainer' | 'editor' | 'chrono' | 'letters';
@@ -287,7 +285,7 @@ $('fab').onchange = async () => {
   const sel = $<HTMLSelectElement>('fab'),
     v = sel.value;
   sel.value = '';
-  if (v === 'stl') return print3d ? print3d.open() : notice('The 3D print dialog could not start.');
+  if (v === 'stl') return void (await print3d())?.open();
   if (!svg || !v) return;
   const name = app.fileName;
   try {
@@ -312,17 +310,55 @@ function wire<T>(name: string, f: (app: App) => T): T | null {
     return null;
   }
 }
-const print3d = wire('3D print dialog', wirePrint3d);
 wire('gallery', wireGallery);
 wire('trainer', wireTrainer);
 wire('editor', wireEditor);
 wire('chronogram helper', wireChrono);
 wire('letter editor', wireLetters);
-wire('critic', wireCritic);
 if (broken.length)
   notice(
     `The ${broken.join(' and the ')} could not start. The rest still works; clearing this site’s saved data may fix it.`,
   );
+
+/** A part of the studio that is fetched when first asked for, with `busy` shown meanwhile. One that fails to load
+ *  or start says so, and is tried again on the next ask. */
+function lazy<T>(name: string, load: () => Promise<T>, busy: (on: boolean) => void): () => Promise<T | null> {
+  let part: Promise<T | null> | null = null;
+  return () =>
+    (part ??= (async () => {
+      busy(true);
+      try {
+        return await load();
+      } catch (e) {
+        console.error(`Kufic Studio: the ${name} could not start`, e);
+        notice(`The ${name} could not be loaded. Check your connection and try again.`);
+        part = null;
+        return null;
+      } finally {
+        busy(false);
+      }
+    })());
+}
+const print3d = lazy(
+  '3D print dialog',
+  async () => (await import('./print3d')).wirePrint3d(app),
+  on => {
+    const sel = $<HTMLSelectElement>('fab');
+    sel.disabled = on;
+    sel.options[0].textContent = on ? 'Loading…' : 'Make…';
+  },
+);
+const critic = lazy(
+  'critic',
+  async () => (await import('./critic')).wireCritic(app),
+  on => {
+    $<HTMLButtonElement>('criticAsk').disabled = on;
+    $('criticStatus').textContent = on ? 'Loading…' : '';
+  },
+);
+const criticBox = $<HTMLDetailsElement>('critic');
+criticBox.addEventListener('toggle', () => criticBox.open && critic());
+if (criticBox.open) critic();
 
 let first = true;
 async function fromHash() {
