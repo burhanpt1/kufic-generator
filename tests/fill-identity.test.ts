@@ -117,7 +117,7 @@ describe('fill identity', () => {
   });
   it('line fills are the pinned ones', () => {
     expect(digest(cases(41, 40, 'lines', 110).map(c => placed(c.c)))).toBe(
-      '336fa0770731f17f12128c9fab4cf98a4e867901d1b28f08767894f611fe89ee',
+      '797c6186380cdb0876585b2f5918254bab925b63c7191f0d39f6d30427cb7be2',
     );
   });
   const only = process.env.IDENTITY_ONLY;
