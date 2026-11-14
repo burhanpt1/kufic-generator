@@ -1,6 +1,7 @@
 // Unit outlines for every Outline kind (COMPOSITION_ENGINE.md §3.2), ported from the lab's outline(), CURVES and
 // curveUnit(). Polygons and stars are normalised to edge distance 1 (inradius 1); curves, uploaded paths and point
 // lists to a maximum radius of 1. All run counter-clockwise on screen and start at their bottom-most corner.
+import { CompositionError } from '../model/schema';
 import { makeRing } from './offset';
 import { bounds, dedupe, orientCCW } from './poly';
 import { importSvgPath } from './svgpath';
@@ -135,16 +136,39 @@ function mihrab(): Pt[] {
 }
 export const PRESETS: Record<PresetName, () => Pt[]> = { teardrop, heart, mihrab };
 
-/** Centre on the bounding box, scale to max radius 1, orient counter-clockwise, start at the bottom-most corner. */
-export function normaliseFree(P: Pt[]): Ring {
+/** A unit outline encloses at least this much (a regular polygon encloses over 3, the presets 1 to 3): less is a
+ *  point, a line or a sliver, which no band can follow and which the offsetting cannot survive. */
+const MIN_UNIT_AREA = 1e-6;
+/** The ring, or a CompositionError when it is not an outline: fewer than three distinct points, coordinates that are
+ *  not finite, or next to no area (three identical points, points on one line, a figure of eight). */
+function checkRing(ring: Ring, kind: string): Ring {
+  const ok =
+    ring.pts.length >= 3 &&
+    ring.pts.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1])) &&
+    Number.isFinite(ring.area) &&
+    ring.area >= MIN_UNIT_AREA;
+  if (!ok)
+    throw new CompositionError([
+      {
+        path: 'outline',
+        message: `the ${kind} outline is degenerate: it needs three or more distinct points enclosing an area`,
+      },
+    ]);
+  return ring;
+}
+
+/** Centre on the bounding box, scale to max radius 1, orient counter-clockwise, start at the bottom-most corner.
+ *  Throws a CompositionError for points that enclose nothing. */
+export function normaliseFree(P: Pt[], kind = 'free'): Ring {
   P = dedupe(P);
+  if (P.length < 3) checkRing({ pts: P, corners: [], area: 0, perimeter: 0 }, kind);
   const b = bounds(P),
     cx = (b.x0 + b.x1) / 2,
     cy = (b.y0 + b.y1) / 2;
   P = P.map(([x, y]) => [x - cx, y - cy]);
-  const r = Math.max(...P.map(([x, y]) => Math.hypot(x, y))) || 1;
+  const r = P.reduce((m, [x, y]) => Math.max(m, Math.hypot(x, y)), -Infinity) || 1;
   P = orientCCW(P.map(([x, y]) => [x / r, y / r] as Pt));
-  return startAtBottomCorner(makeRing(P));
+  return startAtBottomCorner(checkRing(makeRing(P), kind));
 }
 
 /** Rotate the point order so the ring starts at its bottom-most corner (or bottom-most point). */
@@ -164,20 +188,32 @@ export function startAtBottomCorner(ring: Ring): Ring {
   };
 }
 
-/** The unit ring for an outline. */
+/** An uploaded path's points; a path that cannot be read is a CompositionError like any other bad outline. */
+function svgPoints(path: string): Pt[] {
+  try {
+    return importSvgPath(path);
+  } catch (e) {
+    throw new CompositionError([{ path: 'outline', message: `svg path: ${e instanceof Error ? e.message : e}` }]);
+  }
+}
+
+/** The unit ring for an outline. Throws a CompositionError for an outline that encloses nothing. */
 export function unitRing(o: Outline): Ring {
   switch (o.kind) {
     case 'circle':
       return makeRing(circlePoints(1));
     case 'polygon':
-      return makeRing(polygonPoints(o.sides, o.rotation));
+      return checkRing(makeRing(polygonPoints(o.sides, o.rotation)), 'polygon');
     case 'star':
-      return makeRing(starPoints(o.points, o.depth));
+      return checkRing(makeRing(starPoints(o.points, o.depth)), 'star');
     case 'preset':
-      return normaliseFree(PRESETS[o.name]());
+      return normaliseFree(PRESETS[o.name](), o.name);
     case 'svg':
-      return normaliseFree(importSvgPath(o.path));
+      return normaliseFree(svgPoints(o.path), 'svg');
     case 'poly':
-      return normaliseFree(o.points.map(([x, y]) => [x, y] as Pt));
+      return normaliseFree(
+        o.points.map(([x, y]) => [x, y] as Pt),
+        'poly',
+      );
   }
 }
