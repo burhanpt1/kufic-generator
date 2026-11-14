@@ -193,12 +193,17 @@ export const roundelOrderFault = (r: Roundel) =>
  *  sorted heights into a lower and an upper level. */
 export function twoLevels(ys: readonly number[]): number {
   const v = [...ys].sort((a, b) => a - b),
-    sse = (a: number[]) => {
-      const m = a.reduce((s, x) => s + x, 0) / (a.length || 1);
-      return a.reduce((s, x) => s + (x - m) ** 2, 0);
+    // (of v from `from` up to `to`)
+    sse = (from: number, to: number) => {
+      let s = 0,
+        e = 0;
+      for (let k = from; k < to; k++) s += v[k];
+      const m = s / (to - from || 1);
+      for (let k = from; k < to; k++) e += (v[k] - m) ** 2;
+      return e;
     };
-  let best = sse(v);
-  for (let k = 1; k < v.length; k++) best = Math.min(best, sse(v.slice(0, k)) + sse(v.slice(k)));
+  let best = sse(0, v.length);
+  for (let k = 1; k < v.length; k++) best = Math.min(best, sse(0, k) + sse(k, v.length));
   return best;
 }
 
@@ -833,107 +838,194 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
         r = Math.max(0, farthest(m, cx, cy, ovl)[0]);
       return { cx, cy, r: r + 0.8, ink: sw, oval: ovl, field: o.field };
     };
-    const stackOrder = () =>
-      o.stack
-        ? orderFault(
-            groups,
-            groups.map((_, i) => {
-              const S = shapes[i][lv[i]];
-              return { x0: gpos[i].x + S.x0, x1: gpos[i].x + S.x1, y0: gpos[i].y + S.y0, y1: gpos[i].y + S.y1, base: gpos[i].y }; // prettier-ignore
-            }),
-            up,
-          )
-        : 0;
+    // The energy's working arrays, written afresh at each measure: each piece's box and each word's, where each word's
+    // reading starts, and the words' targets along a path. (Every sum below adds the same terms in the same order as
+    // when these were lists made anew each time, so the energy is the same number.)
+    const gX0 = new Float64Array(n),
+      gX1 = new Float64Array(n),
+      gY0 = new Float64Array(n),
+      gY1 = new Float64Array(n),
+      bX0 = new Float64Array(W),
+      bX1 = new Float64Array(W),
+      bY0 = new Float64Array(W),
+      bY1 = new Float64Array(W),
+      hdX = new Float64Array(W),
+      hdY = new Float64Array(W),
+      tgX = new Float64Array(W),
+      tgY = new Float64Array(W),
+      lineAt = new Int32Array(W),
+      stemX: number[] = [],
+      stemY: number[] = [],
+      wordOfG = Int32Array.from(groups, g => g.word);
+    // the path's stretches, as pathTargets (paths.ts) measures them
+    const segs: { a: [number, number]; b: [number, number]; L: number; s0: number }[] = [];
+    let pathLen = 0;
+    const measurePath = (path: ReadingPath) => {
+      segs.length = 0;
+      pathLen = 0;
+      for (const sp of path)
+        for (let i = 0; i + 1 < sp.length; i++) {
+          const L = Math.hypot(sp[i + 1][0] - sp[i][0], sp[i + 1][1] - sp[i][1]);
+          segs.push({ a: sp[i], b: sp[i + 1], L, s0: pathLen });
+          pathLen += L;
+        }
+    };
+    if (PP) measurePath(PP);
+    // each word's target along the path, by the words' widths (pathTargets, into tgX and tgY)
+    const targets = () => {
+      let Wt = 0;
+      for (let w = 0; w < W; w++) Wt += bX1[w] - bX0[w];
+      const sc = (Wt * pFill) / Math.max(1e-6, pathLen);
+      let cum = 0;
+      for (let w = 0; w < W; w++) {
+        const wd = bX1[w] - bX0[w],
+          u = ((cum + wd / 2) / Wt) * pathLen;
+        cum += wd;
+        let g = segs[segs.length - 1];
+        for (let q = 0; q < segs.length; q++)
+          if (u <= segs[q].s0 + segs[q].L + 1e-9) {
+            g = segs[q];
+            break;
+          }
+        const f = Math.max(0, Math.min(1, (u - g.s0) / Math.max(1e-9, g.L)));
+        tgX[w] = sc * (g.a[0] + (g.b[0] - g.a[0]) * f);
+        tgY[w] = sc * (g.a[1] + (g.b[1] - g.a[1]) * f);
+      }
+    };
+    // (orderFault, on the boxes above)
+    const stackOrder = () => {
+      if (!o.stack) return 0;
+      let f = 0;
+      for (let j = 0; j < n; j++) {
+        if (!up[j]) continue;
+        const mid = (gY0[j] + gY1[j]) / 2;
+        for (let i = 0; i < n; i++) {
+          if (wordOfG[i] >= wordOfG[j]) continue;
+          if (Math.min(gX1[i], gX1[j]) - Math.max(gX0[i], gX0[j]) < 0.5) continue;
+          const v = mid - (gpos[i].y - 0.5);
+          if (v > 0) f += v * v;
+        }
+      }
+      return f;
+    };
+    const pathTol = o.pathTol ?? 1.4,
+      pathW = o.pathW ?? 0.6,
+      readW = o.readW ?? 1.5,
+      orderSlack = o.orderSlack ?? 1.0,
+      orderFirm = o.orderFirm ?? 3,
+      FIELD = o.field ? FIELDS[o.field] : null;
     const energy = () => {
       let o2 = 0;
       for (let a = 0; a < W; a++) for (let b = a + 1; b < W; b++) o2 += ov[a][b];
       let order = 0;
-      const bx = words.map((_, w) => wbox(w)),
+      // the pieces' boxes, the words' (wbox), and all the ink's
+      let bx0 = 1e9,
+        bx1 = -1e9,
+        by0 = 1e9,
+        by1 = -1e9;
+      for (let i = 0; i < n; i++) {
+        const S = shapes[i][lv[i]],
+          p = gpos[i];
+        bx0 = Math.min(bx0, (gX0[i] = p.x + S.x0));
+        bx1 = Math.max(bx1, (gX1[i] = p.x + S.x1));
+        by0 = Math.min(by0, (gY0[i] = p.y + S.y0));
+        by1 = Math.max(by1, (gY1[i] = p.y + S.y1));
+      }
+      for (let w = 0; w < W; w++) {
+        const ws = words[w];
+        let x0 = 1e9,
+          x1 = -1e9,
+          y0 = 1e9,
+          y1 = -1e9;
+        for (let q = 0; q < ws.length; q++) {
+          const g2 = ws[q];
+          x0 = Math.min(x0, gX0[g2]);
+          x1 = Math.max(x1, gX1[g2]);
+          y0 = Math.min(y0, gY0[g2]);
+          y1 = Math.max(y1, gY1[g2]);
+        }
+        bX0[w] = x0;
+        bX1[w] = x1;
+        bY0[w] = y0;
+        bY1[w] = y1;
         // where each word's reading starts (its first letter)
-        hd = words.map(ws => {
-          const g0 = ws[0],
-            h = headOf(shapes[g0][lv[g0]]);
-          return { x: gpos[g0].x + h.x, y: gpos[g0].y + h.y };
-        });
+        const g0 = ws[0],
+          h = headOf(shapes[g0][lv[g0]]);
+        hdX[w] = gpos[g0].x + h.x;
+        hdY[w] = gpos[g0].y + h.y;
+      }
       if (PP) {
         // each word near its target along the path (the whole text may shift)
-        const T = pathTargets(
-            PP,
-            bx.map(q => q.x1 - q.x0),
-            pFill,
-          ),
-          A = bx.map(q => [(q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2]),
-          mx = A.reduce((s2, p, i) => s2 + p[0] - T[i][0], 0) / W,
-          my = A.reduce((s2, p, i) => s2 + p[1] - T[i][1], 0) / W,
-          tol = o.pathTol ?? 1.4;
-        A.forEach((p, i) => {
-          const d = Math.hypot(p[0] - T[i][0] - mx, p[1] - T[i][1] - my);
-          if (d > tol) order += (o.pathW ?? 0.6) * (d - tol) ** 2;
-        });
+        targets();
+        let mx = 0,
+          my = 0;
+        for (let w = 0; w < W; w++) {
+          mx = mx + (bX0[w] + bX1[w]) / 2 - tgX[w];
+          my = my + (bY0[w] + bY1[w]) / 2 - tgY[w];
+        }
+        mx /= W;
+        my /= W;
+        for (let w = 0; w < W; w++) {
+          const d = Math.hypot((bX0[w] + bX1[w]) / 2 - tgX[w] - mx, (bY0[w] + bY1[w]) / 2 - tgY[w] - my);
+          if (d > pathTol) order += pathW * (d - pathTol) ** 2;
+        }
         if (o.readRule !== false) {
           // the eye reads across: a later word at about the same height as an earlier one must lie to its left
-          const rowH = (bx.reduce((s2, q) => s2 + q.y1 - q.y0, 0) / W) * 0.45;
+          let hs = 0;
+          for (let w = 0; w < W; w++) hs = hs + bY1[w] - bY0[w];
+          const rowH = (hs / W) * 0.45;
           for (let a = 0; a < W; a++)
             for (let b = a + 1; b < W; b++) {
               const dy = Math.abs(wp[b].y - wp[a].y);
               if (dy > rowH) continue;
-              const v = hd[b].x - (bx[a].x0 + 1.0);
-              if (v > 0) order += (o.readW ?? 1.5) * v * v * (1 - dy / rowH);
+              const v = hdX[b] - (bX0[a] + 1.0);
+              if (v > 0) order += readW * v * v * (1 - dy / rowH);
             }
           // and it reads downward: no later word climbs back above the one before
           for (let a = 0; a + 1 < W; a++) {
-            const back = wp[a + 1].y - wp[a].y - (o.orderSlack ?? 1.0);
-            if (back > 0) order += (o.orderFirm ?? 3) * back * back;
+            const back = wp[a + 1].y - wp[a].y - orderSlack;
+            if (back > 0) order += orderFirm * back * back;
           }
         }
       } else if (!RU)
         for (let w = 0; w + 1 < W; w++) {
           // each word starts to the left of where the one before started
-          const v = hd[w + 1].x - (hd[w].x - 1.5);
+          const v = hdX[w + 1] - (hdX[w] - 1.5);
           if (v > 0) order += v * v;
         }
       if (o.topFirst)
         for (let w = 0; w + 1 < W; w++) {
-          const ox2 = Math.min(bx[w].x1, bx[w + 1].x1) - Math.max(bx[w].x0, bx[w + 1].x0),
-            wm = Math.min(bx[w].x1 - bx[w].x0, bx[w + 1].x1 - bx[w + 1].x0);
+          const ox2 = Math.min(bX1[w], bX1[w + 1]) - Math.max(bX0[w], bX0[w + 1]),
+            wm = Math.min(bX1[w] - bX0[w], bX1[w + 1] - bX0[w + 1]);
           if (ox2 > 0.35 * wm) {
             // by their first letters' baselines
-            const dv = hd[w + 1].y - hd[w].y;
+            const dv = hdY[w + 1] - hdY[w];
             if (dv > -1) order += 0.6 * (dv + 1) ** 2;
           }
         }
       let cost = 0;
-      groups.forEach((_, i) => {
+      for (let i = 0; i < n; i++) {
         cost += shapes[i][lv[i]].cost;
         if (i > 0 && shapes[i][lv[i]].elong && shapes[i - 1][lv[i - 1]].elong) cost += 2.5;
-      });
+      }
       const d = disc(),
         fill = d.ink / (Math.PI * d.r * d.r * OVAL * K * K);
-      let bx0 = 1e9,
-        bx1 = -1e9,
-        by0 = 1e9,
-        by1 = -1e9;
-      groups.forEach((_, i) => {
-        const S = shapes[i][lv[i]];
-        bx0 = Math.min(bx0, gpos[i].x + S.x0);
-        bx1 = Math.max(bx1, gpos[i].x + S.x1);
-        by0 = Math.min(by0, gpos[i].y + S.y0);
-        by1 = Math.max(by1, gpos[i].y + S.y1);
-      });
       // balance: the ink's centre of mass near the centre of the disc
       let sx = 0,
         sy = 0;
-      groups.forEach((_, i) => {
+      for (let i = 0; i < n; i++) {
         const S = shapes[i][lv[i]];
         sx += (gpos[i].x + S.cx) * S.ink;
         sy += (gpos[i].y + S.cy) * S.ink;
-      });
+      }
       const bal = Math.hypot(sx / d.ink - d.cx, sy / d.ink - d.cy) / d.r;
       let shelf = 0;
       if (o.elongate || o.emph)
-        groups.forEach((g, i) => {
-          const S = shapes[i][lv[i]];
-          S.shelves.forEach(sh => {
+        for (let i = 0; i < n; i++) {
+          const shelves = shapes[i][lv[i]].shelves,
+            wi = wordOfG[i];
+          for (let q = 0; q < shelves.length; q++) {
+            const sh = shelves[q];
             let cov = 0,
               tot = 0;
             for (let x = sh.x0 + 0.5; x < sh.x1 - 0.3; x += 0.6) {
@@ -941,7 +1033,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
               const gx = gpos[i].x + x,
                 gy = gpos[i].y + sh.y;
               for (let j = 0; j < n && cov < tot; j++) {
-                if (groups[j].word === g.word) continue;
+                if (wordOfG[j] === wi) continue;
                 const T = shapes[j][lv[j]],
                   lx = Math.round((gx - gpos[j].x - T.x0) * K) + 1;
                 if (lx < 0 || lx >= T.W) continue;
@@ -955,8 +1047,8 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
               }
             }
             shelf += tot ? cov / tot : 0;
-          });
-        });
+          }
+        }
       // a later word may not rise above the first letters of the word before it (so the first name is read first)
       let rise = 0;
       if (o.noRise)
@@ -964,7 +1056,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
           const g0 = words[w][0],
             S0 = shapes[g0][lv[g0]],
             top0 = gpos[g0].y + S0.y1,
-            v = bx[w + 1].y1 - top0;
+            v = bY1[w + 1] - top0;
           if (v > -0.5) rise += (v + 0.5) ** 2;
         }
       // one top line: every tall stem reaches up to the same height
@@ -979,22 +1071,24 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       }
       // a shaped field: the letters' outline points, scaled to their own box, must fall inside the shape
       let sil = 0;
-      if (o.field) {
-        const F = FIELDS[o.field],
-          hx = (bx1 - bx0) / 2,
+      if (FIELD) {
+        const hx = (bx1 - bx0) / 2,
           hy = (by1 - by0) / 2,
           mx = (bx0 + bx1) / 2,
           my = (by0 + by1) / 2;
         let out = 0,
           tot = 0;
-        groups.forEach((_, i) =>
-          shapes[i][lv[i]].hull.forEach(([hx2, hy2]) => {
-            const u = (gpos[i].x + hx2 - mx) / hx,
-              v = (gpos[i].y + hy2 - my) / hy;
+        for (let i = 0; i < n; i++) {
+          const hull = shapes[i][lv[i]].hull,
+            gx = gpos[i].x,
+            gy = gpos[i].y;
+          for (let q = 0; q < hull.length; q++) {
+            const u = (gx + hull[q][0] - mx) / hx,
+              v = (gy + hull[q][1] - my) / hy;
             tot++;
-            out += Math.max(0, Math.abs(u) - F.half(Math.max(-1, Math.min(1, v))));
-          }),
-        );
+            out += Math.max(0, Math.abs(u) - FIELD.half(Math.max(-1, Math.min(1, v))));
+          }
+        }
         sil = tot ? out / tot : 0;
       }
       // ruled: each line filling its chord, the stems in rhythm, the longest stroke on the axis
@@ -1002,46 +1096,64 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
       if (RU) {
         let just = 0,
           rhy = 0;
-        lineFit.forEach(f => (just += f.over ** 2 + f.loose ** 2));
+        for (let l = 0; l < lineFit.length; l++) just += lineFit[l].over ** 2 + lineFit[l].loose ** 2;
+        for (let l = 0; l < brk.length; l++)
+          for (let w = brk[l], e = l + 1 < brk.length ? brk[l + 1] : W; w < e; w++) lineAt[w] = l;
         // each line keeps to its band: a stacked piece no higher than a third of the way to the line above, the ink no
         // lower than half way to the line below (the last line's, than 0.7 of a line)
         const pitch = chord.length > 1 ? (chord[0].y - chord[1].y) * pk : 6;
-        groups.forEach((g, i) => {
-          const l = lineOf(g.word);
-          if (anc[g.word] && g.word > brk[l]) return;
-          const S = shapes[i][lv[i]],
-            y = chord[l].y * pk,
+        for (let i = 0; i < n; i++) {
+          const gw = wordOfG[i],
+            l = lineAt[gw];
+          if (anc[gw] && gw > brk[l]) continue;
+          const y = chord[l].y * pk,
             dev = gpos[i].y - y,
-            lo = y - (l + 1 < chord.length ? 0.5 : 0.7) * pitch - (gpos[i].y + S.y0);
+            lo = y - (l + 1 < chord.length ? 0.5 : 0.7) * pitch - gY0[i];
           if (dev > 0.34 * pitch) just += (dev - 0.34 * pitch) ** 2;
           if (lo > 0) just += lo * lo;
-        });
-        const tops: number[] = [];
-        brk.forEach((_, l) => {
-          const xs: number[] = [];
-          groups.forEach((g, i) => {
-            if (lineOf(g.word) !== l || (anc[g.word] && g.word > brk[l])) return;
-            shapes[i][lv[i]].stemTops.forEach(([tx, ty]) => (xs.push(gpos[i].x + tx), tops.push(gpos[i].y + ty)));
-          });
-          xs.sort((a, b) => a - b);
-          const gaps = xs.slice(1).map((x, k) => x - xs[k]);
-          if (gaps.length >= 2) {
-            const m = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-            rhy += gaps.reduce((a, g2) => a + (g2 - m) ** 2, 0) / gaps.length / Math.max(1, m * m);
+        }
+        stemY.length = 0;
+        for (let l = 0; l < brk.length; l++) {
+          stemX.length = 0;
+          for (let i = 0; i < n; i++) {
+            const gw = wordOfG[i];
+            if (lineAt[gw] !== l || (anc[gw] && gw > brk[l])) continue;
+            const st = shapes[i][lv[i]].stemTops;
+            for (let q = 0; q < st.length; q++) {
+              stemX.push(gpos[i].x + st[q][0]);
+              stemY.push(gpos[i].y + st[q][1]);
+            }
           }
-        });
-        rhy += 0.04 * twoLevels(tops);
+          stemX.sort((a, b) => a - b);
+          const ng = stemX.length - 1;
+          if (ng >= 2) {
+            let m = 0,
+              dev = 0;
+            for (let k = 0; k < ng; k++) m += stemX[k + 1] - stemX[k];
+            m /= ng;
+            for (let k = 0; k < ng; k++) dev += (stemX[k + 1] - stemX[k] - m) ** 2;
+            rhy += dev / ng / Math.max(1, m * m);
+          }
+        }
+        rhy += 0.04 * twoLevels(stemY);
         // the longest stroke (the longest shelf, else the widest piece) centred on the axis
         let li = 0,
           ll = -1,
           lx = 0,
           wi = 0;
-        groups.forEach((_, i) => {
+        for (let i = 0; i < n; i++) {
           const S = shapes[i][lv[i]],
             T = shapes[wi][lv[wi]];
-          S.shelves.forEach(sh => sh.x1 - sh.x0 > ll && ((ll = sh.x1 - sh.x0), (li = i), (lx = (sh.x0 + sh.x1) / 2)));
+          for (let q = 0; q < S.shelves.length; q++) {
+            const sh = S.shelves[q];
+            if (sh.x1 - sh.x0 > ll) {
+              ll = sh.x1 - sh.x0;
+              li = i;
+              lx = (sh.x0 + sh.x1) / 2;
+            }
+          }
           if (S.x1 - S.x0 > T.x1 - T.x0) wi = i;
-        });
+        }
         const W2 = shapes[wi][lv[wi]],
           ax = ll >= 0 ? gpos[li].x + lx : gpos[wi].x + (W2.x0 + W2.x1) / 2;
         ruled =
