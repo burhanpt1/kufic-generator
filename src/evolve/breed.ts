@@ -1,12 +1,9 @@
-// Generations (lab runGeneration / breedFrom) and evaluation of one candidate.
-import { resolve } from '../compose';
-import type { Placed } from '../compose/placed';
+// Generations (lab runGeneration / breedFrom). Nothing here composes: evaluating a candidate is evaluate.ts.
 import type { Composition } from '../model/schema';
-import { renderPlaced } from '../render/composition';
-import { metrics } from './critic';
-import type { Metrics } from './critic';
 import { crossover, mutate, randomComposition } from './operators';
 import type { OperatorOptions } from './operators';
+
+export type { Evaluated } from './evaluate';
 
 /** A fresh generation: optionally a given first composition, then random ones. */
 export function freshGeneration(
@@ -28,21 +25,6 @@ export function breedFrom(parents: Composition[], n: number, rate: number, o: Op
     kids.push(mutate(base, kids.length < n / 3 ? rate * 0.6 : rate * 1.4, o));
   }
   return kids;
-}
-
-export interface Evaluated {
-  svg: string;
-  metrics: Metrics | null;
-  meta: Placed['meta'];
-  ms: number;
-}
-/** Resolve, render and judge one composition. */
-export function evaluate(comp: Composition, idPrefix?: string): Evaluated {
-  const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  const placed = resolve(comp);
-  const svg = renderPlaced(placed, { idPrefix });
-  const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  return { svg, metrics: metrics(placed), meta: placed.meta, ms: t1 - t0 };
 }
 
 /** A rough relative cost of evaluating a composition, for scheduling the slow ones first (seal monograms and mazes

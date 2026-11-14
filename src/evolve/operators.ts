@@ -11,7 +11,7 @@ import type {
   TextBorder,
 } from '../model/schema';
 import { isValidComposition } from '../model/schema';
-import { scriptFor } from '../script/registry';
+import { capabilitiesOf } from '../script/capabilities';
 import { DEFAULT_STYLE } from '../model/style';
 import { PALETTE_LIST, TRAITS, traitsOf } from './genes';
 import type { Trait, TraitSpec, Traits } from './genes';
@@ -58,7 +58,7 @@ export function pickValue(trait: Trait, rng: Rng, taste?: Taste, c?: Composition
 function allowed(c: Composition, trait: Trait, v: V): boolean {
   if (trait === 'pen') return c.style.script === 'thuluth';
   if (trait !== 'fill') return true;
-  const caps = scriptFor(c.style).capabilities;
+  const caps = capabilitiesOf(c.style);
   if (v === 'monogram') return caps.grid && caps.seals;
   if (v === 'maze') return caps.mazes;
   return true;
@@ -290,7 +290,7 @@ const STROKES: Trait[] = ['stroke', 'corner', 'banded', 'weight', 'softness', 'c
 const TERMINALS: Trait[] = ['terminal', 'reach', 'sprouts'];
 export function relevantTraits(c: Composition): Trait[] {
   const t = traitsOf(c),
-    caps = scriptFor(c.style).capabilities;
+    caps = capabilitiesOf(c.style);
   return (Object.keys(TRAITS) as Trait[]).filter(k => {
     // what the script can't do: thuluth has its own letters, pen and stroke, no plaits or floriated endings
     if (k === 'pen') return t.script === 'thuluth';

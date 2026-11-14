@@ -65,8 +65,8 @@ export const ROUNDEL_OPTIONS_NOT_IN_RECIPE = {
   /** Set by the composer itself for every roundel, or per variant of a group: not a recipe's to choose. */
   internal: ['K', 'deep', 'tails', 'longFinal', 'kashMap', 'tail'],
   /** Options the composer reads that the recipe schema (model/schema.ts RoundelRecipe) has no field for yet. */
-  noSchemaField: ['companion', 'companionScale', 'readW', 'orderFirm', 'orderSlack', 'pathW', 'kernTouch', 'stackMin', 'stackBowls', 'stackPull', 'levels', 'margin'],
-} as const satisfies Record<string, readonly (keyof RoundelOptions)[]>; // prettier-ignore
+  noSchemaField: [],
+} as const satisfies Record<string, readonly (keyof RoundelOptions)[]>;
 type NotInRecipe = (typeof ROUNDEL_OPTIONS_NOT_IN_RECIPE)[keyof typeof ROUNDEL_OPTIONS_NOT_IN_RECIPE][number];
 /** The options passed through: all the rest. */
 type FromRecipe = Exclude<keyof RoundelOptions, NotInRecipe>;
@@ -106,6 +106,18 @@ function setup({ text, recipe, pen, pair }: RoundelRequest) {
     pathTol: recipe.pathTol,
     readRule: recipe.readRule,
     ruled: recipe.ruled,
+    companion: recipe.companion,
+    companionScale: recipe.companionScale,
+    kernTouch: recipe.kernTouch,
+    stackPull: recipe.stackPull,
+    stackMin: recipe.stackMin,
+    stackBowls: recipe.stackBowls,
+    levels: recipe.levels,
+    margin: recipe.margin,
+    pathW: recipe.pathW,
+    readW: recipe.readW,
+    orderFirm: recipe.orderFirm,
+    orderSlack: recipe.orderSlack,
   };
   const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap }; // prettier-ignore
   const spec: RoundelSpec = {
@@ -286,7 +298,10 @@ export function roundelFill(f: RoundelNode, res: RegionResult, style: Style, ctx
     return;
   }
   const art = drawRoundel(slot.text, f.recipe, style.pen, !!colours.counters, f.colours?.pair),
-    dropped = unsupportedChars(slot.text);
+    // a companion text is written too, and what it holds that the script cannot write is reported with the rest
+    dropped = f.recipe?.companion
+      ? [...new Set([...unsupportedChars(slot.text), ...unsupportedChars(f.recipe.companion)])]
+      : unsupportedChars(slot.text);
   if (!art) {
     ctx.fill = { type: 'roundel', ok: false, note: f.recipe?.mirror ? 'no tall stroke to share on the axis: not mirrored' : 'no letters' }; // prettier-ignore
     return;

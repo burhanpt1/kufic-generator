@@ -282,6 +282,29 @@ export interface RoundelRecipe {
   clearance?: number;
   markDensity?: number;
   fathaGap?: boolean;
+  /** A short companion text set smaller among the words (a date, a second name), and its scale (0.42). It is written
+   *  here, not in a text slot: it belongs to this one roundel. */
+  companion?: string;
+  companionScale?: number;
+  /** Kerning: how much the pieces of a broken word may touch as they slide together (pixels of overlap, 3). */
+  kernTouch?: number;
+  /** Stacked joins: how strongly they are preferred (1.6; 0 for none); with learnedStack, how often masters must stack
+   *  a join for it to be offered (0.2 of the time), and whether a final bowl (ى ي ن) may be stacked under the letter
+   *  before it. */
+  stackPull?: number;
+  stackMin?: number;
+  stackBowls?: boolean;
+  /** The stretch levels a group may be written at (pen units of kashida at each join; 0, 2, 4 and 7). */
+  levels?: number[];
+  /** The room kept round each group so groups do not touch (pixels of the composer's raster, 1). */
+  margin?: number;
+  /** On a path or lanes: how much a word pays for straying past pathTol (0.6). The reading rules' weights: a later
+   *  word level with an earlier one lying to its right (1.5), a later word climbing more than orderSlack pen units (1)
+   *  above the one before (3). */
+  pathW?: number;
+  readW?: number;
+  orderFirm?: number;
+  orderSlack?: number;
 }
 export interface RoundelColours {
   field?: string;
@@ -479,6 +502,22 @@ const roundelRecipe = z
     clearance: z.number().min(0).max(3),
     markDensity: z.number().min(0).max(1),
     fathaGap: z.boolean(),
+    // the composer's finer options. Each bound keeps the composer's work within a small multiple of its defaults:
+    // none is a loop bound except levels (a set of variants per level) and margin (a square of pixels per ink pixel)
+    companion: z.string().max(60),
+    companionScale: z.number().min(0.2).max(1),
+    kernTouch: z.number().min(0).max(20),
+    stackPull: z.number().min(0).max(5),
+    // below 0.05 every join of a long word could be stacked, and the variants grow with the square of the joins
+    stackMin: z.number().min(0.05).max(1),
+    stackBowls: z.boolean(),
+    // up to the longest elongation the composer itself draws (13)
+    levels: z.array(z.number().min(0).max(13)).min(1).max(6),
+    margin: z.number().int().min(1).max(4),
+    pathW: z.number().min(0).max(10),
+    readW: z.number().min(0).max(10),
+    orderFirm: z.number().min(0).max(20),
+    orderSlack: z.number().min(0).max(10),
   })
   .partial();
 const abjadOpts = z.object({

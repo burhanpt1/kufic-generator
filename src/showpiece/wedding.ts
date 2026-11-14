@@ -5,6 +5,7 @@
 import { resolve } from '../compose';
 import type { Placed, PlacedItem } from '../compose/placed';
 import { inside } from '../geometry/poly';
+import { superellipse } from '../geometry/superellipse';
 import type { Pt } from '../geometry/types';
 import type { Composition, Palette, RoundelColours, RoundelRecipe, Style } from '../model/schema';
 import { DEFAULT_STYLE } from '../model/style';
@@ -68,15 +69,7 @@ export const LOOKS: Record<WeddingVariant, Look> = {
   },
 };
 
-/** A superellipse of width/height `aspect` (exponent e: 2 an ellipse, higher squarer), as outline points. */
-export function superellipse(aspect: number, e: number, n = 360): Pt[] {
-  return Array.from({ length: n }, (_, i) => {
-    const t = (2 * Math.PI * i) / n,
-      c = Math.cos(t),
-      s = Math.sin(t);
-    return [aspect * Math.sign(c) * Math.abs(c) ** (2 / e), Math.sign(s) * Math.abs(s) ** (2 / e)];
-  });
-}
+export { superellipse };
 
 /** Iznik tiles of the corners: eight-fold and dense, as the owner likes them. */
 const TILES = { fold: 8 as const, scale: 3 };

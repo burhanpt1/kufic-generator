@@ -3,6 +3,7 @@
 // the right. Justification is thuluth's own: kashida (one long elongation per word, preferring joins after tooth
 // letters), then the word gaps. Lines narrower than their natural width need stacking, which is a composition, not a
 // line, so layout returns null for them.
+import { CAPABILITIES } from '../capabilities';
 import { abjadValue } from '../kufi';
 import type { LetterStyle, Prepared, ScriptEngine, Segment, Segments, VectorStrip } from '../types';
 import type { Built, Thuluth } from './engine';
@@ -274,7 +275,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       return { kind: 'vector', W, Hb: P.Hb, base: P.base, paths, lines };
     },
     abjad: abjadValue,
-    capabilities: { grid: false, seals: false, mazes: false, plait: false, terminals: false, strokes: false },
+    capabilities: CAPABILITIES.thuluth,
   };
 }
 
