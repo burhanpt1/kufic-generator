@@ -5,6 +5,7 @@ import { allahForms, altForms, ledForms, nameForms } from './alts';
 import { HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
+import type { Shaped } from './shape';
 import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms, muhammadAt, STEM_LETTERS } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
@@ -168,6 +169,10 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     STEM_JOIN = LED ? 0.45 * (st.nib / 1.6) : 0;
   /** Where a word is written as the ligature of the name محمد (the position of its first mim), or -1. */
   const nameAt = (word: string) => (MUHAMMAD ? muhammadAt(word) : -1);
+  /** Whether the join into letter j of a word may be drawn out. With the drafted stems, not the join from a lam into
+   *  a ra or zay: that ra hangs from the lam's foot, and a kashida there is a long flat stroke no hand writes. */
+  const stretches = (fs: readonly Shaped[], j: number) =>
+    !(ALTS?.stems && j > 0 && fs[j - 1].c === 'ل' && (fs[j].c === 'ر' || fs[j].c === 'ز'));
 
   function glyphRaw(c: string, form: Form): GlyphDef | null {
     const fam = FORM_FAM[c + '|' + form] || FAM[c],
@@ -253,6 +258,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             if (allah >= 0 && i >= allah - 1) kl = 0;
             // (nor are the letters of the name محمد, written as its ligature)
             if (mu >= 0 && i >= mu) kl = 0;
+            if (!stretches(fs, i + 1)) kl = 0;
             // (and a lam from the tall loop of a sad that follows it)
             if (STEM_JOIN && allah < 0 && STEM_LETTERS.has(f.c) && (STEM_LETTERS.has(fs[i + 1].c) || FAM[fs[i + 1].c] === 'sad')) kl = Math.max(kl, STEM_JOIN); // prettier-ignore
             // two joined loop letters need a stretch of baseline between them, or their loops run together
@@ -480,7 +486,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     return drawSVG(b.strokes, b.dots, o);
   };
 
-  return { style: st, table, glyphFor, setLine, buildStrokes, strokePolys, dotPolysAt, drawSVG, renderLine, nameAt };
+  return { style: st, table, glyphFor, setLine, buildStrokes, strokePolys, dotPolysAt, drawSVG, renderLine, nameAt, stretches }; // prettier-ignore
 }
 
 /** All the ink of built strokes and dots, as polygons. */

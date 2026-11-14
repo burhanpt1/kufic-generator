@@ -470,7 +470,7 @@ function buildVariants(th: Thuluth, g: RGroup, o: StackOptions, K: number): Grou
   if (o.elongate && !g.sc && n > 1 && !name) {
     const fs = forms(g.s);
     for (let j = 1; j < fs.length; j++) {
-      if (fs[j].form !== 'med' && fs[j].form !== 'fin') continue;
+      if ((fs[j].form !== 'med' && fs[j].form !== 'fin') || !th.stretches(fs, j)) continue;
       [6, 9, 13].forEach(L => {
         const v = groupShape(th, g, 0, { ...o, kashMap: { [j]: L } }, K, null);
         if (v) {
