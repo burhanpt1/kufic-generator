@@ -10,7 +10,7 @@
 // every rating and are not ported.
 import type { Thuluth } from '../engine';
 import { dotPolys } from '../pen';
-import { parseVowels } from '../shape';
+import { allahSpan } from '../shape';
 import type { Poly, Sample } from '../types';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel } from './compose';
@@ -19,12 +19,13 @@ import { featuresIn, rasterUnits, tasteScores } from './deco';
 import type { FinishOptions, Finished, Unit } from './finish';
 import { finishRoundel, roundelParts } from './finish';
 
-/** True when a text may not be mirrored: it holds the divine name (الله, لله, بالله, عبدالله…). */
+/** True when a text may not be mirrored: one of its words holds the divine name (الله, لله, بالله, عبدالله…; not
+ *  اللهب or كللها, which only share its letters). */
 export function refusesMirror(text: string): boolean {
-  const bare = parseVowels(text)
-    .bare.replace(/[ٱأإآ]/g, 'ا')
-    .replace(/\s+/g, ' ');
-  return /لله/.test(bare);
+  return text
+    .trim()
+    .split(/\s+/)
+    .some(w => !!allahSpan(w));
 }
 
 export interface MusennaOptions {

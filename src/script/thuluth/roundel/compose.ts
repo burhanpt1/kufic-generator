@@ -7,7 +7,7 @@ import type { Thuluth } from '../engine';
 import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
 import { parkMiller } from '../rng';
-import { ligate, parseVowels, splitGroups } from '../shape';
+import { allahSpan, ligate, parseVowels, splitGroups } from '../shape';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
@@ -266,7 +266,8 @@ export function roundelGroups(
     // the ligature of the name of God draws the second lam's marks itself: the shadda on the lam, and the small alif,
     // when the text writes it, over the heh
     if (style.allah && g.allah) {
-      const k = [...g.s].length - 2;
+      const name = allahSpan(g.s),
+        k = name ? name.lam + 1 : [...g.s].length - 2;
       if (g.marks.some(m => m.k === k && m.m === 'alifk')) g.alif = true;
       g.marks = g.marks.filter(m => m.k !== k);
     }

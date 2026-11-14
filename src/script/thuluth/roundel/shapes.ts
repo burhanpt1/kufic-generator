@@ -173,7 +173,7 @@ export function groupShape(
   const b = th.buildStrokes(g.s, {
     kashida: level,
     // the ligature draws its own shadda and small alif even in a vowelled text (its other marks were dropped)
-    allah: g.allah && (!hasMarks || !!st.allah),
+    allah: g.allah,
     allahAlif: g.alif,
     noAuto: hasMarks && !(g.allah && st.allah),
     gap: 0,
@@ -550,7 +550,7 @@ function groupShapeOk(th: Thuluth, g: RGroup, level: number, o: StackOptions, st
 }
 function groupShapeCollides(th: Thuluth, g: RGroup, level: number, o: StackOptions, stacks: Stacks, sj: number) {
   const nib = th.style.nib;
-  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah && (!(g.marks && g.marks.length) || !!th.style.allah), allahAlif: g.alif, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
+  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah, allahAlif: g.alif, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
   const pts = (upper: boolean) =>
     b.placed
       .filter(p => isLetter(p) && (upper ? p.li >= sj : p.li < sj))

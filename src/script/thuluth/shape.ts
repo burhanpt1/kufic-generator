@@ -95,6 +95,23 @@ export function parseVowels(text: string): { bare: string; marks: WordMark[][] }
   return { bare: bare.join(' '), marks };
 }
 
+/** Where the name of God stands in a word: its first lam (a letter position, as marks have them), with the second lam
+ *  and the heh following; `final` when the heh ends the word (اللهم has a medial heh). */
+export interface AllahSpan {
+  lam: number;
+  final: boolean;
+}
+// الله, with its alif in any form or (لله) without it; after و ف and ب ت ك (والله, بالله, فبالله, ولله, فلله); as
+// اللهم; and closing a name written as one word (عبدالله, نصرالله). The heh must end the word (or the mim of اللهم),
+// and لله with no alif takes only و or ف before it, so اللهب, اللهو, كللها and ظلله are not it.
+const ALLAH = /^((?:\p{L}{2,}|[وف]?[بتك]?)[اٱ]|[أآ]|[وف]?)لله(م?)$/u;
+/** The name of God in a word (with or without its vowels), or null: the one test for it, shared by the ligature, its
+ *  shadda, the roundel's groups, kashida and the mirror's refusal. */
+export function allahSpan(word: string): AllahSpan | null {
+  const m = ALLAH.exec(word.replace(/[\p{Mn}ـ]/gu, ''));
+  return m && { lam: [...m[1]].length, final: !m[2] };
+}
+
 /** A connected letter group: what the pen writes without lifting. */
 export interface Group {
   s: string;
@@ -108,14 +125,17 @@ export function splitGroups(text: string): Group[] {
     .trim()
     .split(/\s+/)
     .forEach((w, wi) => {
-      const allahWord = /^[اأٱ]?لله$/.test(w),
+      const name = allahSpan(w),
         cs = [...ligate(w)];
-      let cur = '';
+      let cur = '',
+        start = 0;
       cs.forEach((c, i) => {
         cur += c;
         if (NONJOIN.has(c) || !FAM[c] || i === cs.length - 1) {
-          out.push({ s: cur, word: wi, allah: allahWord && cur.startsWith('ل') });
+          // the group that holds the name's lams
+          out.push({ s: cur, word: wi, allah: !!name && name.lam >= start && name.lam <= i });
           cur = '';
+          start = i + 1;
         }
       });
     });
