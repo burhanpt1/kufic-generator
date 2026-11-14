@@ -28,6 +28,7 @@ export const DOTS: Record<string, string> = {
 }; // prettier-ignore
 export const HAMZA_ON: Record<string, string> = {
   'أ': 'a:hamza', 'ؤ': 'a:hamza', 'ئ': 'a:hamza', 'إ': 'b:hamza', 'آ': 'a:madda', 'ٱ': 'a:wasla',
+  'ۂ': 'a:hamza', 'ۀ': 'a:hamza', 'ۓ': 'a:hamza',
 }; // prettier-ignore
 /** Combining marks: [side, shape, layer]. layer: 1 = consonantal (ink), 2 = vocalic (mark colour). */
 export const COMB: Record<string, [string, string, number]> = {
@@ -41,5 +42,5 @@ export const ORDER: Record<string, number> = {
   d1: 0, d2: 0, d3a: 0, d3b: 0, tah: 0, v2: 0, hamza: 1, madda: 1, wasla: 1, shadda: 2,
   fatha: 3, damma: 3, sukun: 3, fathatan: 3, dammatan: 3, salef: 3, kasra: 3, kasratan: 3,
 }; // prettier-ignore
-/** Quranic annotation marks and joiners, skipped silently. */
-export const IGNORE = /[ؐ-ؚٖ-ٟۖ-ۭ‌‍]/;
+/** Quranic annotation marks, skipped silently. (The joiners U+200C and U+200D are read by shape().) */
+export const IGNORE = /[\u0610-\u061A\u0656-\u065F\u06D6-\u06ED]/;

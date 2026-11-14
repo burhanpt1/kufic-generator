@@ -21,13 +21,14 @@ export function renderCircle(res: Composition, opt: RenderOptions) {
     over = '',
     centre = '';
   const rings = res.rings as CircleRing[];
-  const keyMode = opt.colourMode,
-    maxKey =
-      keyMode === 'ring'
-        ? rings.length
-        : keyMode === 'repeat'
-          ? Math.max(1, ...rings.map(r => Math.max(0, ...r.tag)))
-          : 1;
+  const keyMode = opt.colourMode;
+  let maxKey = 1;
+  if (keyMode === 'ring') maxKey = rings.length;
+  else if (keyMode === 'repeat')
+    // a loop: a large ring's tags spread into Math.max overflow the call stack
+    rings.forEach(r => {
+      for (let i = 0; i < r.tag.length; i++) if (r.tag[i] > maxKey) maxKey = r.tag[i];
+    });
   const sh: Shapes = { ink: new Map(), vow: [] };
   rings.forEach(r => merge(sh, ringSVG(r, opt, C, rot, keyMode, maxKey, null)));
   const ce = res.centre;

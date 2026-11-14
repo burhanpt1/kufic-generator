@@ -6,7 +6,7 @@ import type { Strip } from '../types';
 /** Plait pairs of free-standing tall stems an even 2–maxD cells apart with nothing between them near the top.
  *  base = baseline row, H = ascender height (needs 9 or more). Changes the strip in place. */
 export function plaitStrip(st: Strip, Hb: number, base: number, H: number, maxD = 8): Strip {
-  const { W, data: d } = st,
+  const { W, data: d, tag } = st,
     at = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= Hb ? 0 : d[y * W + x]),
     isL = (x: number, y: number) => {
       const v = at(x, y);
@@ -36,9 +36,25 @@ export function plaitStrip(st: Strip, Hb: number, base: number, H: number, maxD 
           break;
         }
     if (!clear) continue;
-    for (let y = y1 + 1; y <= top; y++) d[y * W + a] = d[y * W + b] = 0; // cut the upper stems
-    for (let k = 1; k <= D; k++) d[(y1 + k) * W + a + k] = d[(y1 + k) * W + b - k] = 1; // the crossing diagonals
-    for (let y = y1 + D + 1; y <= top; y++) d[y * W + a] = d[y * W + b] = 1; // carry on up
+    // each strand keeps its stem's tag (its copy of the text) through the crossing and up the other column, so it
+    // takes one colour by repeat and its cells link diagonally
+    const ta = tag[y1 * W + a],
+      tb = tag[y1 * W + b];
+    for (let y = y1 + 1; y <= top; y++) d[y * W + a] = d[y * W + b] = tag[y * W + a] = tag[y * W + b] = 0; // cut the upper stems
+    for (let k = 1; k <= D; k++) {
+      // the crossing diagonals
+      const ia = (y1 + k) * W + a + k,
+        ib = (y1 + k) * W + b - k;
+      d[ia] = d[ib] = 1;
+      tag[ib] = tb;
+      tag[ia] = ta;
+    }
+    for (let y = y1 + D + 1; y <= top; y++) {
+      // carry on up, each strand in the other's column
+      d[y * W + a] = d[y * W + b] = 1;
+      tag[y * W + a] = tb;
+      tag[y * W + b] = ta;
+    }
     i++;
   }
   return st;

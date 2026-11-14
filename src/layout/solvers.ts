@@ -100,7 +100,10 @@ export function fitFlow(
   L0: number,
   allowRep: boolean,
 ): Partition | null {
-  const G = capsOf(L0 + 400) ? capsOf(L0 + 400)!.length : 0;
+  // the number of groups, from the first size that has a geometry: many rings with a reserved centre have none at
+  // L0 + 400 (the first probe) and still fit well under the search's limit
+  let G = 0;
+  for (let L = L0 + 400; !G && L < 3000; L++) G = capsOf(L)?.length ?? 0;
   if (!G) return null;
   const rep0 = Math.max(1, Math.ceil(G / segs0.length));
   let best: Partition | null = null;

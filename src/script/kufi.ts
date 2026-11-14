@@ -6,7 +6,7 @@ import { RHY, strip } from '../layout/strip';
 import { plaitStrip } from '../layout/plait';
 import { markTerminals } from '../layout/terminals';
 import { breakSegs, prepare, wordSegs } from '../shaping/prepare';
-import { shape } from '../shaping/shape';
+import { normalise, shape } from '../shaping/shape';
 import type { Seg, Segs, Shaped, Word } from '../types';
 import type { CellStrip, LayoutOptions, LetterStyle, ScriptEngine, Segments } from './types';
 
@@ -26,7 +26,7 @@ const ARABIC_VALUE: Record<string, number> = { 'ص': 90, 'ض': 800, 'س': 60, '�
 export function abjadValue(text: string, opts: { taMarbuta?: 5 | 400; system?: 'mashriqi' | 'maghribi' } = {}): number {
   let v = abjadBase(text);
   const tm = opts.taMarbuta ?? 5;
-  for (const c of text.normalize('NFC')) {
+  for (const c of normalise(text)) {
     if (tm !== 5 && (c === 'ة' || c === 'ۃ')) v += tm - 5;
     if (opts.system === 'maghribi' && MAGHRIBI[c] != null) v += MAGHRIBI[c] - ARABIC_VALUE[c];
   }

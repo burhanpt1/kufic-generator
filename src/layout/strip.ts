@@ -104,43 +104,110 @@ export function strip(
     const i = idx.get(k);
     return i == null ? 0 : a[i];
   };
-  // tall-stem positions for an allocation
-  const stems = () => {
-    const xs: number[] = [];
-    let x = width - padR;
-    segs.forEach((s, si) => {
-      s.glyphs.forEach((g, gi) => {
-        let gw = g.w;
-        g.str.forEach(st => (gw += get('t' + si + ',' + gi + ',' + st.c)));
-        x -= gw;
-        g.tall.forEach(c => {
-          let sh = 0;
-          g.str.forEach(st => {
-            if (st.c < c) sh += get('t' + si + ',' + gi + ',' + st.c);
-          });
-          xs.push(x + c + sh);
-        });
-        if (gi < s.seps.length) x -= 1 + get('j' + si + ',' + gi);
-      });
-      if (si < segs.length - 1) x -= gapAfter(si) + get('g' + si);
-    });
-    return xs.sort((p, q) => p - q);
-  };
   if (RHY.on && extra > 1 && pts.length > 1) {
-    const a0 = Array.from(a),
+    // The search below prices a few hundred to a few thousand allocations, so the walk along the line that finds the
+    // tall stems is laid out once as flat arrays of indices into a (no keys built, nothing looked up or allocated
+    // per allocation). Per glyph in reading order: its width, its stretch points, its tall columns, and what follows
+    // it (a join or a gap, with the point that widens it, if any).
+    const at = (k: string) => idx.get(k) ?? -1;
+    const gW0: number[] = [],
+      gStr0 = [0], // glyph q's stretch points are sI0/sC0[gStr0[q] .. gStr0[q + 1])
+      gTall0 = [0], // and its tall columns tC0[gTall0[q] .. gTall0[q + 1])
+      gDec0: number[] = [],
+      gAfter0: number[] = [],
+      sI0: number[] = [],
+      sC0: number[] = [],
+      tC0: number[] = [];
+    segs.forEach((s, si) => {
+      if (!s.glyphs.length && si < segs.length - 1) {
+        // an empty segment still takes its gap
+        gW0.push(0);
+        gStr0.push(sI0.length);
+        gTall0.push(tC0.length);
+        gDec0.push(gapAfter(si));
+        gAfter0.push(at('g' + si));
+      }
+      s.glyphs.forEach((g, gi) => {
+        gW0.push(g.w);
+        g.str.forEach(st => {
+          sI0.push(at('t' + si + ',' + gi + ',' + st.c));
+          sC0.push(st.c);
+        });
+        gStr0.push(sI0.length);
+        g.tall.forEach(c => tC0.push(c));
+        gTall0.push(tC0.length);
+        if (gi < s.seps.length) {
+          gDec0.push(1);
+          gAfter0.push(at('j' + si + ',' + gi));
+        } else if (si < segs.length - 1) {
+          gDec0.push(gapAfter(si));
+          gAfter0.push(at('g' + si));
+        } else {
+          gDec0.push(0);
+          gAfter0.push(-1);
+        }
+      });
+    });
+    const nStems = tC0.length,
+      nG = gW0.length,
+      [gW, gStr, gTall, gDec, gAfter, sI, sC, tC] = [gW0, gStr0, gTall0, gDec0, gAfter0, sI0, sC0, tC0].map(v =>
+        Int32Array.from(v),
+      ),
+      ptW = Float64Array.from(pts, p => p.w),
+      walk = new Int32Array(nStems), // stem positions in reading order (right to left)
+      xs = new Int32Array(nStems); // and sorted, left to right
+    const positions = () => {
+      let x = width - padR,
+        n = 0;
+      for (let q = 0; q < nG; q++) {
+        const k0 = gStr[q],
+          k1 = gStr[q + 1];
+        let gw = gW[q];
+        for (let k = k0; k < k1; k++) gw += a[sI[k]];
+        x -= gw;
+        for (let t = gTall[q]; t < gTall[q + 1]; t++) {
+          const c = tC[t];
+          let sh = 0;
+          for (let k = k0; k < k1; k++) if (sC[k] < c) sh += a[sI[k]];
+          walk[n++] = x + c + sh;
+        }
+        x -= gDec[q] + (gAfter[q] < 0 ? 0 : a[gAfter[q]]);
+      }
+    };
+    // Stretching never reorders stems (glyphs keep their order and a glyph's columns theirs), so the order found
+    // once sorts every allocation; were it ever not to, the positions are sorted outright.
+    positions();
+    const order = Array.from(walk, (_, i) => i).sort((p, q) => walk[p] - walk[q] || p - q);
+    const stems = () => {
+      positions();
+      let sorted = true;
+      for (let k = 0; k < nStems; k++) {
+        xs[k] = walk[order[k]];
+        if (k && xs[k] < xs[k - 1]) sorted = false;
+      }
+      if (!sorted) xs.sort();
+    };
+    const a0 = a.slice(),
       norm = (extra * extra) / pts.length + 1;
+    // the same sums in the same order as the plain form (gaps left to right, then the wrap), so the same floats
     const cost = () => {
-      const xs = stems();
-      if (xs.length < 2) return 0;
-      const gaps: number[] = [];
-      for (let i = 1; i < xs.length; i++) gaps.push(xs[i] - xs[i - 1]);
-      if (wrap) gaps.push(width + 1 - (xs[xs.length - 1] - xs[0]));
-      const m = gaps.reduce((p, q) => p + q, 0) / gaps.length;
+      stems();
+      if (nStems < 2) return 0;
+      const span = xs[nStems - 1] - xs[0],
+        nGaps = wrap ? nStems : nStems - 1,
+        m = (wrap ? width + 1 : span) / nGaps;
       let v = 0;
-      gaps.forEach(g => (v += (g - m) * (g - m)));
+      for (let i = 1; i < nStems; i++) {
+        const g = xs[i] - xs[i - 1];
+        v += (g - m) * (g - m);
+      }
+      if (wrap) {
+        const g = width + 1 - span;
+        v += (g - m) * (g - m);
+      }
       let nc = 0;
-      for (let i = 0; i < a.length; i++) nc += ((a[i] - a0[i]) * (a[i] - a0[i])) / pts[i].w;
-      return (v / gaps.length / (m * m + 1)) * 4 + (0.15 * nc) / norm;
+      for (let i = 0; i < a.length; i++) nc += ((a[i] - a0[i]) * (a[i] - a0[i])) / ptW[i];
+      return (v / nGaps / (m * m + 1)) * 4 + (0.15 * nc) / norm;
     };
     let c = cost(),
       seed = 7;

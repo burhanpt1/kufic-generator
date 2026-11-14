@@ -99,18 +99,22 @@ export const acc = (opt: RenderOptions) => (opt.colourMode === 'solid' ? opt.ink
 export const merge = (a: Shapes, b: Shapes) => {
   b.ink.forEach((arr, c) => {
     if (!a.ink.has(c)) a.ink.set(c, []);
-    a.ink.get(c)!.push(...arr);
+    const to = a.ink.get(c)!;
+    for (const s of arr) to.push(s); // not push(...arr): a large ring has more shapes than a call takes arguments
   });
-  a.vow.push(...b.vow);
+  for (const s of b.vow) a.vow.push(s);
   return a;
 };
 
 /** The outer <svg> with a paper background. */
 export const wrap = (W: number, Hh: number, opt: Pick<RenderOptions, 'label' | 'paper'>, body: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f2(W)} ${f2(Hh)}" width="${f2(W)}" height="${f2(Hh)}" role="img" aria-label="${opt.label.replace(/["<>&]/g, '')}"><rect width="${f2(W)}" height="${f2(Hh)}" fill="${opt.paper}"/>${body}</svg>`;
-/** Letter groups (one <g> per colour; fill overrides the colour unless it's the paper) then vowels. */
+/** Letter groups (one <g> per colour; fill overrides the colour unless it's the paper) then vowels. The paper group
+ *  (the inner lines of banded letters) goes last, above every ink colour: in insertion order it would sit after the
+ *  first colour only, and each later colour would paint over its own inner lines. */
 export const groupsOut = (opt: RenderOptions, sh: Shapes, fill: string | null, soft?: number) =>
   [...sh.ink]
+    .sort(([a], [b]) => +(a === opt.paper) - +(b === opt.paper))
     .map(([c, arr]) => {
       const f = c === opt.paper ? c : fill || c;
       return `<g fill="${f}"${soft && c !== opt.paper ? ` stroke="${f}" stroke-width="${f2(soft)}" stroke-linejoin="round"` : ''}>${arr.join('')}</g>`;

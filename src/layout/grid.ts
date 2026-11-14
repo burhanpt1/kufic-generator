@@ -56,9 +56,11 @@ export function centreFill(grid: Grid, o: number, center: string) {
     }
   }
 }
+/** A square grid turned clockwise by deg, to the nearest quarter turn (any angle: -90 is 270, 450 is 90). */
 export function rotate(g: Grid, deg: number): Grid {
-  const L = g.w;
-  for (let r = 0; r < deg / 90; r++) {
+  const L = g.w,
+    turns = ((Math.round(deg / 90) % 4) + 4) % 4 || 0;
+  for (let r = 0; r < turns; r++) {
     const n = makeGrid(L, L);
     for (let y = 0; y < L; y++)
       for (let x = 0; x < L; x++) {
