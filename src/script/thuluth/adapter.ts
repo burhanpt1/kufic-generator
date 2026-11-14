@@ -9,7 +9,7 @@ import type { LetterStyle, Prepared, ScriptEngine, Segment, Segments, VectorStri
 import type { Built, Thuluth } from './engine';
 import { DEFAULT_THULUTH, thuluth } from './engine';
 import { lineMarks } from './marks';
-import { outline } from './outline';
+import { cleanOutline } from './outline';
 import type { WordMark } from './shape';
 import { allahSpan, endsGroup, FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
 import type { Family, Poly, ThuluthStyle } from './types';
@@ -130,7 +130,10 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
   const inkOutline = (b: Built) => {
     let o = outlines.get(b);
     if (!o) {
-      o = outline([...b.strokes.flatMap(s => th.strokePolys(s)), ...b.dots.flatMap(([x, y]) => th.dotPolysAt(x, y))]);
+      o = cleanOutline([
+        ...b.strokes.flatMap(s => th.strokePolys(s)),
+        ...b.dots.flatMap(([x, y]) => th.dotPolysAt(x, y)),
+      ]);
       outlines.set(b, o);
     }
     return o;

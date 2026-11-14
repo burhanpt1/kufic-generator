@@ -2,6 +2,7 @@
 // field, the letters in gold (or in their own colour), and colour in the counters. `roundelArt` gives the same as
 // geometry in pen units, for placing inside a composition.
 import type { Thuluth } from '../engine';
+import { cleanOutline } from '../outline';
 import type { Poly } from '../types';
 import type { Roundel } from './compose';
 import { findCounters } from './counters';
@@ -60,7 +61,7 @@ export function roundelArt(th: Thuluth, r: Roundel, f: Finished, o: RoundelPaint
   const polys = units.map(u => ({
     polys: u.dot
       ? th.dotPolysAt(u.dot[0], u.dot[1], u.dot[2] ?? 1, u.dot[3] || 0)
-      : th.strokePolys({ ang: u.ang!, nib: u.nib, s: u.s! }),
+      : cleanOutline(th.strokePolys({ ang: u.ang!, nib: u.nib, s: u.s! })),
     tint: u.tint,
     mark: !!u.mark || !!u.dot,
     gi: u.gi,

@@ -6,7 +6,7 @@
 // thousand. Each run takes the next run's first quad too, so neighbouring runs overlap instead of meeting on a shared
 // edge (rounding would leave slivers along it). Clipper2's C++ (src/kernels/clipper2.ts) does the unions once it has
 // loaded; the TypeScript port does the same steps until then.
-import { FillRule, simplifyPathsD, unionD } from '@countertype/clipper2-ts';
+import { EndType, FillRule, JoinType, inflatePathsD, simplifyPathsD, unionD } from '@countertype/clipper2-ts';
 import type { PathsD } from 'clipper2-wasm/dist/clipper2z';
 import { clipper2, fromPathsD, toPathsD } from '../../kernels/clipper2';
 import type { Poly } from './types';
@@ -52,4 +52,28 @@ export function outline(polys: readonly Poly[], tolerance = 0.02): Poly[] {
     runs.push(unionD(polys.slice(i, i + CHUNK + 1).map(P), [], FillRule.NonZero, PRECISION));
   const u = runs.length === 1 ? runs[0] : unionD(runs.flat(), [], FillRule.NonZero, PRECISION);
   return simplifyPathsD(u, tolerance, true).map(path => path.map(p => [p.x, p.y] as [number, number]));
+}
+
+/** A stroke's ink as the pen meant it: the union of its quads with the notches between them closed. The quads of a
+ *  turning stroke fan out and leave a comb of fine teeth along the outside of the turn and at a tapering end; here
+ *  the outline is grown by `r` with round joins and shrunk back by the same, which fills any notch narrower than 2r
+ *  and leaves everything else where it was (a hairline keeps its width, a counter wider than 2r stays open). Pen
+ *  units; 0.07 is under a twentieth of the roundel pen's nib. */
+export function cleanOutline(polys: readonly Poly[], r = 0.07, tolerance = 0.01): Poly[] {
+  const u = outline(polys, 0);
+  if (!u.length || !(r > 0)) return u;
+  const C = clipper2();
+  if (C) {
+    const ps = toPathsD(C, u),
+      grown = C.InflatePathsD(ps, r, C.JoinType.Round, C.EndType.Polygon, 2, PRECISION, 0),
+      back = C.InflatePathsD(grown, -r, C.JoinType.Round, C.EndType.Polygon, 2, PRECISION, 0),
+      s = C.SimplifyPathsD(back, tolerance, true),
+      out = fromPathsD(s);
+    for (const x of [ps, grown, back, s]) x.delete();
+    return out;
+  }
+  const P = u.map(q => q.map(([x, y]) => ({ x, y }))),
+    grown = inflatePathsD(P, r, JoinType.Round, EndType.Polygon, 2, PRECISION, 0),
+    back = inflatePathsD(grown, -r, JoinType.Round, EndType.Polygon, 2, PRECISION, 0);
+  return simplifyPathsD(back, tolerance, true).map(path => path.map(p => [p.x, p.y] as [number, number]));
 }
