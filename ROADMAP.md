@@ -93,7 +93,10 @@ What is already done is listed at the end only as milestones; the commit history
     All three make the alif the lam's height and weight.
   - `muhammad: 'a' | 'b' | 'c'`: the letters of محمد redrawn everywhere, the jali ligature in the name only, or both.
     The ligature's roof passes under the mim; check against a master. Initial hah is not redrawn.
-  - `fixes`: medial and isolated kaf, final dal, final qaf, fa/qaf dots.
+  - `fixes`: medial and isolated kaf, final dal, final qaf, fa/qaf dots. **On by default** (owner, 14 November);
+    `fixes: false` gives the letters of before.
+  - The owner's choice of the drafts is stems **c** and muhammad **c** (`CHOSEN` in `alts.ts`), kept as an option
+    until rated. The ligature's roof under the mim is still unchecked against a master.
   - With the recommended set, initial mim/heh and final alif/lam come closer in the confusion matrix (0.51 to 0.37,
     0.60 to 0.37), still above 0.3; three medial pairs leave the under-0.3 list.
   - The audit's weakest forms not yet redrawn: final ain, medial ain, final hah, final waw's neck, final lam-alif.

@@ -55,17 +55,19 @@ export interface ThuluthStyle {
   allah?: { alif: boolean };
   /** Great roundel gestures (lab useGreat): the Husayn bowl as final nun or a returning ya, the long-headed hah. */
   great?: { nun?: boolean; hah?: boolean; ya?: boolean; yaWide?: number; yaDeep?: number };
-  /** Drafted alternative letterforms (alts.ts), for the owner to judge. Unset, everything is drawn as before. */
+  /** Drafted alternative letterforms (alts.ts), for the owner to judge, and the audit's corrections, which are on
+   *  unless `fixes: false`. */
   alts?: ThuluthAlts;
 }
-/** Alternative drawings, each off unless named (alts.ts says what each one is). With any of them on, the pen also
- *  draws its stroke ends clean (pen.ts nibPolys). */
+/** Alternative drawings (alts.ts says what each one is): the stems and the name are off unless named, and with
+ *  either on the pen also draws its stroke ends clean (pen.ts nibPolys). */
 export interface ThuluthAlts {
   /** The head and foot of the tall stems (alif, lam, kaf, ta, lam-alif, the name of God). */
   stems?: 'a' | 'b' | 'c';
   /** How the name محمد is written, and with it initial and medial mim, medial hah and final dal. */
   muhammad?: 'a' | 'b' | 'c';
-  /** Corrected drawings from the audit: all of them (true), or those named. */
+  /** Corrected drawings from the audit: all of them (true, and when unset: the owner turned them on, 14 November
+   *  2026), none (false), or those named. */
   fixes?: boolean | readonly AltFix[];
 }
 /** The audit's corrections, by letter and form (alts.ts ALT_FIXES). */

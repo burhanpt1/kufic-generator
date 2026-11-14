@@ -85,7 +85,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   stackMin: { text: 'محمد علي', set: { stackMin: 0.45 }, with: { learnedStack: true } },
   stackBowls: { text: 'حسين', set: { stackBowls: true }, with: { learnedStack: true } },
   levels: { text: BASMALA, set: { levels: [6] } },
-  margin: { set: { margin: 3 } },
+  margin: { text: BASMALA, set: { margin: 3 } },
   pathW: { text: BASMALA, set: { pathW: 6 }, with: { lanes: {} } },
   readW: { text: BASMALA, set: { readW: 8 }, with: { lanes: {} } },
   // on a path that climbs as it is read, so every word is above the one before

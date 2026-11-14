@@ -26,13 +26,19 @@ const ALTS: ThuluthAlts[] = [
 
 describe('alternatives are off unless asked for', () => {
   for (const [pn, pen] of Object.entries(PENS))
-    it(`nothing changes without them (${pn} pen)`, () => {
+    it(`the stems and the name are off unless named, the audit's corrections on unless refused (${pn} pen)`, () => {
+      // the default carries the corrections (owner, 14 November 2026) and nothing else
       const base = thuluth(pen);
-      for (const alts of [undefined, {}, { stems: undefined, muhammad: undefined, fixes: false }] as ThuluthAlts[]) {
+      for (const alts of [{}, { fixes: true }, { stems: undefined, muhammad: undefined }] as ThuluthAlts[]) {
         const th = thuluth({ ...pen, alts });
         expect(th.table).toEqual(base.table);
         for (const t of TEXTS) expect(th.renderLine(t), t).toBe(base.renderLine(t));
       }
+      // refused, the letters are those of before the audit: a corrected form differs, the rest do not
+      const plain = thuluth({ ...pen, alts: { fixes: false } });
+      expect(plain.glyphFor('ك', 'med')).not.toEqual(base.glyphFor('ك', 'med'));
+      expect(plain.glyphFor('ب', 'med')).toEqual(base.glyphFor('ب', 'med'));
+      expect(plain.renderLine('بسم')).toBe(base.renderLine('بسم'));
       // and the lab's own letters stay the lab's
       const lab = thuluth({ ...pen, labLetters: true });
       expect(thuluth({ ...pen, labLetters: true, alts: RECOMMENDED }).renderLine(TEXTS[0])).toBe(lab.renderLine(TEXTS[0])); // prettier-ignore

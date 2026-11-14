@@ -32,21 +32,21 @@ const BASMALA = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّح
 const COMPOSED: [string, string, RoundelOptions, string][] = [
   ['free', BASMALA, PEN, '84556d1f6ba3e9a1'],
   ['free, every rule', BASMALA, RICH, '8c040b6c42f59b02'],
-  ['girift', SALAWAT, { ...PEN, girift: 0.04, merge: true, stack: true, learnedStack: true }, '0858f91c0e2b9873'],
+  ['girift', SALAWAT, { ...PEN, girift: 0.04, merge: true, stack: true, learnedStack: true }, '16b95174fbd39523'],
   ['fitted lanes', BASMALA, { ...PEN, lanes: {} }, '80dc86d9710623cb'],
-  ['lanes in a pear', SALAWAT, { ...PEN, lanes: {}, field: 'pear', stack: true }, 'f54dc1f305b213b3'],
+  ['lanes in a pear', SALAWAT, { ...PEN, lanes: {}, field: 'pear', stack: true }, '058a0aff36576ab7'],
   ['a path (stag2)', BASMALA, { ...PEN, path: 'stag2' }, 'b06e7acd878c5516'],
-  ['a path (calliar4)', SALAWAT, { ...PEN, path: 'calliar4', stack: true }, 'ce69f289af4a4efd'],
+  ['a path (calliar4)', SALAWAT, { ...PEN, path: 'calliar4', stack: true }, 'e1bf2f674c174e44'],
   ['ruled', BASMALA, { ...PEN, ruled: true }, 'd5d49f72ac0c2ec3'],
-  ['ruled, with riders and stacks', SALAWAT, { ...PEN, ruled: { anchors: true }, stack: true, nest: true, oval: 1.3 }, '8771b90cddbb3193'],
+  ['ruled, with riders and stacks', SALAWAT, { ...PEN, ruled: { anchors: true }, stack: true, nest: true, oval: 1.3 }, '00cabc2f577b7520'],
   ['ruled in a tulip', BASMALA, { ...PEN, ruled: { anchors: true, lines: 3 }, field: 'tulip', stack: true }, '81afd3a683f8d872'],
-  ['two names', 'زينب قصي', { ...PEN, companion: 'سنة', stack: true }, 'b97f16664c44c97c'],
-  ['one name', 'محمد', {}, '97e9e4d2dcb81618'],
+  ['two names', 'زينب قصي', { ...PEN, companion: 'سنة', stack: true }, '73397e4949f6bfd0'],
+  ['one name', 'محمد', {}, 'a737cdab69581cee'],
 ]; // prettier-ignore
 const FINISHED: [string, string, RoundelOptions, Partial<RoundelSpec>, string][] = [
   ['in a fitted frame', BASMALA, PEN, { frame: {} }, 'c86f334e3c61f326'],
   ['with ornaments and clearance', BASMALA, { ...PEN, lanes: {} }, { frame: { ornaments: true, density: 0.6, markReach: 2.2, clearance: 0.3, markDensity: 0.8, fathaGap: true } }, '4a99590f65fd539d'],
-  ['in the composed disc, with a companion', SALAWAT, { ...PEN, ruled: true }, { frame: false, companion: 'سنة' }, '09be8bc7d0e0271f'],
+  ['in the composed disc, with a companion', SALAWAT, { ...PEN, ruled: true }, { frame: false, companion: 'سنة' }, '548d747235898cd7'],
 ]; // prettier-ignore
 
 describe('roundels, to the bit', () => {

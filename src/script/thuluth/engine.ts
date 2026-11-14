@@ -153,9 +153,10 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       g.dotX = -0.9;
       t.ya = { ...t.ya, fin: g as unknown as GlyphDef };
     }
-    // drafted alternatives, over everything else
-    if (st.alts && !st.labLetters) {
-      const over = altForms(st.alts, t, st.nib, st.body) as Partial<Record<Family, Partial<Record<Form, GlyphDef>>>>;
+    // the audit's corrections (on unless a style says `fixes: false`) and any drafted alternatives, over everything
+    // else
+    if (!st.labLetters) {
+      const over = altForms({ fixes: true, ...st.alts }, t, st.nib, st.body) as Partial<Record<Family, Partial<Record<Form, GlyphDef>>>>; // prettier-ignore
       for (const fam of Object.keys(over) as Family[]) t[fam] = { ...t[fam], ...over[fam] };
     }
     return t;
@@ -447,8 +448,9 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
   }
 
   /** The ink of a stroke and of a dot, as polygons in pen units. */
-  // any drafted alternative is drawn with clean stroke ends (pen.ts)
-  const CLEAN_ENDS = !!st.alts && Object.values(st.alts).some(Boolean) && !st.labLetters;
+  // the drafted stems and the drafted name are drawn with clean stroke ends (pen.ts); the audit's corrections alone
+  // leave every other letter's ends as they were
+  const CLEAN_ENDS = !!(st.alts?.stems || st.alts?.muhammad) && !st.labLetters;
   const strokePolys = (s: Stroke, nibScale = 1) =>
     nibPolys(s.s, (s.nib || st.nib) * nibScale, s.ang, st.floor, CLEAN_ENDS);
   const dotPolysAt = (x: number, y: number, scale = 1, rot = 0) =>

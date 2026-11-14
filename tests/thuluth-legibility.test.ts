@@ -198,8 +198,12 @@ describe('the lab letters stay available', () => {
     const lab = thuluth({ ...ROUNDEL_PEN, labLetters: true }),
       now = thuluth(ROUNDEL_PEN);
     expect(lab.glyphFor('ك', 'iso')!.s).toHaveLength(2);
-    expect(now.glyphFor('ك', 'iso')!.s).toHaveLength(4);
-    expect(lab.renderLine('زينب وقصي')).toBe(now.renderLine('زينب وقصي'));
+    // the rebuilt kaf, less the join stub the audit took off its foot (alts.ts kaf-iso)
+    expect(now.glyphFor('ك', 'iso')!.s).toHaveLength(3);
+    expect(thuluth({ ...ROUNDEL_PEN, alts: { fixes: false } }).glyphFor('ك', 'iso')!.s).toHaveLength(4);
+    // a text with none of the redrawn letters is the lab's, but for the audit's room after an initial qaf
+    expect(lab.renderLine('زينب')).toBe(now.renderLine('زينب'));
+    expect(lab.renderLine('زينب وقصي')).toBe(thuluth({ ...ROUNDEL_PEN, alts: { fixes: false } }).renderLine('زينب وقصي')); // prettier-ignore
   });
 });
 
