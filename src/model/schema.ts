@@ -308,6 +308,11 @@ export interface RoundelRecipe {
   /** The clear space kept between words that follow each other on a line (pen units, ink edge to ink edge; the
    *  roundel pen's nib is 1.6): without it words may touch, and a line reads as one run of letters. */
   wordGap?: number;
+  /** The clear space set between the pieces of a word broken by a non-joining letter (pen units, ink edge to ink
+   *  edge): each slides in after the one before until that much is left, over a tail and under a head, so a word
+   *  holds together. Without it the pieces are kerned on the composer's raster, and may touch or stand a word's
+   *  space apart. */
+  innerGap?: number;
 }
 export interface RoundelColours {
   field?: string;
@@ -523,6 +528,7 @@ const roundelRecipe = z
     orderSlack: z.number().min(0).max(10),
     // (the distance fields it is measured on grow with its square)
     wordGap: z.number().min(0).max(6),
+    innerGap: z.number().min(0).max(3),
   })
   .partial();
 const abjadOpts = z.object({

@@ -10,7 +10,7 @@
 //   one of them do).
 import type { Thuluth } from '../engine';
 import { STEM_LETTERS } from '../shape';
-import type { Poly } from '../types';
+import type { Poly, Stroke } from '../types';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
 import type { Finished } from './finish';
@@ -136,27 +136,31 @@ export function alignment(r: Roundel, nib: number): { baselines: number; stemRhy
   };
 }
 
-/** The ink of each piece as the pen draws it (a quad for each step of each letter stroke; no vowels or dots, which are
- *  placed afterwards and have their own checks), in composition coordinates, with each quad's box. */
-interface Quad {
+/** A quad of ink, with its box. */
+export interface Quad {
   p: Poly;
   x0: number;
   x1: number;
   y0: number;
   y1: number;
 }
+/** The ink of strokes as the pen draws it, moved by (dx, dy): a quad for each step of each stroke that is not a
+ *  mark, with its box. */
+export function strokeQuads(th: Thuluth, strokes: readonly Stroke[], dx = 0, dy = 0): Quad[] {
+  return strokes
+    .filter(s => !s.mark)
+    .flatMap(s => th.strokePolys(s))
+    .map(q => {
+      const p: Poly = q.map(([x, y]) => [x + dx, y + dy]),
+        xs = p.map(v => v[0]),
+        ys = p.map(v => v[1]);
+      return { p, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    });
+}
+/** The ink of each piece as the pen draws it (a quad for each step of each letter stroke; no vowels or dots, which are
+ *  placed afterwards and have their own checks), in composition coordinates. */
 function inkQuads(th: Thuluth, r: Roundel): Quad[][] {
-  return r.shapes.map((S, g) =>
-    S.b.strokes
-      .filter(s => !s.mark)
-      .flatMap(s => th.strokePolys(s))
-      .map(q => {
-        const p: Poly = q.map(([x, y]) => [x + r.st[g].x, y + r.st[g].y]),
-          xs = p.map(v => v[0]),
-          ys = p.map(v => v[1]);
-        return { p, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
-      }),
-  );
+  return r.shapes.map((S, g) => strokeQuads(th, S.b.strokes, r.st[g].x, r.st[g].y));
 }
 const segPoint = (px: number, py: number, ax: number, ay: number, bx: number, by: number) => {
   const dx = bx - ax,
@@ -193,7 +197,7 @@ function polyGap(P: Poly, Q: Poly): number {
   return inside(Q, P[0][0], P[0][1]) || inside(P, Q[0][0], Q[0][1]) ? 0 : d;
 }
 /** The gap between two sets of quads, ink edge to ink edge (0 when they touch). */
-function inkGap(A: Quad[], B: Quad[]): number {
+export function inkGap(A: readonly Quad[], B: readonly Quad[]): number {
   let d = Infinity;
   for (const a of A)
     for (const b of B) {
