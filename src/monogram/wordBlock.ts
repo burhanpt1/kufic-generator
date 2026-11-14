@@ -7,13 +7,18 @@
 import type { LetterStyle, ScriptEngine } from '../script/types';
 import type { CellGrid } from './grid';
 import { G, markEnds, trim } from './grid';
-import { wordGrid } from './words';
+import { kufi } from '../script/kufi';
+import { wordLine } from './words';
 
 /** Empty cells kept between letters of different lines, and between a dot (or vowel) and another line's ink. */
 export const LINE_CLEAR = 1;
 export const MARK_CLEAR = 4;
 /** Words a block will break into lines by search (longer texts are split evenly by width instead). */
 const MAX_LINES = 8;
+/** The longest text a block is made of. The work grows with the square of the word count (about a second at 400
+ *  words, several at 1,000), and a seal of more than a few dozen words is not legible anyway: beyond this there is
+ *  no block (the caller reports that the text doesn't fit), at once, instead of a search that runs for minutes. */
+export const MAX_WORDS = 1000;
 
 export interface WordBlock {
   grid: CellGrid;
@@ -28,16 +33,27 @@ const isMark = (v: number) => v === 2 || v === 3;
 
 /** Grow a mask by r cells in every direction (Chebyshev). */
 function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
-  const out = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      if (!m[y * w + x]) continue;
-      for (let dy = -r; dy <= r; dy++)
-        for (let dx = -r; dx <= r; dx++) {
-          const X = x + dx,
-            Y = y + dy;
-          if (X >= 0 && Y >= 0 && X < w && Y < h) out[Y * w + X] = 1;
-        }
+  // a square neighbourhood is a run along the row, then a run along the column; each cell is written once per pass
+  const out = new Uint8Array(w * h),
+    rows = new Uint8Array(w * h);
+  let any = false;
+  for (let y = 0; y < h; y++) {
+    const o = y * w;
+    for (let x = 0, done = 0; x < w; x++) {
+      if (!m[o + x]) continue;
+      const b = Math.min(w - 1, x + r);
+      for (let X = Math.max(done, x - r); X <= b; X++) rows[o + X] = 1;
+      done = b + 1;
+      any = true;
+    }
+  }
+  if (!any) return out;
+  for (let x = 0; x < w; x++)
+    for (let y = 0, done = 0; y < h; y++) {
+      if (!rows[y * w + x]) continue;
+      const b = Math.min(h - 1, y + r);
+      for (let Y = Math.max(done, y - r); Y <= b; Y++) out[Y * w + x] = 1;
+      done = b + 1;
     }
   return out;
 }
@@ -48,7 +64,7 @@ function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
 export const STEM_GAP = 3;
 /** Straight vertical cells each end needs to count as a stem (a lam-alif knot's short legs don't). */
 const STEM_RUN = 4;
-function shareStems(out: CellGrid, above: Uint8Array, H: number, cols: Set<number>) {
+function shareStems(out: CellGrid, above: Uint8Array, H: number, cols: Set<number>, added: number[]) {
   const W = out.w,
     up = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && above[y * W + x] === 1,
     any = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && out.data[y * W + x] !== 0,
@@ -66,7 +82,11 @@ function shareStems(out: CellGrid, above: Uint8Array, H: number, cols: Set<numbe
       let q = 0;
       while (up(x, u - q)) q++;
       if (u === t - 1 || q < STEM_RUN || up(x - 1, u - 1) || up(x + 1, u - 1)) continue;
-      for (let y = u + 1; y < t; y++) out.data[y * W + x] = 1;
+      // (these cells were empty: the walk up to u passed only empty ones)
+      for (let y = u + 1; y < t; y++) {
+        out.data[y * W + x] = 1;
+        added.push(y * W + x);
+      }
     }
 }
 
@@ -80,33 +100,63 @@ function stack(lines: { g: CellGrid; base: number }[], W: number, H: number): Ce
   let bottom = 0, // one past the lowest inked row so far
     base = -1, // the previous line's baseline row
     prevAlifs = new Set<number>();
+  // what is placed so far, as the masks a new line is tested against: everything grown by LINE_CLEAR and by
+  // MARK_CLEAR, the marks grown by MARK_CLEAR, and the STEM_CLEAR cells straight below letter ink (no letter of the
+  // new line may start there). A placed cell never changes (a line only goes where nothing is, and a shared stem
+  // fills empty cells), and growing a union is the union of the grown parts, so each line adds its own cells to the
+  // masks instead of the masks being rebuilt from the whole block for every line.
+  const nearAll = new Uint8Array(W * total),
+    farAll = new Uint8Array(W * total),
+    farMarks = new Uint8Array(W * total),
+    under = new Uint8Array(W * total);
+  const addToMasks = (ink: number[], marks: number[]) => {
+    if (!ink.length && !marks.length) return;
+    let ya = total,
+      yb = -1;
+    for (const list of [ink, marks])
+      for (const k of list) {
+        const y = Math.floor(k / W);
+        ya = Math.min(ya, y);
+        yb = Math.max(yb, y);
+      }
+    // the rows the new cells can reach
+    const y0 = Math.max(0, ya - MARK_CLEAR),
+      h = Math.min(total - 1, yb + MARK_CLEAR) - y0 + 1,
+      o = y0 * W,
+      all = new Uint8Array(W * h),
+      mk = new Uint8Array(W * h);
+    for (const k of ink) all[k - o] = 1;
+    for (const k of marks) all[k - o] = mk[k - o] = 1;
+    const near = dilate(all, W, h, LINE_CLEAR),
+      far = dilate(all, W, h, MARK_CLEAR),
+      farM = marks.length ? dilate(mk, W, h, MARK_CLEAR) : null;
+    for (let k = 0; k < W * h; k++) {
+      if (near[k]) nearAll[o + k] = 1;
+      if (far[k]) farAll[o + k] = 1;
+      if (farM && farM[k]) farMarks[o + k] = 1;
+    }
+    for (const k of ink) for (let d = 1; d <= STEM_CLEAR && k + d * W < under.length; d++) under[k + d * W] = 1;
+  };
   for (const { g, base: gb } of lines) {
     const alifs = new Set(alifCols(g, gb, H)),
       joins = new Set([...alifs].filter(x => prevAlifs.has(x)));
-    const ink = new Uint8Array(W * total),
-      marks = new Uint8Array(W * total);
-    for (let k = 0; k < out.data.length; k++) if (out.data[k]) (isMark(out.data[k]) ? marks : ink)[k] = 1;
-    const all = ink.map((v, k) => v | marks[k]),
-      nearAll = dilate(all, W, total, LINE_CLEAR),
-      farAll = dilate(all, W, total, MARK_CLEAR),
-      farMarks = dilate(marks, W, total, MARK_CLEAR),
-      // straight below ink, STEM_CLEAR cells: no letter of the new line may start there
-      under = new Uint8Array(W * total);
-    for (let k = 0; k < all.length; k++)
-      if (ink[k]) for (let d = 1; d <= STEM_CLEAR && k + d * W < under.length; d++) under[k + d * W] = 1;
-    let top = -1;
-    for (let y = 0; y < g.h && top < 0; y++) for (let x = 0; x < g.w; x++) if (g.data[y * g.w + x]) top = y;
+    // the line's inked cells, row by row: x, y, value
+    const cells: number[] = [];
+    for (let y = 0; y < g.h; y++)
+      for (let x = 0; x < g.w; x++) {
+        const v = g.data[y * g.w + x];
+        if (v) cells.push(x, y, v);
+      }
+    const top = cells.length ? cells[1] : -1;
     const fits = (oy: number) => {
-      for (let y = 0; y < g.h; y++)
-        for (let x = 0; x < g.w; x++) {
-          const v = g.data[y * g.w + x];
-          if (!v) continue;
-          const Y = y + oy;
-          if (Y < 0) return false;
-          if (Y >= total) continue;
-          const k = Y * W + x;
-          if (isMark(v) ? farAll[k] : nearAll[k] || farMarks[k] || (under[k] && !joins.has(x))) return false;
-        }
+      for (let c = 0; c < cells.length; c += 3) {
+        const x = cells[c],
+          Y = cells[c + 1] + oy;
+        if (Y < 0) return false;
+        if (Y >= total) continue;
+        const k = Y * W + x;
+        if (isMark(cells[c + 2]) ? farAll[k] : nearAll[k] || farMarks[k] || (under[k] && !joins.has(x))) return false;
+      }
       return true;
     };
     // start clear below everything placed, then lift while it still fits
@@ -114,46 +164,90 @@ function stack(lines: { g: CellGrid; base: number }[], W: number, H: number): Ce
     // a line never rises to the baseline of the one above (it would read before it)
     while (oy - 1 + gb > base + 1 && fits(oy - 1)) oy--;
     base = oy + gb;
-    const above = Uint8Array.from(out.data);
-    for (let y = 0; y < g.h; y++)
-      for (let x = 0; x < g.w; x++) {
-        const v = g.data[y * g.w + x],
-          Y = y + oy;
-        if (v && Y >= 0 && Y < total) out.data[Y * W + x] = v;
-      }
-    if (bottom) shareStems(out, above, total, joins);
+    const above = bottom ? out.data.slice() : null,
+      ink: number[] = [],
+      marks: number[] = [];
+    for (let c = 0; c < cells.length; c += 3) {
+      const v = cells[c + 2],
+        Y = cells[c + 1] + oy;
+      if (Y < 0 || Y >= total) continue;
+      const k = Y * W + cells[c];
+      out.data[k] = v;
+      (isMark(v) ? marks : ink).push(k);
+    }
+    if (above) shareStems(out, above, total, joins, ink);
     prevAlifs = alifs;
-    for (let y = total - 1; y >= 0; y--)
-      if (out.data.subarray(y * W, y * W + W).some(v => v)) {
-        bottom = y + 1;
-        break;
-      }
+    addToMasks(ink, marks);
+    for (const list of [ink, marks]) for (const k of list) bottom = Math.max(bottom, Math.floor(k / W) + 1);
   }
   return trim(out);
 }
 
-/** Even splits of `n` words into `L` lines by natural width: the split whose widest line is narrowest. */
-function splitEvenly(widths: (i: number, j: number) => number, n: number, L: number): number[] | null {
+/** Even splits of `n` words into lines by natural width, for every line count up to `maxL` at once: the split whose
+ *  widest line is narrowest. The function returned gives the first word of each of L lines (null if no split). */
+function splitEvenly(widths: (i: number, j: number) => number, n: number, maxL: number) {
   // best[k][j]: narrowest possible widest line for words 0..j-1 in k lines; cut[k][j]: start of the last line
-  const best = Array.from({ length: L + 1 }, () => new Array<number>(n + 1).fill(Infinity)),
-    cut = Array.from({ length: L + 1 }, () => new Array<number>(n + 1).fill(-1));
+  // (a row doesn't depend on how many lines are wanted in the end, so one table serves every line count)
+  const best = Array.from({ length: maxL + 1 }, () => new Float64Array(n + 1).fill(Infinity)),
+    cut = Array.from({ length: maxL + 1 }, () => new Int32Array(n + 1).fill(-1));
   best[0][0] = 0;
-  for (let k = 1; k <= L; k++)
-    for (let j = k; j <= n; j++)
+  for (let k = 1; k <= maxL; k++) {
+    const prev = best[k - 1],
+      cur = best[k],
+      ck = cut[k];
+    for (let j = k; j <= n; j++) {
+      let b = Infinity,
+        c = -1;
       for (let i = k - 1; i < j; i++) {
-        const v = Math.max(best[k - 1][i], widths(i, j));
-        if (v < best[k][j]) {
-          best[k][j] = v;
-          cut[k][j] = i;
+        const v = Math.max(prev[i], widths(i, j));
+        if (v < b) {
+          b = v;
+          c = i;
         }
       }
-  if (!isFinite(best[L][n])) return null;
-  const starts: number[] = [];
-  for (let k = L, j = n; k > 0; k--) {
-    starts.unshift(cut[k][j]);
-    j = cut[k][j];
+      cur[j] = b;
+      ck[j] = c;
+    }
   }
-  return starts;
+  return (L: number): number[] | null => {
+    if (!isFinite(best[L][n])) return null;
+    const starts: number[] = [];
+    for (let k = L, j = n; k > 0; k--) {
+      starts.unshift(cut[k][j]);
+      j = cut[k][j];
+    }
+    return starts;
+  };
+}
+
+/** The natural width of the line of words i..j-1 (Infinity when none of them can be drawn).
+ *
+ *  The Kufi engine shapes each word by itself and sets a natural line as its words side by side with the word gap
+ *  between them (shape.ts splits the text into words, prepare.ts sizes each glyph from its own word, strip() adds up
+ *  minW and gaps), so a span is exactly as wide as its drawn words and the gaps between them: per-word widths and
+ *  two prefix sums answer every span, where laying out each span of an n-word text was O(n³) work. A word the engine
+ *  draws nothing for (no letter it knows) adds neither width nor a gap, as in the joined text. Any other engine, and
+ *  a fractional gap (whose sum could round differently), is measured by laying the span out. */
+function spanWidths(
+  script: ScriptEngine,
+  words: string[],
+  wordGap: number,
+  lineGrid: (text: string, extra: number) => LineGrid | null,
+): (i: number, j: number) => number {
+  if (script !== kufi || !Number.isInteger(wordGap))
+    return (i, j) => lineGrid(words.slice(i, j).join(' '), 0)?.g.w ?? Infinity;
+  const n = words.length,
+    sum = new Float64Array(n + 1),
+    drawn = new Int32Array(n + 1);
+  for (let k = 0; k < n; k++) {
+    const g = lineGrid(words[k], 0);
+    sum[k + 1] = sum[k] + (g ? g.g.w : 0);
+    drawn[k + 1] = drawn[k] + (g ? 1 : 0);
+  }
+  return (i, j) => {
+    const c = drawn[j] - drawn[i];
+    return c ? sum[j] - sum[i] + wordGap * (c - 1) : Infinity;
+  };
 }
 
 /** Columns where a line has a full stem: letter ink straight from just under the ascender top down to the baseline
@@ -185,28 +279,32 @@ const wordExtra = (w: number) => Math.ceil(w / 4);
 /** A line `W` wide built word by word, each word's kashida and each gap chosen so that as many of its alifs as
  *  possible stand right under alifs of the line above (owner's review, seals round 7: the alifs of اله and الله in
  *  the Shahada share one stem). Within that, kashida and gaps spread as evenly as they can. */
+/** A word as alignLine may set it: `e` cells of kashida, its grid, and the columns of its alifs. */
+type WordOpt = { e: number; lg: LineGrid; tall: number[] };
+/** The widths a word may take in alignLine, narrowest first (the same for every line and block width). */
+function wordOpts(w: string, word: (w: string, e: number) => LineGrid | null, H: number): WordOpt[] {
+  const o: WordOpt[] = [];
+  const w0 = word(w, 0)?.g.w ?? 0;
+  for (let e = 0; e <= wordExtra(w0); e++) {
+    const lg = word(w, e);
+    if (lg && lg.g.w === (o[0]?.lg.g.w ?? lg.g.w - e) + e) o.push({ e, lg, tall: alifCols(lg.g, lg.base, H) });
+  }
+  return o;
+}
 function alignLine(
   ws: string[],
   W: number,
   above: Set<number>,
-  word: (w: string, e: number) => LineGrid | null,
-  H: number,
+  optsOf: (w: string) => WordOpt[],
   wordGap: number,
 ): { line: LineGrid; aligned: number; stretched: number } | null {
-  type Opt = { e: number; lg: LineGrid; tall: number[] };
-  const opts: Opt[][] = ws.map(w => {
-    const o: Opt[] = [];
-    const w0 = word(w, 0)?.g.w ?? 0;
-    for (let e = 0; e <= wordExtra(w0); e++) {
-      const lg = word(w, e);
-      if (lg && lg.g.w === (o[0]?.lg.g.w ?? lg.g.w - e) + e) o.push({ e, lg, tall: alifCols(lg.g, lg.base, H) });
-    }
-    return o;
-  });
+  const opts: WordOpt[][] = ws.map(optsOf);
   if (opts.some(o => !o.length)) return null;
-  type St = { score: number; aligned: number; pick: { o: Opt; left: number }[] };
+  // the words chosen so far, last first (a chain shared between states instead of a copy per state)
+  type Pick = { o: WordOpt; left: number; prev: Pick | null };
+  type St = { score: number; aligned: number; pick: Pick | null };
   // states by the left edge of the last word placed, words placed from the right
-  let states = new Map<number, St>([[W, { score: 0, aligned: 0, pick: [] }]]);
+  let states = new Map<number, St>([[W, { score: 0, aligned: 0, pick: null }]]);
   ws.forEach((_, i) => {
     const next = new Map<number, St>();
     for (const [edge, st] of states)
@@ -214,20 +312,27 @@ function alignLine(
         for (const o of opts[i]) {
           const left = edge - gp - o.lg.g.w;
           if (left < 0) continue;
-          const hit = o.tall.filter(c => above.has(left + c)).length,
-            score = st.score + ALIGN * hit - (o.e * o.e) / opts[i][0].lg.g.w - 0.5 * (gp - (i ? wordGap : 0)) ** 2,
+          let hit = 0;
+          for (const c of o.tall) if (above.has(left + c)) hit++;
+          const score = st.score + ALIGN * hit - (o.e * o.e) / opts[i][0].lg.g.w - 0.5 * (gp - (i ? wordGap : 0)) ** 2,
             cur = next.get(left);
           if (!cur || score > cur.score)
-            next.set(left, { score, aligned: st.aligned + hit, pick: [...st.pick, { o, left }] });
+            next.set(left, { score, aligned: st.aligned + hit, pick: { o, left, prev: st.pick } });
         }
     states = next;
   });
   const end = states.get(0);
   if (!end) return null;
-  const up = Math.max(...end.pick.map(p => p.o.lg.base)),
-    down = Math.max(...end.pick.map(p => p.o.lg.g.h - 1 - p.o.lg.base)),
-    g = G(W, up + 1 + down);
-  for (const { o, left } of end.pick) {
+  const picks: Pick[] = [];
+  for (let p = end.pick; p; p = p.prev) picks.unshift(p);
+  let up = -Infinity,
+    down = -Infinity;
+  for (const p of picks) {
+    up = Math.max(up, p.o.lg.base);
+    down = Math.max(down, p.o.lg.g.h - 1 - p.o.lg.base);
+  }
+  const g = G(W, up + 1 + down);
+  for (const { o, left } of picks) {
     const dy = up - o.lg.base;
     for (let y = 0; y < o.lg.g.h; y++)
       for (let x = 0; x < o.lg.g.w; x++) {
@@ -238,7 +343,7 @@ function alignLine(
   return {
     line: { g, base: up },
     aligned: end.aligned,
-    stretched: end.pick.reduce((a, p) => a + p.o.e, 0),
+    stretched: picks.reduce((a, p) => a + p.o.e, 0),
   };
 }
 
@@ -275,21 +380,31 @@ export function wordBlock(
   Hs: number[],
   wordGap = 2,
 ): WordBlock | null {
-  if (!words.length) return null;
+  if (!words.length || words.length > MAX_WORDS) return null;
   let best: { b: WordBlock; score: number } | null = null;
   for (const H of Hs) {
     const lt: LetterStyle = { ...letter, ascenders: H, marks: 'dots' },
-      cache = new Map<string, ReturnType<typeof wordGrid>>(),
+      // each text is shaped and set at its natural width once, then laid out at each width asked for, once
+      cache = new Map<string, { line: ReturnType<typeof wordLine>; at: Map<number, LineGrid | null> }>(),
       lineGrid = (text: string, extra: number) => {
-        const k = text + '|' + extra;
-        if (!cache.has(k)) cache.set(k, wordGrid(script, text, lt, extra, wordGap));
-        return cache.get(k)!;
+        let c = cache.get(text);
+        if (!c) cache.set(text, (c = { line: wordLine(script, text, lt, wordGap), at: new Map() }));
+        let g = c.at.get(extra);
+        if (g === undefined) c.at.set(extra, (g = c.line ? c.line(extra) : null));
+        return g;
       },
       text = (i: number, j: number) => words.slice(i, j).join(' '),
-      wordOf = (w: string, e: number) => lineGrid(w, e),
-      widths = (i: number, j: number) => lineGrid(text(i, j), 0)?.g.w ?? Infinity;
-    for (let L = 1; L <= Math.min(words.length, MAX_LINES); L++) {
-      const starts = splitEvenly(widths, words.length, L);
+      optsCache = new Map<string, WordOpt[]>(),
+      optsOf = (w: string) => {
+        let o = optsCache.get(w);
+        if (!o) optsCache.set(w, (o = wordOpts(w, lineGrid, H)));
+        return o;
+      },
+      widths = spanWidths(script, words, wordGap, lineGrid),
+      maxL = Math.min(words.length, MAX_LINES),
+      split = splitEvenly(widths, words.length, maxL);
+    for (let L = 1; L <= maxL; L++) {
+      const starts = split(L);
       if (!starts) continue;
       const spans = starts.map((s, k) => [s, starts[k + 1] ?? words.length]),
         nat = spans.map(([i, j]) => widths(i, j)),
@@ -329,7 +444,7 @@ export function wordBlock(
           const above = new Set(alifCols(grids[k - 1].g, grids[k - 1].base, H)),
             have = alifCols(grids[k].g, grids[k].base, H).filter(c => above.has(c)).length,
             [i, j] = spans[k],
-            a = alignLine(words.slice(i, j), W, above, wordOf, H, wordGap);
+            a = alignLine(words.slice(i, j), W, above, optsOf, wordGap);
           if (a && a.aligned > have) {
             used[k] = a.stretched;
             grids[k] = a.line;
@@ -344,7 +459,7 @@ export function wordBlock(
             have = mine(grids[k]).filter(c => below.has(c)).length,
             kept = prev ? mine(grids[k]).filter(c => prev.has(c)).length : 0,
             [i, j] = spans[k],
-            a = alignLine(words.slice(i, j), W, below, wordOf, H, wordGap);
+            a = alignLine(words.slice(i, j), W, below, optsOf, wordGap);
           if (a && a.aligned > have && (!prev || mine(a.line).filter(c => prev.has(c)).length >= kept)) {
             used[k] = a.stretched;
             grids[k] = a.line;

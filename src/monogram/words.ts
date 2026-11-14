@@ -24,6 +24,18 @@ export function wordGrid(
   extra: number,
   wordGap = 2,
 ): { g: CellGrid; base: number } | null {
+  const line = wordLine(script, text, letter, wordGap);
+  return line ? line(extra) : null;
+}
+
+/** wordGrid for one text at several widths: the text is shaped, prepared and set at its natural width once, and
+ *  the function returned lays it out `extra` cells wider (a new grid each call). null if the text can't be set. */
+export function wordLine(
+  script: ScriptEngine,
+  text: string,
+  letter: LetterStyle,
+  wordGap = 2,
+): ((extra: number) => { g: CellGrid; base: number } | null) | null {
   const sh = script.shape(text, letter) as { words?: unknown[] };
   if (!sh.words?.length) return null;
   const p = script.prepare(sh, letter),
@@ -31,27 +43,29 @@ export function wordGrid(
     opts = { wrap: false, rhythm: false, wordGap, terminals: 'none' as const };
   const nat = script.layout(segs, p, null, opts);
   if (!nat || nat.kind !== 'cells') return null;
-  const st = extra ? script.layout(segs, p, nat.W + extra, opts) : nat;
-  if (!st || st.kind !== 'cells') return null;
-  const out = stripGrid(st);
-  // baseline: the lowest row that holds a long horizontal run
-  let base = out.h - 1,
-    best = -1;
-  for (let y = 0; y < out.h; y++) {
-    let run = 0,
-      mx = 0;
-    for (let x = 0; x < out.w; x++) {
-      if (out.data[y * out.w + x] === 1) {
-        run++;
-        mx = Math.max(mx, run);
-      } else run = 0;
+  return extra => {
+    const st = extra ? script.layout(segs, p, nat.W + extra, opts) : nat;
+    if (!st || st.kind !== 'cells') return null;
+    const out = stripGrid(st);
+    // baseline: the lowest row that holds a long horizontal run
+    let base = out.h - 1,
+      best = -1;
+    for (let y = 0; y < out.h; y++) {
+      let run = 0,
+        mx = 0;
+      for (let x = 0; x < out.w; x++) {
+        if (out.data[y * out.w + x] === 1) {
+          run++;
+          mx = Math.max(mx, run);
+        } else run = 0;
+      }
+      if (mx >= best) {
+        best = mx;
+        base = y;
+      }
     }
-    if (mx >= best) {
-      best = mx;
-      base = y;
-    }
-  }
-  return { g: out, base };
+    return { g: out, base };
+  };
 }
 
 export interface LetterShape {
