@@ -10,7 +10,7 @@
 // every rating and are not ported.
 import type { Thuluth } from '../engine';
 import { dotPolys } from '../pen';
-import { parseVowels } from '../shape';
+import { allahSpan, STEM_LETTERS } from '../shape';
 import type { Poly, Sample } from '../types';
 import type { Roundel, RoundelOptions } from './compose';
 import { composeRoundel } from './compose';
@@ -19,12 +19,13 @@ import { featuresIn, rasterUnits, tasteScores } from './deco';
 import type { FinishOptions, Finished, Unit } from './finish';
 import { finishRoundel, roundelParts } from './finish';
 
-/** True when a text may not be mirrored: it holds the divine name (الله, لله, بالله, عبدالله…). */
+/** True when a text may not be mirrored: one of its words holds the divine name (الله, لله, بالله, عبدالله…; not
+ *  اللهب or كللها, which only share its letters). */
 export function refusesMirror(text: string): boolean {
-  const bare = parseVowels(text)
-    .bare.replace(/[ٱأإآ]/g, 'ا')
-    .replace(/\s+/g, ' ');
-  return /لله/.test(bare);
+  return text
+    .trim()
+    .split(/\s+/)
+    .some(w => !!allahSpan(w));
 }
 
 export interface MusennaOptions {
@@ -149,9 +150,6 @@ export interface MusennaArt {
   shared: { dots: number; marks: number; strokes: number; dropped: number };
 }
 
-/** Letters with a stem that can stand on the axis. */
-const STEMS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
-
 const mirrorPoly = (q: Poly, ax: number): Poly => q.map(([x, y]) => [2 * ax - x, y] as [number, number]).reverse();
 
 /** Draw a candidate as one design (renderMusennaCombined), with `shareStrokes` (on by default) fusing narrow letter
@@ -217,7 +215,7 @@ export function musennaArt(th: Thuluth, c: MusennaCandidate, o: { shareStrokes?:
     const S = u.gi != null ? c.r.shapes[u.gi] : null;
     if (!S || !u.own) return false;
     const letter = new Map(S.b.placed.flatMap(p => ('g' in p ? [[p.li, p.c] as [number, string]] : []))),
-      mine = u.own.filter(li => STEMS.has(letter.get(li) ?? '')).length,
+      mine = u.own.filter(li => STEM_LETTERS.has(letter.get(li) ?? '')).length,
       ys = u.s!.map(q => q.y),
       xs = u.s!.map(q => q.x);
     return mine > u.own.length / 2 && Math.max(...ys) - Math.min(...ys) > 2 * (Math.max(...xs) - Math.min(...xs));

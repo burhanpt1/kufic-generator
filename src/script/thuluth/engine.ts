@@ -1,9 +1,10 @@
 // The thuluth line engine (lab engine3.js setLine / buildStrokes / drawSVG), with the lab's globals as an explicit
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
-import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, LETTER_FIXES } from './fixes';
+import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
-import { DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
+import type { AllahSpan } from './shape';
+import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
 export const DEFAULT_THULUTH: ThuluthStyle = {
@@ -76,10 +77,12 @@ export interface LineOptions {
   tail?: { sx: number; sy: number } | null;
   /** How far a kashida sags below the baseline. */
   sag?: number;
-  /** Treat as the name of God (shadda and dagger alif); noAuto turns the automatic detection off. */
+  /** The name of God is found word by word (allahSpan). A caller that sets a piece of a word, and knows whether the
+   *  word is the name, says so: true, the text holds it; false, it does not, whatever its letters. */
   allah?: boolean;
   /** With the ligature (style.allah): draw its small alif, as a vowelled text that writes it asks. */
   allahAlif?: boolean;
+  /** Leave out the name's own shadda and small alif (a vowelled text sets its marks itself). */
   noAuto?: boolean;
 }
 /** A dot: position, then (in compositions) its scale, the nib's rotation and a tint. */
@@ -99,6 +102,21 @@ const scaleGlyph = (g: GlyphDef, k: number): GlyphDef => ({
   s: g.s.map(st => ({ ...st, pts: st.pts.map(([x, y, w, c]) => [x * k, y * k, w, c] as SkelPt) })),
 });
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+/** Where the name of God stands in each word of a text (null for a word without it). */
+function nameSpans(text: string, o: LineOptions): (AllahSpan | null)[] {
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(w => {
+      if (o.allah === false) return null;
+      const sp = allahSpan(w);
+      if (sp || !o.allah) return sp;
+      // said to be the name: wherever its two lams and heh stand
+      const cs = forms(w).map(f => f.c),
+        at = cs.findIndex((c, i) => c === 'ل' && cs[i + 1] === 'ل' && cs[i + 2] === 'ه');
+      return at < 0 ? null : { lam: at, final: at + 3 === cs.length };
+    });
+}
 
 export type Thuluth = ReturnType<typeof thuluth>;
 
@@ -115,6 +133,8 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     if (!st.labLetters)
       for (const [fam, fs] of Object.entries(LETTER_FIXES) as [Family, Partial<Record<Form, GlyphDef>>][])
         t[fam] = { ...t[fam], ...fs };
+    // the hamza on the line, which the lab's table has no letter for (so no lab reference holds one)
+    t.hamza = { iso: HAMZA };
     t.ha = { ...t.ha, fin: HEH_FIN[st.heh] || HEH_FIN.round };
     const gr = st.great;
     if (gr?.nun) t.nun = { ...t.nun, fin: clone(GREAT.nunFin) };
@@ -155,6 +175,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       gap = o.gap ?? 0.9,
       wordGap = o.wordGap ?? 1.6;
     const words = text.trim().split(/\s+/),
+      names = st.allah ? nameSpans(text, o) : [],
       placed: Placed[] = [];
     let x = 0,
       y = 0;
@@ -163,13 +184,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       const fs = forms(w);
       let joined = false;
       y = 0;
-      // the name of God as one ligature: its second lam and its heh in their own forms
-      const allah = st.allah && /^[اأٱ]?لله$/.test(w) ? fs.length - 2 : -1;
+      // the name of God as one ligature: its lams and its final heh in their own forms (`allah` is the second lam)
+      const name = names[wi],
+        allah = name ? name.lam + 1 : -1;
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
         if (allah >= 0 && i === allah - 1) g = ALLAH_LAM_INI;
         if (allah >= 0 && i === allah) g = ALLAH_LAM;
-        if (allah >= 0 && i === allah + 1) g = scaleGlyph(ALLAH_HEH, st.body);
+        if (allah >= 0 && i === allah + 1 && name!.final) g = scaleGlyph(ALLAH_HEH, st.body);
         if (!g) {
           x -= 2;
           joined = false;
@@ -320,23 +342,18 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       strokes.push({ ang: r.ang, s: sampleStroke(r.pts, st.tension), raw: r.pts.map(q => [q[0], q[1]]), own: spans.map(k => r.own[k]), wi: r.wi }); // prettier-ignore
     });
     // the name of God: shadda and a small upright alif above the second lam
-    if (!o.noAuto && (o.allah || /^ٱ?[اأ]?لله$/.test(text.trim()) || /(^|\s)الله(\s|$)/.test(text)))
-      placed.forEach((p, i) => {
-        // the letters after it (a kashida between them is not a letter)
+    // (the lab's own letters keep the lab's rule for a line, as its references were drawn: only a text that is the
+    // name alone, or that writes it الله, has these marks)
+    const labOff = !!st.labLetters && !(o.allah || /^ٱ?[اأ]?لله$/.test(text.trim()) || /(^|\s)الله(\s|$)/.test(text));
+    if (!o.noAuto && !labOff)
+      nameSpans(text, o).forEach((name, wi) => {
+        const i = name ? placed.findIndex(p => isLetter(p) && p.wi === wi && p.li === name.lam) : -1;
+        if (i < 0) return;
+        // the letters after its first lam (a kashida between them is not a letter)
         const next = placed.slice(i + 1).filter(isLetter),
           q = st.allah ? next[0] : placed[i + 1],
           r = st.allah ? next[1] : placed[i + 2];
-        if (
-          isLetter(p) &&
-          p.c === 'ل' &&
-          p.form === 'ini' &&
-          q &&
-          isLetter(q) &&
-          q.c === 'ل' &&
-          r &&
-          isLetter(r) &&
-          r.c === 'ه'
-        ) {
+        if (q && isLetter(q) && q.c === 'ل' && r && isLetter(r) && r.c === 'ه') {
           const sm = 0.55,
             sh: SkelPt[] = [[0.95, 0.15], [0.65, 0.65], [0.35, 0.05, 1, 1], [0.05, 0.6], [-0.3, 0.05, 1, 1], [-0.6, 0.6], [-0.9, 0.3, 0.6]]; // prettier-ignore
           const shadda = (x: number, y: number) =>

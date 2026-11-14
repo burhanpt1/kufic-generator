@@ -10,6 +10,7 @@ import { isLetter } from '../engine';
 import { gapKernel } from '../../../kernels/roundel';
 import { ALIF_ANG, ALIF_PEN, ALIF_SCALE, MARK_PEN, MARK_SHAPES, MARK_SIZE, SIGN_PEN } from '../marks';
 import { sampleStroke } from '../pen';
+import { parkMiller } from '../rng';
 import { Alpha, toPixels } from '../raster';
 import type { MarkName } from '../shape';
 import { BELOW } from '../shape';
@@ -140,6 +141,8 @@ export interface Solved {
   signs: string[];
   /** Items left nearer the letters or each other than the clearance (0 without a clearance). */
   clearFaults: number;
+  /** Dots and marks the search left lying on ink (the letters, or a companion): the marks without room. */
+  unplaced: number;
 }
 
 interface Item {
@@ -451,8 +454,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   };
   const energy = () => items.reduce((a, it) => a + itemCost(it), 0) + pairCost() + orderCost() + 8 * gapCost();
   // start from the plain positions, nudged into free space, then search
-  let sd = 12345;
-  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const R = parkMiller(12345);
   items.forEach(v => {
     if (v.kind !== 'mark') return;
     const d = items.find(q => q.kind === 'dots' && q.key === v.key && q.side === v.side);
@@ -616,6 +618,11 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           });
         }).length
       : 0,
+    // as drawn, by the item's own box (the search pays for ink within a quarter unit more)
+    unplaced: items.filter(it => {
+      const [w, h] = boxOf(it);
+      return inkHits(it.x, it.y, w, h) > 0;
+    }).length,
     E,
     items: items.map(it => {
       const [w, h] = boxOf(it);

@@ -85,6 +85,9 @@ export interface ScriptEngine {
   segments(prepared: Prepared, mode: 'words' | 'breaks', wordGap: number): Segments;
   /** Justify segments to exactly `width` cells (null = natural width). null if they don't fit. */
   layout(segments: Segments, prepared: Prepared, width: number | null, opts: LayoutOptions): Strip | null;
+  /** The characters of a text the script cannot write and leaves out (digits, punctuation, letters of other
+   *  scripts), for a caller to report. Absent: the engine reports none. */
+  unsupported?(text: string): string[];
   /** Abjad value of the text. */
   abjad(text: string, opts?: { taMarbuta?: 5 | 400; system?: 'mashriqi' | 'maghribi' }): number;
   /** What the script can do beyond setting lines; fillers, features and evolution check these. grid: letters as

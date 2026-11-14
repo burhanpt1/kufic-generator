@@ -58,6 +58,8 @@ const borderStrips = (p: Placed) => {
 const CRITICS = new Map<string, Critic>();
 /** Add a critic (for a new node type). */
 export const registerCritic = (name: string, c: Critic) => CRITICS.set(name, c);
+/** One critic by name (to run or test it alone). */
+export const criticOf = (name: string): Critic | undefined => CRITICS.get(name);
 
 // text bands: stem rhythm, even stretching, density and its evenness, little repetition, filled canvas
 registerCritic('borders', p => {
@@ -73,7 +75,8 @@ registerCritic('borders', p => {
   const kashida = clamp(1 - (Math.max(...parts.map(x => x.maxRun)) / Hb - 1.6) / 3.5);
   const dm = dens.reduce((a, b) => a + b, 0) / dens.length,
     dsd = Math.sqrt(dens.reduce((a, b) => a + (b - dm) * (b - dm), 0) / dens.length);
-  const density = clamp(1 - Math.abs(dm - 0.26) / 0.16) * clamp(1 - dsd / dm / 0.6);
+  // (strips with no ink at all have no evenness to speak of: 0, not 0 / 0)
+  const density = clamp(1 - Math.abs(dm - 0.26) / 0.16) * clamp(1 - (dm > 0 ? dsd / dm : 0) / 0.6);
   const maxRep = Math.max(1, ...p.meta.borders.flatMap(b => b.rings.map(r => r.rep)));
   const rep = clamp(1 - Math.max(0, maxRep - 4) / 10);
   const bandArea = strips.reduce((a, s) => {
@@ -110,6 +113,8 @@ registerCritic('roundel', p => {
   return {
     clearance: clamp(1 - m.grow / 0.3),
     apart: clamp(1 - m.overlap / 40),
+    // (`missing` is 0 whenever the marks solver ran, so this is all but constant; m.marksUnplaced, the marks left
+    // lying on ink, is reported as the candidate to replace it, and is not scored: it would change what is chosen)
     marked: m.missing ? 0.4 : 1,
     layers: clamp((m.levels - 1) / 4 + Math.min(m.tails, 2) * 0.15),
     // a stacked piece in an earlier word's line reads out of order: it costs the layers it bought, and more

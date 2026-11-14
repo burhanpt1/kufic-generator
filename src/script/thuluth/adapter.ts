@@ -10,7 +10,7 @@ import { DEFAULT_THULUTH, thuluth } from './engine';
 import { lineMarks } from './marks';
 import { outline } from './outline';
 import type { WordMark } from './shape';
-import { FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
+import { allahSpan, endsGroup, FAM, forms, ligate, NONJOIN, parseVowels } from './shape';
 import type { Family, Poly, ThuluthStyle } from './types';
 
 /** Room kept above the tallest ink for vowels, and below the lowest for marks under it (pen units). */
@@ -32,10 +32,15 @@ export interface ThuluthSegment extends Segment {
   w: number;
   /** The join that takes this piece's kashida (lab kashMap index), if any. */
   kashJoin: number | null;
+  /** For a piece of a word (breaks mode): whether it holds the name of God, which only the whole word tells. */
+  allah?: boolean;
+  /** The text writes the name's small alif, which the ligature then draws. */
+  allahAlif?: boolean;
 }
 interface ThuluthWord {
   text: string;
   marks: WordMark[];
+  allah?: boolean;
 }
 export interface ThuluthPrepared extends Prepared {
   words: ThuluthWord[];
@@ -43,6 +48,8 @@ export interface ThuluthPrepared extends Prepared {
   ascent: number;
   descent: number;
   vowels: boolean;
+  /** Characters of the line that the script cannot write, and left out. */
+  unsupported: string[];
 }
 
 const polysBox = (polys: Poly[]) => {
@@ -60,17 +67,20 @@ const polysBox = (polys: Poly[]) => {
   return { x0, x1, y0, y1 };
 };
 
-/** The best join of a piece of text to elongate (its lab kashMap key), or null. */
-export function kashidaJoin(text: string): number | null {
-  // the name of God is never stretched (and its shadda and dagger alif hang on its letters)
-  if (/^[اأٱ]?لله$/.test(text)) return null;
-  const fs = forms(text);
+/** The best join of a piece of text to elongate (its lab kashMap key), or null. `allah`: for a piece of a word,
+ *  whether it holds the name of God (LineOptions.allah). */
+export function kashidaJoin(text: string, allah?: boolean): number | null {
+  // the name of God is never stretched (and its shadda and dagger alif hang on its letters): no join from its first
+  // lam on
+  const name = allah === false ? null : allahSpan(text),
+    fs = forms(text);
   let best: number | null = null,
     score = 0;
   for (let i = 0; i + 1 < fs.length; i++) {
     const a = fs[i],
       b = fs[i + 1];
     if (NONJOIN.has(a.c) || (a.form !== 'ini' && a.form !== 'med') || (b.form !== 'med' && b.form !== 'fin')) continue;
+    if (name && i >= name.lam && i <= name.lam + 2) continue;
     const s = KASH_PREF[FAM[a.c]] ?? 0;
     if (s && s >= score) {
       score = s;
@@ -83,16 +93,17 @@ export function kashidaJoin(text: string): number | null {
 /** Split a word's marks between its connected groups (letter positions after the lam-alif ligature). */
 function groupsOf(w: ThuluthWord): ThuluthWord[] {
   const cs = [...ligate(w.text)],
+    name = allahSpan(w.text),
     out: ThuluthWord[] = [];
   let cur = '',
     start = 0;
   cs.forEach((c, i) => {
     cur += c;
-    if (NONJOIN.has(c) || !FAM[c] || i === cs.length - 1) {
+    if (endsGroup(cs, i)) {
       const n = [...cur].length,
         s0 = start;
       // the group's text keeps the ligature's letters (لا), so its marks keep their positions
-      out.push({ text: cur.replace(/ﻻ/g, 'لا'), marks: w.marks.filter(m => m.li >= s0 && m.li < s0 + n).map(m => ({ li: m.li - s0, m: m.m })) }); // prettier-ignore
+      out.push({ text: cur.replace(/ﻻ/g, 'لا'), marks: w.marks.filter(m => m.li >= s0 && m.li < s0 + n).map(m => ({ li: m.li - s0, m: m.m })), allah: !!name && name.lam >= s0 && name.lam < s0 + n }); // prettier-ignore
       start += n;
       cur = '';
     }
@@ -103,11 +114,11 @@ function groupsOf(w: ThuluthWord): ThuluthWord[] {
 export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngine & { th: Thuluth } {
   const th = thuluth(style),
     built = new Map<string, Built>();
-  const build = (text: string, kash: number | null, L: number): Built => {
-    const k = `${text}|${kash}|${L}`;
+  const build = (text: string, kash: number | null, L: number, allah?: boolean, allahAlif?: boolean): Built => {
+    const k = `${text}|${kash}|${L}|${allah ?? ''}|${allahAlif ? 1 : ''}`;
     let b = built.get(k);
     if (!b) {
-      b = th.buildStrokes(text, kash != null && L > 0 ? { kashMap: { [kash]: L } } : {});
+      b = th.buildStrokes(text, { ...(kash != null && L > 0 ? { kashMap: { [kash]: L } } : {}), allah, allahAlif });
       if (built.size > 4000) built.clear();
       built.set(k, b);
     }
@@ -155,6 +166,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
       ascent: up,
       descent: -down,
       vowels,
+      unsupported: p.dropped,
     }));
   }
 
@@ -162,6 +174,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
     id: 'thuluth',
     th,
     shape: text => ({ text }),
+    unsupported: text => parseVowels(text).dropped,
     prepare: (shaped, letter) => prepareLines([(shaped as { text: string }).text], letter)[0],
     prepareLines,
     segments(prepared, mode, wordGap) {
@@ -170,15 +183,22 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
         return parts.map((p, i) => ({ ...p, endsWord: i === parts.length - 1 }));
       });
       const segs: Segments<ThuluthSegment> = pieces.map(p => {
-        const box = inkOf(build(p.text, null, 0)),
+        // the ligature of the name of God draws the second lam's marks itself, as in a roundel: its shadda, and the
+        // small alif when the text writes it
+        const name = th.style.allah && p.allah !== false ? allahSpan(p.text) : null,
+          own = name ? p.marks.filter(m => m.li === name.lam + 1) : [],
+          allahAlif = own.some(m => m.m === 'alifk'),
+          box = inkOf(build(p.text, null, 0, p.allah, allahAlif)),
           w = box.x1 - box.x0;
         return {
           text: p.text,
-          marks: p.marks,
+          marks: own.length ? p.marks.filter(m => !own.includes(m)) : p.marks,
           w,
           minW: Math.ceil(w),
           endsWord: p.endsWord,
-          kashJoin: kashidaJoin(p.text),
+          kashJoin: kashidaJoin(p.text, p.allah),
+          ...(p.allah == null ? {} : { allah: p.allah }),
+          ...(allahAlif ? { allahAlif } : {}),
         };
       });
       segs.wg = wordGap * WORD_SPACE;
@@ -210,7 +230,7 @@ export function thuluthScript(style: ThuluthStyle = DEFAULT_THULUTH): ScriptEngi
         L = stretchy ? Math.min(KASH_MAX, ((nWord ? KASH_SHARE : 1) * slack) / stretchy) : 0,
         use = L >= 0.5 ? Math.floor(L * 4) / 4 : 0;
       const pieces = segs.map(s => {
-        const b = build(s.text, s.kashJoin, s.kashJoin != null ? use : 0),
+        const b = build(s.text, s.kashJoin, s.kashJoin != null ? use : 0, s.allah, s.allahAlif),
           box = inkOf(b);
         return { s, b, box, w: box.x1 - box.x0 };
       });

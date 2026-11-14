@@ -23,10 +23,13 @@ export interface LetterForm extends GlyphDef {
   src: Source;
 }
 export type Form = 'ini' | 'med' | 'fin' | 'iso';
-export type Family =
+/** The families of the lab's letter table. */
+export type LabFamily =
   | 'alif' | 'lam' | 'tooth' | 'sin' | 'mim' | 'ha' | 'ra' | 'hah' | 'nun' | 'dal' | 'waw' | 'kaf' | 'ain' | 'fa' | 'qaf'
   | 'sad' | 'ta' | 'ya' | 'lamalif'; // prettier-ignore
-export type LetterTable = Record<Family, Partial<Record<Form, LetterForm>>>;
+/** And the hamza written on the line (ء), which the lab had no letter for (fixes.ts). */
+export type Family = LabFamily | 'hamza';
+export type LetterTable = Record<LabFamily, Partial<Record<Form, LetterForm>>>;
 
 /** Everything the lab kept in globals, as one explicit style. */
 export interface ThuluthStyle {

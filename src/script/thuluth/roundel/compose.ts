@@ -6,7 +6,8 @@ import { discKernel } from '../../../kernels/roundel';
 import type { Thuluth } from '../engine';
 import type { ThuluthStyle } from '../types';
 import { isLetter } from '../engine';
-import { ligate, parseVowels, splitGroups } from '../shape';
+import { parkMiller } from '../rng';
+import { allahSpan, ligate, parseVowels, splitGroups } from '../shape';
 import type { FieldName } from './fields';
 import { FIELDS, fieldLanes } from './fields';
 import type { ReadingPath } from './paths';
@@ -265,7 +266,8 @@ export function roundelGroups(
     // the ligature of the name of God draws the second lam's marks itself: the shadda on the lam, and the small alif,
     // when the text writes it, over the heh
     if (style.allah && g.allah) {
-      const k = [...g.s].length - 2;
+      const name = allahSpan(g.s),
+        k = name ? name.lam + 1 : [...g.s].length - 2;
       if (g.marks.some(m => m.k === k && m.m === 'alifk')) g.alif = true;
       g.marks = g.marks.filter(m => m.k !== k);
     }
@@ -348,8 +350,7 @@ export function composeRoundel(th: Thuluth, text: string, o: RoundelOptions = {}
   );
   const results: Roundel[] = [];
   for (const t of only ?? Array.from({ length: tries }, (_, k) => k)) {
-    let sd = seed + t * 7919;
-    const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const R = parkMiller(seed + t * 7919);
     const lv = groups.map((_, i) => Math.floor(R() * shapes[i].length)),
       wp = words.map(() => ({ x: 0, y: 0 })),
       gpos: { x: number; y: number }[] = new Array(n),

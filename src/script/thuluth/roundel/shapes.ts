@@ -6,7 +6,7 @@ import { isLetter } from '../engine';
 import { nibPolys, sampleStroke, dotPolys } from '../pen';
 import { Alpha } from '../raster';
 import type { MarkName } from '../shape';
-import { FAM, forms } from '../shape';
+import { FAM, forms, STEM_LETTERS } from '../shape';
 import type { Poly, SkelPt, ThuluthStyle } from '../types';
 
 /** A letter group in a composition, with its vowel marks (k = letter index in the group). */
@@ -96,8 +96,6 @@ export interface StackOptions {
 
 /** Letters whose final bowl can hold a short word. */
 export const NEST_BOWLS = new Set(['ر', 'ز', 'و', 'ن', 'ي', 'ى', 'ق', 'س', 'ش', 'ص', 'ض']);
-/** Letters with a tall stem. */
-const STEM_LETTERS = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
 
 /** At most this many tower variants per group and stretch level (the first found, in join and offset order). */
 const MAX_TOWERS = 12;
@@ -173,7 +171,7 @@ export function groupShape(
   const b = th.buildStrokes(g.s, {
     kashida: level,
     // the ligature draws its own shadda and small alif even in a vowelled text (its other marks were dropped)
-    allah: g.allah && (!hasMarks || !!st.allah),
+    allah: g.allah,
     allahAlif: g.alif,
     noAuto: hasMarks && !(g.allah && st.allah),
     gap: 0,
@@ -550,7 +548,7 @@ function groupShapeOk(th: Thuluth, g: RGroup, level: number, o: StackOptions, st
 }
 function groupShapeCollides(th: Thuluth, g: RGroup, level: number, o: StackOptions, stacks: Stacks, sj: number) {
   const nib = th.style.nib;
-  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah && (!(g.marks && g.marks.length) || !!th.style.allah), allahAlif: g.alif, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
+  const b = th.buildStrokes(g.s, { kashida: level, allah: g.allah, allahAlif: g.alif, noAuto: !!(g.marks && g.marks.length) && !(g.allah && th.style.allah), gap: 0, wordGap: 0, stacks, kashMap: o.kashMap, longFinal: o.longFinal, tail: o.tail }); // prettier-ignore
   const pts = (upper: boolean) =>
     b.placed
       .filter(p => isLetter(p) && (upper ? p.li >= sj : p.li < sj))

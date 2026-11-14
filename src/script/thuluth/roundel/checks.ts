@@ -6,6 +6,7 @@
 //   doubled: ink run twice along the same course by two different letters. A letter's own overlaps are its design,
 //   and a redraw cannot leave old ink behind (redraw() replaces it).
 import type { Thuluth } from '../engine';
+import { STEM_LETTERS } from '../shape';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
 import type { Finished } from './finish';
@@ -68,6 +69,9 @@ export interface RoundelChecks {
   strayDots: number;
   /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
+  /** Dots and marks left lying on ink once the marks are placed (Finished.marksUnplaced): the measure the score's
+   *  "marks without room" was meant to be, which with the solver on is always 0. A candidate for the score. */
+  marksUnplaced: number;
   /** Alignment (alignment()). */
   baselines: number;
   stemRhythm: number;
@@ -184,13 +188,11 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
         [bx, by] = tangent(twin);
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
-  return { wordSpace, strayMarks, strayDots, doubled, ...alignment(r, nib) };
+  return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, ...alignment(r, nib) };
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */
 const EYED = new Set(['ف', 'ق', 'و', 'م', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ه', 'ة']);
-/** Letters with a tall stem. */
-const TALL = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'ل', 'ك', 'ط', 'ظ', 'ﻻ']);
 export interface Crossings {
   /** A stem passing through a horizontal: the crossing girift seeks. */
   stemHorizontal: number;
@@ -215,7 +217,7 @@ export function crossings(r: Roundel): Crossings {
           a = Math.abs(Math.atan2(q.y - p.y, q.x - p.x)),
           horiz = a < 0.38 || a > Math.PI - 0.38,
           upright = Math.abs(a - Math.PI / 2) < 0.45,
-          kind = upright && TALL.has(c) ? 'stem' : horiz ? 'horizontal' : EYED.has(c) ? 'eye' : 'curve';
+          kind = upright && STEM_LETTERS.has(c) ? 'stem' : horiz ? 'horizontal' : EYED.has(c) ? 'eye' : 'curve';
         segs.push({ ax: p.x + r.st[g].x, ay: p.y + r.st[g].y, bx: q.x + r.st[g].x, by: q.y + r.st[g].y, word: r.groups[g].word, kind }); // prettier-ignore
       }
     });

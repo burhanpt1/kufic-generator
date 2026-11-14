@@ -1,6 +1,7 @@
 // Roundels and cartouches in thuluth (lab roundel.js, bowl.js, counters.js, marks2.js): a phrase arranged to fill a
 // disc or an oval, finished by hand-like steps, its marks solved as one even distribution, drawn on a gilded field.
 import type { Thuluth } from '../engine';
+import { parkMiller } from '../rng';
 import type { BowlOptions, FrameOptions, RiseOptions, TailOptions } from './bowl';
 import { clashes, extendTails, fitFrame, placeUnder, riseStems, scaleGroup, shapeBowl } from './bowl';
 import { crossings } from './checks';
@@ -100,8 +101,7 @@ function adjust(th: Thuluth, r: Roundel, spec: RoundelSpec): Roundel {
 /** A seeded sample of the composer options a recipe leaves open: the field's proportion and fill, stacking (by rule or
  *  learned), girift's gentle setting, and fitted lanes for texts of three words or more. */
 export function sampleRecipe(given: RoundelOptions, words: number, seed: number): RoundelOptions {
-  let sd = (seed * 48271) % 2147483647 || 1;
-  const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647,
+  const R = parkMiller((seed * 48271) % 2147483647),
     pick = <T>(xs: readonly T[]) => xs[Math.floor(R() * xs.length)],
     out: RoundelOptions = {};
   if (given.oval == null) out.oval = pick([1, 1, 1.15, 1.3]);
