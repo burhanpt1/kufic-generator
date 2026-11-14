@@ -41,10 +41,21 @@ export function learn(
   const t: Taste = { w: { ...taste.w }, pref: structuredClone(taste.pref), picks: taste.picks };
   const ms = population.filter((m): m is Metrics => !!m);
   if (ms.length) {
+    // a metric's mean is taken over the compositions that have it (a monogram's legibility over the monograms): over
+    // the whole population, any pick of a kind of composition would raise that kind's weights, however it does
+    // against its peers
     const keys = Object.keys(t.w),
-      mean = Object.fromEntries(keys.map(k => [k, ms.reduce((a, m) => a + (m[k] ?? 0), 0) / ms.length]));
+      mean: Record<string, number | undefined> = {};
+    for (const k of keys) {
+      const vs = ms.flatMap(m => (m[k] != null ? [m[k]] : []));
+      if (vs.length) mean[k] = vs.reduce((a, b) => a + b, 0) / vs.length;
+    }
     for (const p of picks)
-      if (p.m) for (const k of keys) if (p.m[k] != null) t.w[k] = Math.max(0.02, t.w[k] + 0.12 * (p.m[k] - mean[k]));
+      if (p.m)
+        for (const k of keys) {
+          const mk = mean[k];
+          if (p.m[k] != null && mk != null) t.w[k] = Math.max(0.02, t.w[k] + 0.12 * (p.m[k] - mk));
+        }
     const sum = Object.values(t.w).reduce((a, b) => a + b, 0);
     for (const k of keys) t.w[k] /= sum;
   }
