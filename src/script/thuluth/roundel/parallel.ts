@@ -39,45 +39,107 @@ export function runRoundelJob(job: RoundelJob): RoundelJobResult {
   }
 }
 
-type Pending = { job: RoundelJob; needs?: string[]; done: (r: RoundelJobResult) => void };
+type Timer = ReturnType<typeof setTimeout>;
+/** A job waiting or running. `over` once its caller has been answered (a cancelled job may still be running). */
+type Pending = { job: RoundelJob; needs?: string[]; done: (r: RoundelJobResult) => void; over?: boolean };
+type Busy = { p: Pending; timeout: Timer; grace?: Timer };
+export interface RoundelWorkersOptions {
+  /** A job running longer than this fails, and its worker is replaced (default two minutes). */
+  jobTimeoutMs?: number;
+  /** How long a cancelled job may keep its worker before the worker is replaced (default 4 s). */
+  staleGraceMs?: number;
+}
 
 export class RoundelWorkers {
   private workers: Worker[] = [];
   private idle: Worker[] = [];
   private queue: Pending[] = [];
-  private busy = new Map<Worker, Pending>();
+  private busy = new Map<Worker, Busy>();
   // variants built so far (by variantsKey), and which of them each worker holds
   private variants = new Map<string, GroupShape[]>();
   private holds = new Map<Worker, Set<string>>();
+  private make: (() => Worker) | null = null;
+  private jobTimeout: number;
+  private staleGrace: number;
 
   /** size: how many workers (default: one per core but one, at least two); factory makes one (default: the bundled
    *  roundel worker). Size 0, or no Worker here, runs the jobs in this thread. */
-  constructor(size?: number, factory?: () => Worker) {
+  constructor(size?: number, factory?: () => Worker, o: RoundelWorkersOptions = {}) {
+    this.jobTimeout = o.jobTimeoutMs ?? 120_000;
+    this.staleGrace = o.staleGraceMs ?? 4000;
     const n =
       size ??
       (typeof navigator !== 'undefined' ? Math.max(2, Math.min(8, (navigator.hardwareConcurrency || 2) - 1)) : 0);
     if (n > 0 && (factory || typeof Worker !== 'undefined')) {
-      const make = factory ?? (() => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }));
-      for (let i = 0; i < n; i++) {
-        const w = make();
-        w.onmessage = (e: MessageEvent<RoundelJobResult>) => this.settle(w, e.data);
-        w.onerror = e => this.settle(w, { ok: false, error: String(e.message || 'worker failed') });
-        this.workers.push(w);
-        this.idle.push(w);
-        this.holds.set(w, new Set());
-      }
+      this.make = factory ?? (() => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }));
+      for (let i = 0; i < n; i++) this.spawn();
     }
   }
   get size() {
     return this.workers.length;
   }
-  terminate() {
-    this.workers.forEach(w => w.terminate());
-    this.workers = this.idle = [];
-    this.queue.forEach(p => p.done({ ok: false, error: 'terminated' }));
+  /** Give up everything asked so far (a newer drawing supersedes it): waiting jobs are dropped and running ones
+   *  answered as cancelled, so the builds they belong to reject. A running job gets a short grace to finish (the
+   *  variants it built are kept); a worker still on the same job after that is replaced. */
+  cancel() {
+    const queued = this.queue;
     this.queue = [];
+    queued.forEach(p => this.answer(p, { ok: false, error: 'cancelled' }));
+    for (const [w, b] of this.busy) {
+      this.answer(b.p, { ok: false, error: 'cancelled' });
+      b.grace ??= setTimeout(() => this.busy.get(w) === b && this.replace(w, 'cancelled'), this.staleGrace);
+    }
+  }
+  /** Stop the workers. Jobs waiting and jobs running both fail. */
+  terminate() {
+    const queued = this.queue,
+      running = [...this.busy.values()];
+    this.queue = [];
+    this.busy.clear();
+    this.workers.forEach(w => w.terminate());
+    this.workers = [];
+    this.idle = [];
+    this.holds.clear();
+    this.make = null;
+    for (const b of running) {
+      clearTimeout(b.timeout);
+      clearTimeout(b.grace);
+      this.answer(b.p, { ok: false, error: 'terminated' });
+    }
+    queued.forEach(p => this.answer(p, { ok: false, error: 'terminated' }));
   }
 
+  private spawn() {
+    const w = this.make!();
+    w.onmessage = (e: MessageEvent<RoundelJobResult>) => this.settle(w, e.data);
+    w.onerror = e => this.settle(w, { ok: false, error: String(e.message || 'worker failed') });
+    this.workers.push(w);
+    this.idle.push(w);
+    this.holds.set(w, new Set());
+  }
+  /** Answer a job's caller, once. */
+  private answer(p: Pending, r: RoundelJobResult) {
+    if (p.over) return;
+    p.over = true;
+    p.done(r);
+  }
+  /** Stop a worker and start a fresh one in its place (holding no variants yet); the job it held fails. */
+  private replace(w: Worker, error: string) {
+    const b = this.busy.get(w);
+    if (b) {
+      clearTimeout(b.timeout);
+      clearTimeout(b.grace);
+      this.busy.delete(w);
+    }
+    w.onmessage = w.onerror = null;
+    w.terminate();
+    this.workers = this.workers.filter(x => x !== w);
+    this.idle = this.idle.filter(x => x !== w);
+    this.holds.delete(w);
+    if (this.make) this.spawn();
+    if (b) this.answer(b.p, { ok: false, error });
+    this.pump();
+  }
   private run(job: RoundelJob, needs?: string[]): Promise<RoundelJobResult> {
     if (!this.workers.length) return Promise.resolve(runRoundelJob(job));
     return new Promise(done => {
@@ -93,22 +155,26 @@ export class RoundelWorkers {
         // the variants this job needs that this worker does not hold yet go with it
         missing = (p.needs ?? []).filter(k => !held.has(k) && this.variants.has(k));
       missing.forEach(k => held.add(k));
-      this.busy.set(w, p);
+      this.busy.set(w, { p, timeout: setTimeout(() => this.replace(w, 'timed out'), this.jobTimeout) });
       w.postMessage(missing.length ? { ...p.job, prime: missing.map(key => ({ key, vs: this.variants.get(key)! })) } : p.job); // prettier-ignore
     }
   }
   private settle(w: Worker, r: RoundelJobResult) {
-    const p = this.busy.get(w);
+    const b = this.busy.get(w);
+    if (!b) return; // an idle worker reporting an error holds no job, and is in the idle list already
+    clearTimeout(b.timeout);
+    clearTimeout(b.grace);
     this.busy.delete(w);
     this.idle.push(w);
+    const p = b.p;
     // a worker that built a group's variants holds them
-    if (p?.job.kind === 'variants' && r.ok) {
+    if (p.job.kind === 'variants' && r.ok) {
       const key = variantsKey(p.job.style, p.job.g, p.job.vopts, p.job.K);
       this.holds.get(w)!.add(key);
       if (this.variants.size > 2000) this.variants.clear();
       this.variants.set(key, r.vs!);
     }
-    p?.done(r);
+    this.answer(p, r);
     this.pump();
   }
   private async must(job: RoundelJob, needs?: string[]) {
