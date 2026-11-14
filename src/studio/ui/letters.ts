@@ -45,11 +45,17 @@ export function wireLetters(app: App) {
     ovr: {},
   } as EditorState;
   const dropped = loadOverrides(state);
+  // the background thread draws with the same letters as this one
+  app.glyphs = state.ovr;
+  // drawn only while the tab shows: a hidden preview is left until the tab is opened
+  let stale = true;
   const draw = () => {
-    const st = app.comp.style,
-      slot = mainSlot(app.comp),
-      text = (slot && app.comp.texts[slot]?.text) || 'بسم الله الرحمن الرحيم';
+    const st = app.comp.style;
     Object.assign(state, { ra: st.letter.ra, ayn: st.letter.ayn, la: st.letter.lamAlif });
+    stale = $('letters').classList.contains('hidden');
+    if (stale) return;
+    const slot = mainSlot(app.comp),
+      text = (slot && app.comp.texts[slot]?.text) || 'بسم الله الرحمن الرحيم';
     const alpha = alphabet(st.letter.ascenders, { ra: st.letter.ra, ayn: st.letter.ayn, la: st.letter.lamAlif });
     $('letterPreview').innerHTML =
       linePreview(text.split('\n')[0], st) + renderGrid(alpha, renderOpts(st, 'Kufic letter forms'), 1);
@@ -60,6 +66,7 @@ export function wireLetters(app: App) {
     state,
     () => {
       clearMonogramCache();
+      app.glyphs = state.ovr;
       draw();
       app.glyphsChanged();
     },
@@ -67,4 +74,5 @@ export function wireLetters(app: App) {
   );
   drawEditor();
   app.onChange(draw);
+  app.onTab(t => t === 'letters' && stale && draw());
 }

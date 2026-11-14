@@ -1,10 +1,10 @@
 // The 3D print dialog: the current design's relief map, or an image the user picks, becomes a binary STL.
-import { resolve } from '../../compose';
+// The relief map is drawn and the solid meshed on the studio's background thread; the small preview is made here.
 import { saveSTL } from '../../app/export';
-import { RELIEF_LEVELS, reliefSVG } from '../../fabricate';
-import { heightmapFromPixels, heightmapToMesh, meshToSTL } from '../../fabricate/mesh';
-import { findLevels, terraceMesh } from '../../fabricate/terrace';
-import type { Heightmap, Pixels } from '../../fabricate/mesh';
+import { RELIEF_LEVELS } from '../../fabricate';
+import { heightmapFromPixels } from '../../fabricate/mesh';
+import { findLevels } from '../../fabricate/terrace';
+import type { Heightmap, HeightmapOptions, Pixels } from '../../fabricate/mesh';
 import type { App } from './main';
 import { $ } from './main';
 
@@ -44,16 +44,19 @@ export function wirePrint3d(app: App) {
     pixels: Pixels | null = null,
     key = '';
   const surface = () => $<HTMLSelectElement>('p3Levels').value === 'surface';
-  /** The plateaus for flat levels: the relief map's own for the design, else found in the image or evenly spaced. */
-  function levelsOf(hm: Heightmap): number[] {
+  /** The plateaus for flat levels: evenly spaced, the relief map's own for the design, or 'find' (those found in the
+   *  image's heightmap). */
+  function levelsAsked(): number[] | 'find' {
     const v = $<HTMLSelectElement>('p3Levels').value;
     if (v !== 'auto') return Array.from({ length: Number(v) }, (_, k) => k / (Number(v) - 1));
-    if (source.value === 'design') {
-      const L = RELIEF_LEVELS;
-      return [L.ground, L.pattern, L.bands, L.letters];
-    }
-    return findLevels(hm);
+    if (source.value !== 'design') return 'find';
+    const L = RELIEF_LEVELS;
+    return [L.ground, L.pattern, L.bands, L.letters];
   }
+  const levelsOf = (hm: Heightmap): number[] => {
+    const ls = levelsAsked();
+    return ls === 'find' ? findLevels(hm) : ls;
+  };
 
   /** The pixels to mesh, cached while the source and detail stay the same. */
   async function source2pixels(): Promise<Pixels | null> {
@@ -63,7 +66,7 @@ export function wirePrint3d(app: App) {
     if (k === key && pixels) return pixels;
     let img: HTMLImageElement | null;
     if (source.value === 'design') {
-      const svg = reliefSVG(resolve(app.comp));
+      const svg = await app.background.fab(app.comp, app.glyphs, 'relief');
       img = await loadImage('data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))));
     } else img = image;
     if (!img) return null;
@@ -71,14 +74,11 @@ export function wirePrint3d(app: App) {
     key = k;
     return pixels;
   }
-  function heightmap(px: Pixels): Heightmap {
+  function heightmapOptions(): HeightmapOptions {
     const cut = num('p3Cut');
-    return heightmapFromPixels(px, {
-      invert: $<HTMLInputElement>('p3Invert').checked,
-      cutBelow: cut > 0 ? cut / 100 : -1,
-      blur: num('p3Blur'),
-    });
+    return { invert: $<HTMLInputElement>('p3Invert').checked, cutBelow: cut > 0 ? cut / 100 : -1, blur: num('p3Blur') };
   }
+  const heightmap = (px: Pixels): Heightmap => heightmapFromPixels(px, heightmapOptions());
   function preview(hm: Heightmap) {
     const c = $<HTMLCanvasElement>('p3Preview');
     c.width = hm.width;
@@ -150,15 +150,18 @@ export function wirePrint3d(app: App) {
     const px = await source2pixels();
     if (!px) return void (info.textContent = 'Pick an image.');
     info.textContent = 'Meshing…';
-    await new Promise(r => setTimeout(r, 20));
     try {
-      const hm = heightmap(px),
-        size = { widthMM: num('p3Width'), baseMM: num('p3Base'), reliefMM: num('p3Relief') },
-        flat = surface() ? null : terraceMesh(hm, { ...size, levels: levelsOf(hm) }),
-        mesh = flat ?? heightmapToMesh(hm, { ...size, resolution: num('p3Res') / 4 }),
-        stl = meshToSTL(mesh),
-        tris = mesh.triangles.length / 3,
-        open = flat?.failedFaces ?? 0;
+      const {
+        stl,
+        triangles: tris,
+        open,
+      } = await app.background.stl({
+        pixels: { width: px.width, height: px.height, data: px.data },
+        heightmap: heightmapOptions(),
+        size: { widthMM: num('p3Width'), baseMM: num('p3Base'), reliefMM: num('p3Relief') },
+        levels: surface() ? null : levelsAsked(),
+        resolution: num('p3Res') / 4,
+      });
       if (!tris) return void (info.textContent = 'Nothing left to print: everything is cut away.');
       saveSTL(
         document,
