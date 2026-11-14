@@ -222,6 +222,21 @@ function* buildPlan(th: Thuluth, spec: RoundelSpec): Plan {
   return yield* onePlan(th, spec);
 }
 
+/** Ruled lines with a space kept between words (wordGap): the arrangements with the number of lines that gives the
+ *  largest letters, in the order given. The composer's tries differ in their number of lines, and its energy, which
+ *  has no word for the size of the letters, ranks them by how well each line fills its chord and how its stems fall;
+ *  with the gaps in the lines, fewer and longer lines fill best, and a flat field of small letters wins. So the
+ *  number of lines is chosen first, by the energy and the disc together: each hundredth by which an arrangement's
+ *  disc is wider than the smallest of them counts as LETTER_SIZE of energy (at 3, a pen unit of radius is worth
+ *  about 12: enough for a third line that costs its stems a third level, not enough for a fourth that overflows). */
+const LETTER_SIZE = 3;
+export function largestLetters(all: Roundel[]): Roundel[] {
+  const least = Math.min(...all.map(r => r.disc.r)),
+    cost = (r: Roundel) => r.E + LETTER_SIZE * 100 * (r.disc.r / least - 1),
+    best = all.reduce((m, r) => (cost(r) < cost(m) ? r : m));
+  return all.filter(r => r.lanes?.n === best.lanes?.n);
+}
+
 function* onePlan(th: Thuluth, spec: RoundelSpec): Plan {
   // girift, judged as drawn: each exact stem-through-horizontal crossing earns in proportion to the dial, each crossing
   // at a curve costs, and one through an eye costs double (Derman)
@@ -231,8 +246,10 @@ function* onePlan(th: Thuluth, spec: RoundelSpec): Plan {
       const c = crossings(r);
       return 10 * g * c.stemHorizontal - 0.5 * c.curve - c.eye;
     };
-  const all = (yield { kind: 'compose', text: spec.text, opts: spec.compose }) as Roundel[];
+  let all = (yield { kind: 'compose', text: spec.text, opts: spec.compose }) as Roundel[];
   if (!all.length) return null;
+  const c = spec.compose;
+  if (c?.wordGap && c.ruled && !c.fixed && !(typeof c.ruled === 'object' && c.ruled.lines)) all = largestLetters(all);
   const k = Math.min(all.length, spec.judge ?? (spec.bowl ? BOWL_CHOICES : 3));
   if (k <= 1) return ((yield { kind: 'finish', spec, rs: [all[0]] }) as BuiltRoundel[])[0];
   // the composer's best few, each finished (bowl, tails, stems, marks, frame) and judged as drawn: a layout's merit
