@@ -1,5 +1,5 @@
 // Regressions from a review of the engine: the ring solver's first probe, plaited stems' tags, glyph edits and
-// variants, and small option handling.
+// variants, small option handling, and the stem-rhythm search (which must give the layouts it always gave).
 import { afterAll, describe, expect, it } from 'vitest';
 import { compose } from '../src/engine';
 import type { ComposeOptions, ComposeResult, SquareRing } from '../src/engine';
@@ -7,10 +7,11 @@ import { bitmap } from '../src/glyphs/bitmap';
 import { V, altDef, def, getRows, overrideFor, setOverrides, setVariants } from '../src/glyphs/overrides';
 import { makeGrid, rotate } from '../src/layout/grid';
 import { plaitStrip } from '../src/layout/plait';
-import { fitFlow } from '../src/layout/solvers';
+import { fitFlow, repeatSegs } from '../src/layout/solvers';
+import { RHY, strip } from '../src/layout/strip';
 import { renderSquare } from '../src/render';
 import type { RenderOptions } from '../src/render';
-import { prepare, wordSegs } from '../src/shaping/prepare';
+import { breakSegs, prepare, wordSegs } from '../src/shaping/prepare';
 import { shape } from '../src/shaping/shape';
 import type { Segs } from '../src/types';
 
@@ -21,6 +22,7 @@ type Square = Extract<ComposeResult, { kind: 'square' | 'circle' }>;
 afterAll(() => {
   setOverrides({});
   setVariants({});
+  RHY.on = false;
 });
 
 describe('fitFlow(): the group count', () => {
@@ -188,3 +190,45 @@ describe('small fixes', () => {
     expect(renderSquare(at(0), opt)).not.toMatch(/NaN|Infinity|undefined/);
   });
 });
+
+describe('strip(): the stem-rhythm search', () => {
+  // The layouts the search gave before its inner loop was rewritten for speed (no keys, lookups or sorting per
+  // step): a checksum over a spread of lines, widths, wraps and letter sets, recorded from that version.
+  it('gives the same layouts as before', () => {
+    let h = 2166136261,
+      n = 0,
+      seed = 12345;
+    const rnd = (k: number) => (seed = (seed * 16807) % 2147483647) % k,
+      eat = (a: Uint8Array) => {
+        for (let i = 0; i < a.length; i++) h = Math.imul(h ^ a[i], 16777619) >>> 0;
+      };
+    const texts = [
+      BASMALA,
+      'لا اله الا الله محمد رسول الله',
+      'محمد علي فاطمة الحسن الحسين',
+      'الله نور السماوات والارض مثل نوره كمشكاة فيها مصباح المصباح في زجاجة',
+    ];
+    RHY.on = true;
+    for (const set of ['square', 'fatimid'] as const)
+      for (const alts of [false, true])
+        for (const text of texts)
+          for (const mode of ['words', 'all'])
+            for (const rep of [1, 3]) {
+              setVariants({ set });
+              const p = prepare(shape(text).words, 9 + rnd(4), rnd(2) ? 'all' : 'off', 'modern', alts);
+              let segs: Segs = mode === 'words' ? wordSegs(p.words) : breakSegs(p.words);
+              segs.wg = 2;
+              segs = repeatSegs(segs, rep);
+              const nat = strip(segs, p.Hb, p.base, 2, null)!.W;
+              for (let t = 0; t < 6; t++) {
+                const st = strip(segs, p.Hb, p.base, 2, nat + 2 + rnd(t < 3 ? 12 : 150), !!rnd(2), rnd(3) ? 0 : 1)!;
+                eat(st.data);
+                eat(st.tag);
+                n++;
+              }
+            }
+    expect(n).toBe(384);
+    expect(h).toBe(RECORDED);
+  });
+});
+const RECORDED = 2125247111;
