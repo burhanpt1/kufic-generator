@@ -143,13 +143,27 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
 
   // letters: one Shapes per style so colours group, drawn at the end of the letters layer
   const strips = placed.items.filter(it => it.type === 'strip') as Extract<PlacedItem, { type: 'strip' }>[];
-  const maxRing = Math.max(1, ...placed.items.map(it => ('ring' in it ? it.ring : 0)));
-  const maxTag = Math.max(
-    1,
-    ...strips.map(st =>
-      st.strip.kind === 'cells' ? Math.max(0, ...st.strip.tag) : Math.max(1, ...st.strip.paths.map(p => p.tag)),
-    ),
-  );
+  // the largest ring and repeat index, for colouring by ring or by repeat: found only when a style colours that way,
+  // and by loops (a large strip's tags spread into Math.max overflow the call stack)
+  let ringMax = 0,
+    tagMax = 0;
+  const maxRing = () => {
+    if (!ringMax) {
+      ringMax = 1;
+      for (const it of placed.items) if ('ring' in it && it.ring > ringMax) ringMax = it.ring;
+    }
+    return ringMax;
+  };
+  const maxTag = () => {
+    if (!tagMax) {
+      tagMax = 1;
+      for (const { strip: st } of strips)
+        if (st.kind === 'cells') {
+          for (let i = 0; i < st.tag.length; i++) if (st.tag[i] > tagMax) tagMax = st.tag[i];
+        } else for (const p of st.paths) if (p.tag > tagMax) tagMax = p.tag;
+    }
+    return tagMax;
+  };
   const shapes = new Map<number, Shapes>();
   const shapesFor = (i: number) => {
     if (!shapes.has(i)) shapes.set(i, { ink: new Map(), vow: [] });
@@ -160,7 +174,7 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
   const vectorSVG = (it: Extract<PlacedItem, { type: 'strip' }>, st: VectorStrip) => {
     const o = ropt(it.style),
       cell = placeMap(it.place),
-      maxKey = o.colourMode === 'ring' ? maxRing : o.colourMode === 'repeat' ? maxTag : 1,
+      maxKey = o.colourMode === 'ring' ? maxRing() : o.colourMode === 'repeat' ? maxTag() : 1,
       sh: Shapes = { ink: new Map(), vow: [] };
     for (const p of st.paths) {
       const d = parsePolys(p.d)
@@ -182,7 +196,7 @@ export function renderPlaced(placed: Placed, opts: RenderPlacedOptions = {}): st
       cell = placeMap(it.place);
     const map = (x: number, y: number) => P(cell(x, y));
     const at = (x: number, y: number) => (x < 0 || y < 0 || x >= st.W || y >= st.Hb ? 0 : st.data[y * st.W + x]);
-    const maxKey = o.colourMode === 'ring' ? maxRing : o.colourMode === 'repeat' ? maxTag : 1;
+    const maxKey = o.colourMode === 'ring' ? maxRing() : o.colourMode === 'repeat' ? maxTag() : 1;
     const src: Source = {
       w: st.W,
       h: st.Hb,
