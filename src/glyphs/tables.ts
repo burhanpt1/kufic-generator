@@ -149,7 +149,7 @@ const add = (key: string, chars: string) => {
 add('ALEF', 'اأإآٱ');
 add('BEH', 'بتثپٹٺٻٽٿ');
 add('NOON', 'نں');
-add('YEH', 'يىئیےې');
+add('YEH', 'يىئیےۓې');
 add('HAH', 'جحخچڃڄڇ');
 add('DAL', 'دذڈڊڍڌڏ');
 add('REH', 'رزڑژ');
@@ -163,12 +163,12 @@ add('KAF', 'كکڪ');
 add('GAF', 'گ');
 add('LAM', 'ل');
 add('MEEM', 'م');
-add('HEH', 'هہھةۃ');
+add('HEH', 'هہۂھەۀةۃ');
 add('WAW', 'وؤۆۇۈۋ');
 add('HAMZA', 'ء');
 add('TATWEEL', 'ـ');
 /** Right-joining only: these letters never connect to the next one. */
-export const RJ = new Set('اأإآٱدذڈڊڍڌڏرزڑژوؤۆۇۈۋةۃے');
+export const RJ = new Set('اأإآٱدذڈڊڍڌڏرزڑژوؤۆۇۈۋةۃەۀےۓ');
 /** Non-joining. */
 export const NJ = new Set('ء');
 
