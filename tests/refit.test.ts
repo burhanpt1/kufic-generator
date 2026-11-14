@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 import type { Vote } from '../src/evolve/ratings';
-import { fitPairwise } from '../src/evolve/ratings';
+import { evalPairwise, fitPairwise } from '../src/evolve/ratings';
 import type { DecoFeatures, Genre } from '../src/script/thuluth/roundel';
 import { decoMetrics, FEATURES, noiseOf } from '../src/script/thuluth/roundel';
 import { FITS } from '../src/script/thuluth/roundel/fits.data';
@@ -53,8 +53,8 @@ function roundSet(d: string) {
     tied = [...new Set(rated.flatMap(v => (v.w === 'tie' ? [v.a, v.b] : [])))].filter(id => !disliked.includes(id) && !winners.includes(id)), // prettier-ignore
     votes = [
       ...rated.filter(v => v.w !== 'tie'),
-      ...tied.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 2).map(w => ({ a: w, b: id, w: 'a' as const }))), // prettier-ignore
-      ...disliked.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 5).map(w => ({ a: w, b: id, w: 'a' as const }))), // prettier-ignore
+      ...tied.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 2).map(w => ({ a: w, b: id, w: 'a' as const, synthetic: true }))), // prettier-ignore
+      ...disliked.flatMap(id => winners.filter(w => genreOf[w] === genreOf[id]).slice(0, 5).map(w => ({ a: w, b: id, w: 'a' as const, synthetic: true }))), // prettier-ignore
     ];
   return {
     votes,
@@ -70,7 +70,10 @@ const rounds = () =>
     ...(process.env.REFIT_EXTRA ? [process.env.REFIT_EXTRA] : []),
   ].filter(d => existsSync(join(d, 'items.json')) && existsSync(join(d, 'votes.json')));
 
-function refit() {
+const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
+
+/** The fits, the report, and with `honest` the table of what each fit really predicts (tests/ratings/README.md). */
+function refit(honest = false) {
   const sets = [labSet(), ...rounds().map(roundSet)];
   const votes = sets.flatMap(s => s.votes),
     feats = Object.assign({}, ...sets.map(s => s.feats)) as Record<string, DecoFeatures>,
@@ -80,11 +83,12 @@ function refit() {
     const keep = new Set(ids),
       vs = votes.filter(v => keep.has(v.a) && keep.has(v.b)),
       fs = Object.fromEntries(ids.map(id => [id, [...FEATURES.map(k => feats[id][k]), ...extra.map(c => checks[id]?.[c] ?? 0)]])); // prettier-ignore
-    return { vs, ...fitPairwise(vs, fs, { looTest: true }) };
+    return { vs, fs, ...fitPairwise(vs, fs, { looTest: true }) };
   };
   const all = Object.keys(feats),
     out: Record<string, unknown> = {},
-    report: string[] = [];
+    report: string[] = [],
+    table: string[] = [];
   for (const g of ['dense', 'mirror', 'single'] as Genre[]) {
     let ids = all.filter(id => genre[id] === g),
       from: string = g;
@@ -96,6 +100,20 @@ function refit() {
     const f = fitOf(ids);
     out[g] = { features: FEATURES, w: f.w, mean: f.mean, sd: f.sd, votes: f.vs.length, loo: f.loo, from };
     report.push(`${g}: ${f.vs.length} votes (${from}), leave-one-out ${(100 * f.loo!).toFixed(1)}%`);
+    if (honest) {
+      const e = evalPairwise(f.vs, f.fs),
+        s = e.baselineInSample;
+      // the plain figure over every row must be the one the fit reports
+      expect(e.looAll).toBeCloseTo(f.loo!, 12);
+      table.push(
+        `${g} (${from}): ${e.real} real votes, ${e.synthetic} made up from dislikes and ties`,
+        `  to quote — real votes, both compositions held out: ${pct(e.grouped.acc)} (${e.grouped.right}/${e.grouped.n}; 95% interval ${pct(e.grouped.lo)} to ${pct(e.grouped.hi)})`,
+        `  one feature's sign alone, chosen inside the same folds: ${pct(e.baseline.acc)}`,
+        `  one feature's sign alone, chosen on the votes it is scored on: ${pct(s.acc)} (${s.sign > 0 ? '+' : '−'}${FEATURES[s.feature]})`,
+        `  real votes, plain leave-one-out: ${pct(e.looReal)}`,
+        `  every row, made-up ones included, plain leave-one-out (the old figure): ${pct(e.looAll)}`,
+      );
+    }
     // a reported check is promoted only if it predicts the votes: compare the fit with it
     const withChecks = ids.filter(id => checks[id]);
     for (const c of ['wordSpace', 'strayMarks', 'strayDots', 'doubled'])
@@ -105,7 +123,7 @@ function refit() {
         report.push(`  ${c}: ${(100 * a.loo!).toFixed(1)}% → ${(100 * b.loo!).toFixed(1)}% with it`);
       }
   }
-  return { out, report };
+  return { out, report, table };
 }
 
 const fmt = (o: Record<string, unknown>) =>
@@ -142,9 +160,10 @@ describe('the critic fitted to the owner’s votes', () => {
   it.runIf(!!process.env.REFIT)(
     'refits',
     () => {
-      const { out, report } = refit();
+      const { out, report, table } = refit(true);
       writeFileSync(join(import.meta.dirname, '../src/script/thuluth/roundel/fits.data.ts'), fmt(out));
       console.log(report.join('\n'));
+      console.log(`What each fit really predicts (tests/ratings/README.md):\n${table.join('\n')}`);
     },
     3_600_000,
   );
