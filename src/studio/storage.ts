@@ -65,6 +65,20 @@ export const loadFavourites = (): Favourite[] =>
 /** Names of the stored favourites left out of loadFavourites because they could not be read. */
 export const skippedFavourites = (): string[] =>
   unreadable().map(f => (isRecord(f) && typeof f.name === 'string' ? f.name : '(unnamed)'));
+/** What to tell the user about the favourites that could not be read ('' when there are none). */
+export function skippedNote(names: string[]): string {
+  if (!names.length) return '';
+  const shown = names.slice(0, 6).map(n => `“${n}”`),
+    more = names.length - shown.length;
+  return (
+    (names.length === 1
+      ? '1 saved favourite couldn’t be read and was left as it is: '
+      : `${names.length} saved favourites couldn’t be read and were left as they are: `) +
+    shown.join(', ') +
+    (more ? ` and ${more} more` : '') +
+    '.'
+  );
+}
 /** Save the favourites; those in storage that could not be read are kept after them, untouched. */
 export const saveFavourites = (fs: Favourite[]) => set(FAVS, [...fs, ...unreadable()]);
 

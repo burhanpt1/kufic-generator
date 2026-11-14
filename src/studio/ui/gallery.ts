@@ -10,7 +10,7 @@ import { learn, newTaste, score } from '../../evolve/taste';
 import { blendScore, screenGeneration } from '../../evolve/trainer';
 import type { Composition, TextBorder } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
-import { loadFavourites, saveFavourites } from '../storage';
+import { loadFavourites, saveFavourites, skippedFavourites, skippedNote } from '../storage';
 import type { Favourite } from '../storage';
 import type { App } from './main';
 import { $, h } from './main';
@@ -45,6 +45,15 @@ export function wireGallery(app: App) {
 
   // ---- presets & favourites ----
   const favs: Favourite[] = loadFavourites();
+  // favourites this version cannot read stay in storage; say so once, above the ones it can
+  const skipped = skippedNote(skippedFavourites());
+  if (skipped) {
+    const note = h('div', { class: 'notice', role: 'status', style: 'margin: 6px 0' }, h('span', {}, skipped));
+    note.append(
+      h('button', { textContent: '×', title: 'Dismiss', 'aria-label': 'Dismiss', onclick: () => note.remove() }),
+    );
+    $('favs').before(note);
+  }
   function card(title: string, comp: Composition, tools: [string, string, () => void][] = []) {
     const pic = h('div', { class: 'pic' }),
       c = h(

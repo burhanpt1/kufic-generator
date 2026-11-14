@@ -5,23 +5,17 @@ import type { Taste } from '../../evolve/taste';
 import { train } from '../../evolve/trainer';
 import type { Rating, TasteModel } from '../../evolve/trainer';
 import { loadKernels } from '../../kernels';
-import { resolve } from '../../compose';
-import { collectRoundels, prepareRoundel } from '../../compose/roundel';
-import { RoundelWorkers } from '../../script/thuluth/roundel/parallel';
 import type { Composition } from '../../model/schema';
 import { PRESETS } from '../../model/presets';
-import { renderPlaced } from '../../render/composition';
 import { downloadName, saveSVG, savePNG } from '../../app/export';
-import type { Placed } from '../../compose/placed';
-import { laserSVG, plotterSVG, reliefSVG } from '../../fabricate';
+import { Background } from '../background';
+import type { FabKind, Glyphs } from '../compute';
 import { compositionFromHash, hashFor } from '../state';
 import { loadRatings, loadTaste, saveTaste } from '../storage';
 import { wireChrono } from './chrono';
-import { wireCritic } from './critic';
 import { wireEditor } from './editor';
 import { mainSlot, wireGallery } from './gallery';
 import { wireLetters } from './letters';
-import { wirePrint3d } from './print3d';
 import { wireTrainer } from './trainer';
 
 export type Tab = 'gallery' | 'trainer' | 'editor' | 'chrono' | 'letters';
@@ -36,8 +30,15 @@ export interface App {
   /** Trainer ratings and the models trained on them (null below six ratings). */
   ratings: Rating[];
   model: TasteModel | null;
-  pool: EvalPool;
+  /** The breeding workers (started on first use, or once the first preview is up). */
+  readonly pool: EvalPool;
+  /** The thread the preview is composed on, for other heavy work on the composition. */
+  background: Background;
+  /** The user's letter edits, which go with every job for the background (set by the letter editor). */
+  glyphs: Glyphs;
   showTab(t: Tab): void;
+  /** Called when a tab is shown (a hidden panel can leave its drawing until then). */
+  onTab(f: (t: Tab) => void): void;
   /** Called after every change of the composition. */
   onChange(f: () => void): void;
   /** Glyphs changed: re-render everything that shows letters. */
@@ -87,17 +88,17 @@ export function keepFocus(box: HTMLElement, rebuild: () => void, fallback?: stri
     }
 }
 
-await loadKernels();
+// the preview is composed on a background worker; only without one does this thread compose, and need the kernels
+const background = new Background();
+if (!background.threaded) await loadKernels();
 
-// made when a composition first has a roundel to draw
-let workers: RoundelWorkers | null = null;
-const roundelWorkers = () => (workers ??= new RoundelWorkers());
 let comp: Composition = structuredClone(PRESETS[0].comp),
   svg = '',
-  placed: Placed | null = null;
+  pool: EvalPool | null = null;
 const undo: Composition[] = [],
   redo: Composition[] = [],
-  listeners: (() => void)[] = [];
+  listeners: (() => void)[] = [],
+  tabListeners: ((t: Tab) => void)[] = [];
 
 function notice(message: string) {
   const box = $('notices');
@@ -136,8 +137,13 @@ const app: App = {
   saveTaste: () => saveTaste(app.taste),
   ratings: loadRatings(),
   model: null,
-  pool: new EvalPool(),
+  get pool() {
+    return (pool ??= new EvalPool());
+  },
+  background,
+  glyphs: {},
   showTab,
+  onTab: f => tabListeners.push(f),
   onChange: f => listeners.push(f),
   glyphsChanged: () => changed(),
   notice,
@@ -174,45 +180,21 @@ function changed() {
   if (!urlHeld) urlTimer = window.setTimeout(async () => history.replaceState(null, '', await hashFor(comp)), 300);
   undoButtons();
 }
-/** resolve, with the composition's roundels drawn first on workers (as resolveAsync does), which are only started
- *  when there is a roundel to draw. A wait for the same roundels is shared; a wait for others is cancelled. */
-let roundelWait: { key: string; done: Promise<unknown> } | null = null;
-async function resolveWithRoundels(c: Composition): Promise<Placed> {
-  let p: Placed | undefined;
-  const asked = collectRoundels(() => (p = resolve(c))),
-    key = asked.length ? JSON.stringify(asked) : '';
-  if (roundelWait?.key !== key) {
-    workers?.cancel();
-    roundelWait = asked.length ? { key, done: Promise.all(asked.map(q => prepareRoundel(q, roundelWorkers()))) } : null;
-  }
-  // nothing left to draw: the look through was the whole resolve
-  if (!asked.length) return p ?? resolve(c);
-  const wait = roundelWait!;
-  try {
-    await wait.done;
-  } finally {
-    if (roundelWait === wait) roundelWait = null;
-  }
-  return resolve(c);
-}
-// a newer change supersedes the wait
+// composed on the background thread; a newer change supersedes one still being composed
 let previewRun = 0;
 async function renderPreview() {
   const run = ++previewRun,
     t0 = performance.now(),
-    c = comp;
+    c = comp,
+    text = mainText().split('\n')[0],
+    label = (c.style.script === 'thuluth' ? 'Thuluth' : 'Kufic') + ' composition' + (text ? ': ' + text : '');
   try {
     const slow = window.setTimeout(() => run === previewRun && ($('info').textContent = 'Composing…'), 150),
-      p = await resolveWithRoundels(c).finally(() => clearTimeout(slow));
-    if (run !== previewRun) return;
-    placed = p;
-    const text = mainText().split('\n')[0];
-    svg = renderPlaced(placed, {
-      idPrefix: 'pv',
-      label: (c.style.script === 'thuluth' ? 'Thuluth' : 'Kufic') + ' composition' + (text ? ': ' + text : ''),
-    });
+      p = await background.preview(c, app.glyphs, label).finally(() => clearTimeout(slow));
+    if (!p || run !== previewRun) return;
+    svg = p.svg;
     $('preview').innerHTML = svg;
-    const m = placed.meta,
+    const m = p.meta,
       rings = m.borders.flatMap(b => b.rings),
       parts = [
         `${rings.length} ring${rings.length === 1 ? '' : 's'}`,
@@ -226,7 +208,11 @@ async function renderPreview() {
   } catch (e) {
     if (run === previewRun) $('info').textContent = 'Could not lay this out: ' + String((e as Error)?.message ?? e);
   }
-  if (run === previewRun) $('preview').classList.remove('busy');
+  if (run === previewRun) {
+    $('preview').classList.remove('busy');
+    // the breeding workers start (and warm up) once the first preview has had the processor to itself
+    if (!pool) setTimeout(() => app.pool, 1500);
+  }
 }
 
 // ---- tabs ----
@@ -238,6 +224,7 @@ function showTab(t: Tab) {
     b.tabIndex = on ? 0 : -1;
     $(b.dataset.tab!).classList.toggle('hidden', !on);
   });
+  tabListeners.forEach(f => f(t));
 }
 tabs.forEach((b, i) => {
   const panel = $(b.dataset.tab!);
@@ -294,15 +281,21 @@ $('share').onclick = async () => {
 };
 $('saveSvg').onclick = () => svg && saveSVG(document, app.fileName, svg);
 $('savePng').onclick = () => svg && savePNG(document, app.fileName, svg, notice);
-$('fab').onchange = () => {
+$('fab').onchange = async () => {
   const sel = $<HTMLSelectElement>('fab'),
     v = sel.value;
   sel.value = '';
-  if (v === 'stl') return print3d ? print3d.open() : notice('The 3D print dialog could not start.');
-  if (!placed || !v) return;
-  if (v === 'plot') saveSVG(document, app.fileName + '-plotter', plotterSVG(placed));
-  else if (v === 'laser') saveSVG(document, app.fileName + '-laser', laserSVG(placed));
-  else savePNG(document, app.fileName + '-relief', reliefSVG(placed), notice);
+  if (v === 'stl') return void (await print3d())?.open();
+  if (!svg || !v) return;
+  const name = app.fileName;
+  try {
+    const out = await background.fab(comp, app.glyphs, v as FabKind);
+    if (v === 'plot') saveSVG(document, name + '-plotter', out);
+    else if (v === 'laser') saveSVG(document, name + '-laser', out);
+    else savePNG(document, name + '-relief', out, notice);
+  } catch (e) {
+    notice('That file could not be made: ' + String((e as Error)?.message ?? e));
+  }
 };
 
 // ---- start ----
@@ -317,17 +310,55 @@ function wire<T>(name: string, f: (app: App) => T): T | null {
     return null;
   }
 }
-const print3d = wire('3D print dialog', wirePrint3d);
 wire('gallery', wireGallery);
 wire('trainer', wireTrainer);
 wire('editor', wireEditor);
 wire('chronogram helper', wireChrono);
 wire('letter editor', wireLetters);
-wire('critic', wireCritic);
 if (broken.length)
   notice(
     `The ${broken.join(' and the ')} could not start. The rest still works; clearing this site’s saved data may fix it.`,
   );
+
+/** A part of the studio that is fetched when first asked for, with `busy` shown meanwhile. One that fails to load
+ *  or start says so, and is tried again on the next ask. */
+function lazy<T>(name: string, load: () => Promise<T>, busy: (on: boolean) => void): () => Promise<T | null> {
+  let part: Promise<T | null> | null = null;
+  return () =>
+    (part ??= (async () => {
+      busy(true);
+      try {
+        return await load();
+      } catch (e) {
+        console.error(`Kufic Studio: the ${name} could not start`, e);
+        notice(`The ${name} could not be loaded. Check your connection and try again.`);
+        part = null;
+        return null;
+      } finally {
+        busy(false);
+      }
+    })());
+}
+const print3d = lazy(
+  '3D print dialog',
+  async () => (await import('./print3d')).wirePrint3d(app),
+  on => {
+    const sel = $<HTMLSelectElement>('fab');
+    sel.disabled = on;
+    sel.options[0].textContent = on ? 'Loading…' : 'Make…';
+  },
+);
+const critic = lazy(
+  'critic',
+  async () => (await import('./critic')).wireCritic(app),
+  on => {
+    $<HTMLButtonElement>('criticAsk').disabled = on;
+    $('criticStatus').textContent = on ? 'Loading…' : '';
+  },
+);
+const criticBox = $<HTMLDetailsElement>('critic');
+criticBox.addEventListener('toggle', () => criticBox.open && critic());
+if (criticBox.open) critic();
 
 let first = true;
 async function fromHash() {
