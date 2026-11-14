@@ -13,19 +13,37 @@ export const V: LetterVariants = {
   loops: 'rigid',
   set: 'square',
 };
-let OVR: Record<string, Rows | undefined> = {}; // user glyph edits: 'KEY.form' -> rows
+/** A user glyph edit: the rows with the baseline they were drawn on ({ rows, base }, base = rows below the
+ *  baseline), or rows alone (the format before the baseline was stored), which take the baseline of whichever
+ *  variant is active. */
+export type GlyphOverride = Rows | { rows: Rows; base: number };
+let OVR: Record<string, GlyphOverride | undefined> = {}; // user glyph edits: 'KEY.form' -> override
 let epoch = 0;
 /** Changes whenever the glyph edits change, for caches keyed on letter shapes. */
 export const glyphEpoch = () => epoch;
 
+/** The values each variant takes, its default first. */
+const CHOICES: { [K in keyof LetterVariants]-?: readonly NonNullable<LetterVariants[K]>[] } = {
+  ra: ['desc', 'short', 'hook'],
+  ayn: ['cup', 'open'],
+  la: ['plain', 'knot'],
+  meem: ['drop', 'flat'],
+  sad: ['short', 'tall'],
+  loops: ['rigid', 'stretch'],
+  set: ['square', 'fatimid'],
+};
+/** A variant's value, or its default when it is missing or not one of its choices (a stale link, a typo). */
+const pick = <K extends keyof LetterVariants>(k: K, v: unknown): NonNullable<LetterVariants[K]> =>
+  ((CHOICES[k] as readonly unknown[]).includes(v) ? v : CHOICES[k][0]) as NonNullable<LetterVariants[K]>;
+
 export function setVariants(opts: LetterOptions) {
-  V.ra = opts.ra || 'desc';
-  V.ayn = opts.ayn || 'cup';
-  V.la = opts.la || 'plain';
-  V.meem = opts.meem || 'drop';
-  V.sad = opts.sad || 'short';
-  V.loops = opts.loops || 'rigid';
-  V.set = opts.set || 'square';
+  V.ra = pick('ra', opts.ra);
+  V.ayn = pick('ayn', opts.ayn);
+  V.la = pick('la', opts.la);
+  V.meem = pick('meem', opts.meem);
+  V.sad = pick('sad', opts.sad);
+  V.loops = pick('loops', opts.loops);
+  V.set = pick('set', opts.set);
 }
 
 export function baseDef(key: string, form: Form): GlyphDef {
@@ -50,11 +68,20 @@ export function baseDef(key: string, form: Form): GlyphDef {
 }
 export function def(key: string, form: Form): GlyphDef {
   const o = OVR[key + '.' + form];
-  if (o) {
+  if (Array.isArray(o)) {
+    // rows alone: the baseline of the active variant
     const b = baseDef(key, form);
     return Array.isArray(b) ? o : { rows: o, base: b.base };
   }
+  if (o && Array.isArray(o.rows)) return { rows: o.rows, base: o.base || 0 };
   return baseDef(key, form);
+}
+/** The override to store for an edit of a letter form drawn under the given variants: the rows with the baseline
+ *  of the glyph they replace, so the edit sits the same under every variant. */
+export function overrideFor(key: string, form: Form, rows: Rows, opts: LetterOptions = {}): GlyphOverride {
+  setVariants(opts);
+  const b = baseDef(key, form);
+  return { rows: rows.slice(), base: Array.isArray(b) ? 0 : b.base };
 }
 
 export function getRows(key: string, form: Form, opts: LetterOptions = {}): Rows {
@@ -62,15 +89,18 @@ export function getRows(key: string, form: Form, opts: LetterOptions = {}): Rows
   const d = def(key, form);
   return (Array.isArray(d) ? d : d.rows).slice();
 }
-export function setOverrides(o: Record<string, Rows | undefined>) {
+export function setOverrides(o: Record<string, GlyphOverride | undefined>) {
   OVR = { ...o };
   epoch++;
   clearBitmapCache();
 }
 
-/** The long alternate of a letter form, if it has one. */
+/** The long alternate of a letter form, if it has one. The long م drops its tail below the line, so a flat م (chosen
+ *  to keep it on the line) has none. */
 export const altDef = (key: string, form: Form): GlyphDef | null =>
-  (V.set === 'fatimid' ? FATIMID_ALTS[key]?.[form] : undefined) ?? ALTS[key]?.[form] ?? null;
+  key === 'MEEM' && V.meem === 'flat'
+    ? null
+    : ((V.set === 'fatimid' ? FATIMID_ALTS[key]?.[form] : undefined) ?? ALTS[key]?.[form] ?? null);
 /** Where marks above a letter form centre, when not its middle column (per the active letter set). */
 export const anchorOf = (key: string): Partial<Record<Form, number>> | undefined =>
   (V.set === 'fatimid' && FATIMID_ANCHOR[key]) || ANCHOR[key];

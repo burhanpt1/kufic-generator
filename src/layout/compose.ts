@@ -42,7 +42,8 @@ export function compose(opts: ComposeOptions): ComposeResult {
     repeat = true,
     terminals = 'none',
   } = opts;
-  const gap = opts.gap || 1,
+  // 0 is a gap (the bands touch); only a missing or unusable value takes the default
+  const gap = opts.gap != null && opts.gap >= 0 ? opts.gap : 1,
     taper = opts.taper || 0,
     cf = opts.centre || 0;
   setVariants(opts);
