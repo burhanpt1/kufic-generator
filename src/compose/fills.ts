@@ -18,6 +18,18 @@ import { weaveFill } from './weave';
 /** Horizontal crossings of a closed outline: y -> the inside intervals [x0, x1] along that line. Edges are bucketed
  *  by height so each query only looks at nearby edges (the results are the same as scanning every edge). */
 export function crossingsOf(pts: Pt[]): (y: number) => [number, number][] {
+  const into = crossingsInto(pts),
+    xs: number[] = [];
+  return y => {
+    const m = into(y, xs),
+      iv: [number, number][] = [];
+    for (let k = 0; k < m; k += 2) iv.push([xs[k], xs[k + 1]]);
+    return iv;
+  };
+}
+/** crossingsOf without an array per answer, for a caller that asks many times: the inside intervals along y are
+ *  written into `out` as x0, x1, x0, x1, … (in rising order) and the count of numbers written is returned. */
+function crossingsInto(pts: Pt[]): (y: number, out: number[]) => number {
   const n = pts.length,
     ys = pts.map(p => p[1]),
     Y0 = Math.min(...ys),
@@ -31,32 +43,28 @@ export function crossingsOf(pts: Pt[]): (y: number) => [number, number][] {
       b = slab(Math.max(pts[i][1], pts[j][1]));
     for (let k = a; k <= b; k++) buckets[k].push(j);
   }
-  return y => {
-    const xs: number[] = [];
+  return (y, out) => {
+    let m = 0;
     if (y >= Y0 && y <= Y1)
       for (const j of buckets[slab(y)]) {
-        const [x1, y1] = pts[j],
-          [x2, y2] = pts[(j + 1) % n];
-        if (y1 > y !== y2 > y) xs.push(x1 + ((y - y1) * (x2 - x1)) / (y2 - y1));
+        const p = pts[j],
+          q = pts[(j + 1) % n],
+          x1 = p[0],
+          y1 = p[1],
+          x2 = q[0],
+          y2 = q[1];
+        if (y1 > y !== y2 > y) {
+          // each crossing goes in after those not over it: the order a stable sort of them all would give
+          const x = x1 + ((y - y1) * (x2 - x1)) / (y2 - y1);
+          let t = m++;
+          for (; t > 0 && out[t - 1] > x; t--) out[t] = out[t - 1];
+          out[t] = x;
+        }
       }
-    xs.sort((a, b) => a - b);
-    const iv: [number, number][] = [];
-    for (let k = 0; k + 1 < xs.length; k += 2) iv.push([xs[k], xs[k + 1]]);
-    return iv;
+    // an odd crossing left over (the line grazes a vertex) pairs with nothing
+    return m - (m % 2);
   };
 }
-const ivIntersect = (A: [number, number][], B: [number, number][]) => {
-  const out: [number, number][] = [];
-  A.forEach(([a0, a1]) =>
-    B.forEach(([b0, b1]) => {
-      const lo = Math.max(a0, b0),
-        hi = Math.min(a1, b1);
-      if (hi > lo) out.push([lo, hi]);
-    }),
-  );
-  return out;
-};
-
 /** A short text in a large region: keep only the middle lines it needs (about 1.25× its length), so it is set at full
  *  size in a centred block instead of being stretched thin or forcing the composition larger. */
 function middleLines<T extends { yb: number; W: number }>(ivs: T[], total: number, centreY?: number): T[] {
@@ -114,7 +122,8 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
     y0 = b.y0,
     y1 = b.y1,
     vary = f.vary ?? 0,
-    crossings = crossingsOf(pts);
+    crossings = crossingsOf(pts),
+    crossInto = crossingsInto(pts);
   // variable line height: a line's scale follows the region's width at its height, from 1 where the region is
   // widest down to (1 - vary / 2) at the tips, so lines there stay readable instead of being dropped
   // the width profile, sampled once (row placement asks for it many times)
@@ -133,9 +142,10 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
   };
   const kAt = (y: number) =>
     vary > 0 && wMax > 0 ? 1 - vary * (1 - Math.min(1, Math.max(0.5, Math.sqrt(widthAt(y) / wMax)))) : 1;
-  /** Line bands from `start` downward at base scale s: [top, scale] pairs. */
-  const rows = (s: number, start: number) => {
-    const out: [number, number][] = [];
+  /** Line bands from `start` downward at base scale s, written into `out` as top, scale, top, scale, …; returns the
+   *  count of numbers written. */
+  const rows = (s: number, start: number, out: number[]) => {
+    let n = 0;
     for (let y = start; ;) {
       // the band's scale follows the width at its middle (a few fixed-point steps); the ends of a band can graze
       // rounded corners, which would shrink a line that has plenty of room
@@ -143,37 +153,85 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
       for (let it = 0; it < 3; it++) k = kAt(y + Hb * s * k * 0.5);
       const h = Hb * s * k;
       if (y + h > y1 - margin) break;
-      out.push([y, s * k]);
+      out[n++] = y;
+      out[n++] = s * k;
       y += h + lineGap * s * k;
     }
-    return out;
+    return n;
   };
-  const ivsOf = (rs: [number, number][]) => {
+  // (the scan lays rows at up to 90 scales, each row cut by the outline at five heights: the crossings and their
+  // intersections are worked in these lists, kept from row to row, instead of in arrays made for each)
+  const cutA: number[] = [],
+    cutB: number[] = [],
+    cutC: number[] = [],
+    pieces: number[] = [],
+    FRACTIONS = [0.25, 0.5, 0.75, 1];
+  /** The pieces of the first `n` numbers of `rs` (top, scale per row) that lie inside the outline. */
+  const ivsOf = (rs: number[], n: number) => {
     const ivs: { a: number; b: number; yb: number; W: number; s: number }[] = [];
-    for (const [yt, sl] of rs) {
-      const yb = yt + Hb * sl;
-      let iv = crossings(yt + 0.01);
-      [0.25, 0.5, 0.75, 1].forEach(fr => (iv = ivIntersect(iv, crossings(yt + (yb - yt) * fr - 0.01))));
-      iv.map(([a, bb]) => [a + margin, bb - margin] as [number, number])
-        .filter(([a, bb]) => (bb - a) / sl >= minCells)
-        .sort((p, q) => q[0] - p[0]) // right to left
-        .forEach(([a, bb]) => ivs.push({ a, b: bb, yb, W: Math.floor((bb - a) / sl), s: sl }));
+    for (let r = 0; r < n; r += 2) {
+      const yt = rs[r],
+        sl = rs[r + 1],
+        yb = yt + Hb * sl;
+      // inside at the top of the band and at each quarter down it
+      let A = cutA,
+        C = cutC,
+        na = crossInto(yt + 0.01, A);
+      for (const fr of FRACTIONS) {
+        const nb = crossInto(yt + (yb - yt) * fr - 0.01, cutB);
+        let nc = 0;
+        for (let p = 0; p < na; p += 2)
+          for (let q = 0; q < nb; q += 2) {
+            const lo = Math.max(A[p], cutB[q]),
+              hi = Math.min(A[p + 1], cutB[q + 1]);
+            if (hi > lo) {
+              C[nc++] = lo;
+              C[nc++] = hi;
+            }
+          }
+        const t = A;
+        A = C;
+        C = t;
+        na = nc;
+      }
+      // those long enough, right to left (each goes in before those to its left; equal ones keep their order)
+      let np = 0;
+      for (let p = 0; p < na; p += 2) {
+        const a = A[p] + margin,
+          bb = A[p + 1] - margin;
+        if (!((bb - a) / sl >= minCells)) continue;
+        let t = np;
+        for (; t > 0 && pieces[t - 2] < a; t -= 2) {
+          pieces[t] = pieces[t - 2];
+          pieces[t + 1] = pieces[t - 1];
+        }
+        pieces[t] = a;
+        pieces[t + 1] = bb;
+        np += 2;
+      }
+      for (let p = 0; p < np; p += 2) {
+        const a = pieces[p],
+          bb = pieces[p + 1];
+        ivs.push({ a, b: bb, yb, W: Math.floor((bb - a) / sl), s: sl });
+      }
     }
     return ivs;
   };
+  const rowBuf: number[] = [];
   const lay = (s: number) => {
     if (vary > 0) {
       // rows of varying height land differently against the outline's steps (a dome on a wide base); try several
       // starting offsets and keep the one that holds the most, the most centred on a tie
       // (offsets are ranked by the sampled width profile; exact intervals are found for the winner only)
-      let best: { rs: [number, number][]; cap: number; off: number } | null = null;
+      let best: { rs: number[]; cap: number; off: number } | null = null;
       const step = (Hb * s) / 8;
       for (let k = 0; k < 8; k++) {
-        const rs = rows(s, y0 + margin + k * step);
-        if (!rs.length) continue;
+        const n = rows(s, y0 + margin + k * step, rowBuf);
+        if (!n) continue;
         let cap = 0;
-        for (const [yt, sl] of rs) {
-          const hh = Hb * sl,
+        for (let r = 0; r < n; r += 2) {
+          const yt = rowBuf[r],
+            hh = Hb * rowBuf[r + 1],
             w = Math.min(
               widthAt(yt),
               widthAt(yt + hh * 0.25),
@@ -183,20 +241,31 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
             );
           cap += Math.max(0, w - 2 * margin);
         }
-        const [ly, ls] = rs[rs.length - 1],
+        const ly = rowBuf[n - 2],
+          ls = rowBuf[n - 1],
           off = Math.abs(y1 - margin - (ly + Hb * ls) - k * step);
         if (!best || cap > best.cap + 1e-9 || (Math.abs(cap - best.cap) <= 1e-9 && off < best.off))
-          best = { rs, cap, off };
+          best = { rs: rowBuf.slice(0, n), cap, off };
       }
-      return best ? ivsOf(best.rs) : null;
+      return best ? ivsOf(best.rs, best.rs.length) : null;
     }
     const pitch = (Hb + lineGap) * s,
       usableH = y1 - y0 - 2 * margin,
       nLines = Math.floor((usableH + lineGap * s) / pitch);
     if (nLines < 1) return null;
     const top = y0 + margin + (usableH - (nLines * pitch - lineGap * s)) / 2;
-    return ivsOf(Array.from({ length: nLines }, (_, L) => [top + L * pitch, s] as [number, number]));
+    for (let L = 0; L < nLines; L++) {
+      rowBuf[2 * L] = top + L * pitch;
+      rowBuf[2 * L + 1] = s;
+    }
+    return ivsOf(rowBuf, 2 * nLines);
   };
+  // the rows at each scale of the scan: the same whichever way the text is then cut, so each is laid once for all
+  // the passes below
+  const SCALES = 90,
+    scaleOf = (i: number) => sMax * Math.pow(0.97, i),
+    laid: (ReturnType<typeof lay> | undefined)[] = new Array(SCALES),
+    layAt = (i: number) => (laid[i] !== undefined ? laid[i] : (laid[i] = lay(scaleOf(i))));
   let best: { sc: number; s: number; ivs: NonNullable<ReturnType<typeof lay>>; groups: Segs[] } | null = null;
   // a second pass, only when nothing fits, lets a short text skip the shortest pieces of lines (a star or a mosque
   // cuts each row into more pieces than the text has words)
@@ -205,9 +274,9 @@ function linesFill(f: Extract<FillerNode, { type: 'lines' }>, res: RegionResult,
       if (best) break;
       const segs = script.segments(prep, mode, wg) as Segs;
       const total = segs.reduce((a, x) => a + x.minW, 0) + wg * (segs.length - 1);
-      for (let i = 0; i < 90; i++) {
-        const s = sMax * Math.pow(0.97, i);
-        let ivs = lay(s);
+      for (let i = 0; i < SCALES; i++) {
+        const s = scaleOf(i);
+        let ivs = layAt(i);
         if (!ivs || !ivs.length) continue;
         if (trim) ivs = middlePieces(ivs, total, segs.length, (y0 + y1) / 2);
         else if (i === 0 || mode === 'words') {
