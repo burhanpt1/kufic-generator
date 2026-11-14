@@ -36,7 +36,7 @@ describe('letter sets from outside', () => {
     expect(r.ovr).toEqual({ 'DAL.iso': good });
     expect(r.dropped).toBe(11);
   });
-  it('reads the rows of a { rows, base } entry', () => {
+  it('keeps a { rows, base } entry with its baseline', () => {
     const r = sanitizeOverrides({
       'REH.iso': { rows: good, base: 1 },
       'REH.fin': { rows: good },
@@ -44,7 +44,7 @@ describe('letter sets from outside', () => {
       'WAW.fin': { rows: good, base: -1 },
       'YEH.iso': { base: 1 },
     });
-    expect(r.ovr).toEqual({ 'REH.iso': good, 'REH.fin': good });
+    expect(r.ovr).toEqual({ 'REH.iso': { rows: good, base: 1 }, 'REH.fin': good });
     expect(r.dropped).toBe(3);
   });
   it('takes nothing from what is not a set', () => {

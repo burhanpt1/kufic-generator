@@ -1,6 +1,6 @@
 // Letter editor: pick a letter and form, click cells to draw. Edits are glyph overrides kept in localStorage.
-import { GROUPS, getRows, setOverrides } from '../engine';
-import type { Form } from '../engine';
+import { GROUPS, getRows, overrideFor, setOverrides } from '../engine';
+import type { Form, GlyphOverride } from '../engine';
 
 /** What the editor reads and writes: the letter and form being edited, the letter variants, and the overrides. */
 export interface EditorState {
@@ -11,7 +11,7 @@ export interface EditorState {
   la: string;
   meem?: string;
   sad?: string;
-  ovr: Record<string, string[] | undefined>;
+  ovr: Record<string, GlyphOverride | undefined>;
 }
 type State = EditorState;
 export type Lookup = <T extends HTMLElement = HTMLInputElement>(id: string) => T;
@@ -56,9 +56,10 @@ const validRows = (v: unknown): v is string[] =>
   v.every(r => /^[#.]+$/.test(r));
 
 /** A stored or pasted letter set, checked: only entries named 'GROUP.form' whose rows are a non-empty rectangle of
- *  '#' and '.' are kept (a `{ rows, base }` entry is read for its rows). `dropped` counts the rest. */
-export function sanitizeOverrides(raw: unknown): { ovr: Record<string, string[]>; dropped: number } {
-  const ovr: Record<string, string[]> = {};
+ *  '#' and '.' are kept, as rows alone (older sets) or as `{ rows, base }` (rows with their baseline). `dropped`
+ *  counts the rest. */
+export function sanitizeOverrides(raw: unknown): { ovr: Record<string, GlyphOverride>; dropped: number } {
+  const ovr: Record<string, GlyphOverride> = {};
   let dropped = 0;
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ovr, dropped: raw == null ? 0 : 1 };
   for (const [k, v] of Object.entries(raw)) {
@@ -68,7 +69,8 @@ export function sanitizeOverrides(raw: unknown): { ovr: Record<string, string[]>
       boxed = !!o && typeof o === 'object' && !Array.isArray(o),
       rows = boxed ? o.rows : v,
       baseOk = !boxed || o.base === undefined || (Number.isInteger(o.base) && (o.base as number) >= 0);
-    if (known && baseOk && validRows(rows)) ovr[k] = rows.slice();
+    if (known && baseOk && validRows(rows))
+      ovr[k] = boxed && typeof o.base === 'number' ? { rows: rows.slice(), base: o.base } : rows.slice();
     else dropped++;
   }
   return { ovr, dropped };
@@ -118,7 +120,9 @@ export function wireEditor($: Lookup, doc: Document, state: State, render: () =>
     setOverrides({ ...state.ovr, [k]: undefined });
     delete state.ovr[k];
     const orig = getRows(state.edKey, state.edForm as Form, letterOpts());
-    if (rows.join('|') !== orig.join('|')) state.ovr[k] = rows;
+    // stored with the baseline of the glyph it replaces, so the edit sits the same under every letter variant
+    if (rows.join('|') !== orig.join('|'))
+      state.ovr[k] = overrideFor(state.edKey, state.edForm as Form, rows, letterOpts());
     saveOvr();
     drawEditor();
     render();
