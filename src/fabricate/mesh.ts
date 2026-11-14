@@ -76,10 +76,14 @@ function boxBlur(src: Float32Array, w: number, h: number, r: number): Float32Arr
   return out;
 }
 
+/** The thinnest base a solid is given: with none at all, its lowest parts would have no thickness and the mesh would
+ *  not close. */
+export const MIN_BASE_MM = 0.05;
+
 export interface SolidOptions {
   /** Width of the object in millimetres (the depth follows the image). */
   widthMM?: number;
-  /** Solid base under everything, in millimetres. */
+  /** Solid base under everything, in millimetres (at least MIN_BASE_MM). */
   baseMM?: number;
   /** Height of white (1) above the base, in millimetres. */
   reliefMM?: number;
@@ -123,7 +127,7 @@ function resample(hm: Heightmap, size: number, step: number) {
 /** Heightmap → closed solid. Cut-away samples become holes and an outline that follows the mask. */
 export function heightmapToMesh(hm: Heightmap, o: SolidOptions = {}): Mesh {
   const widthMM = o.widthMM ?? 120,
-    base = o.baseMM ?? 2,
+    base = Math.max(MIN_BASE_MM, o.baseMM ?? 2),
     relief = o.reliefMM ?? 3,
     maxErr = (o.maxErrorMM ?? 0.05) / Math.max(relief, 1e-9),
     longest = Math.max(hm.width, hm.height),

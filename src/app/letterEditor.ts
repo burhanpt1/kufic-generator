@@ -46,17 +46,62 @@ export const LETTER_CHARS: Record<string, string> = {
 
 export const STORAGE_KEY = 'kufi-glyphs';
 
-export function loadOverrides(state: State) {
+const FORMS = ['ini', 'med', 'fin', 'iso'],
+  MAX_SIDE = 64;
+const validRows = (v: unknown): v is string[] =>
+  Array.isArray(v) &&
+  v.length > 0 &&
+  v.length <= MAX_SIDE &&
+  v.every(r => typeof r === 'string' && r.length > 0 && r.length <= MAX_SIDE && r.length === v[0].length) &&
+  v.every(r => /^[#.]+$/.test(r));
+
+/** A stored or pasted letter set, checked: only entries named 'GROUP.form' whose rows are a non-empty rectangle of
+ *  '#' and '.' are kept (a `{ rows, base }` entry is read for its rows). `dropped` counts the rest. */
+export function sanitizeOverrides(raw: unknown): { ovr: Record<string, string[]>; dropped: number } {
+  const ovr: Record<string, string[]> = {};
+  let dropped = 0;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ovr, dropped: raw == null ? 0 : 1 };
+  for (const [k, v] of Object.entries(raw)) {
+    const [group, form, ...more] = k.split('.'),
+      known = (GROUPS as readonly string[]).includes(group) && FORMS.includes(form) && !more.length,
+      o = v as { rows?: unknown; base?: unknown } | null,
+      boxed = !!o && typeof o === 'object' && !Array.isArray(o),
+      rows = boxed ? o.rows : v,
+      baseOk = !boxed || o.base === undefined || (Number.isInteger(o.base) && (o.base as number) >= 0);
+    if (known && baseOk && validRows(rows)) ovr[k] = rows.slice();
+    else dropped++;
+  }
+  return { ovr, dropped };
+}
+const droppedNote = (n: number) =>
+  `Left out ${n} ${n === 1 ? 'entry that wasn’t a letter shape' : 'entries that weren’t letter shapes'}.`;
+
+/** Read the stored letter set into state.ovr. Returns how many stored entries were unusable and dropped. */
+export function loadOverrides(state: State): number {
+  let dropped = 0;
   try {
     const s = localStorage.getItem(STORAGE_KEY);
-    if (s) state.ovr = JSON.parse(s) || {};
+    if (s) {
+      const r = sanitizeOverrides(JSON.parse(s));
+      state.ovr = r.ovr;
+      dropped = r.dropped;
+      // put the cleaned set back, so the bad entries are gone for good
+      if (dropped) localStorage.setItem(STORAGE_KEY, JSON.stringify(r.ovr));
+    }
   } catch {
-    /* storage unavailable */
+    dropped = 1; // not JSON at all
   }
   setOverrides(state.ovr);
+  return dropped;
 }
 
-export function wireEditor($: Lookup, doc: Document, state: State, render: () => void) {
+export function wireEditor($: Lookup, doc: Document, state: State, render: () => void, loadDropped = 0) {
+  /** A line under the editor (pages without one get the message on the paste box instead). */
+  const say = (msg: string) => {
+    const n = doc.getElementById('edNote');
+    if (n) n.textContent = msg;
+    return !!n;
+  };
   const letterOpts = () =>
     ({ ra: state.ra, ayn: state.ayn, la: state.la, meem: state.meem, sad: state.sad }) as Parameters<typeof getRows>[2];
   const saveOvr = () => {
@@ -113,6 +158,7 @@ export function wireEditor($: Lookup, doc: Document, state: State, render: () =>
     const b = doc.createElement('button');
     b.dataset.v = k;
     b.textContent = LETTER_CHARS[k];
+    b.lang = 'ar';
     b.setAttribute('aria-pressed', String(k === state.edKey));
     b.title = k.toLowerCase();
     $('edLetters').append(b);
@@ -160,20 +206,32 @@ export function wireEditor($: Lookup, doc: Document, state: State, render: () =>
       t.focus();
       return;
     }
-    try {
-      const o = JSON.parse(t.value);
-      if (o && typeof o === 'object') {
-        state.ovr = o;
-        saveOvr();
-        drawEditor();
-        render();
-        t.classList.add('hidden');
-      }
-    } catch {
+    const refuse = () => {
       t.setCustomValidity('That isn’t a letter set. Copy one with “Copy set” first.');
       t.reportValidity();
       setTimeout(() => t.setCustomValidity(''), 2500);
+    };
+    let o: unknown;
+    try {
+      o = JSON.parse(t.value);
+    } catch {
+      return refuse();
     }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return refuse();
+    const { ovr, dropped } = sanitizeOverrides(o),
+      kept = Object.keys(ovr).length;
+    // nothing usable in a set that had entries: keep the letters as they are
+    if (!kept && dropped) {
+      if (!say('Nothing pasted: there are no letter shapes in that set.')) refuse();
+      return;
+    }
+    state.ovr = ovr;
+    saveOvr();
+    drawEditor();
+    render();
+    t.classList.add('hidden');
+    say(`Pasted ${kept} letter shape${kept === 1 ? '' : 's'}.` + (dropped ? ' ' + droppedNote(dropped) : ''));
   };
+  if (loadDropped) say(`Your saved letter set was damaged. ${droppedNote(loadDropped)}`);
   return { drawEditor };
 }
