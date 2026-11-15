@@ -19,3 +19,4 @@ src/script/thuluth/roundel/fits.data.ts
 tests/ratings/
 tests/ratings/rounds/*/vote.html
 docs/placement-brief/kit.json
+docs/placement-brief/entries/*/placements.json
