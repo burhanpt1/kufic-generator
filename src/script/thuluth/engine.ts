@@ -6,6 +6,8 @@ import { HAMZA, LETTER_FIXES } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
 import type { Shaped } from './shape';
+import type { Sides } from './spacing';
+import { sidesOf, slideRooms, STEM_SPACE } from './spacing';
 import { allahSpan, DOTS, FAM, FORM_FAM, familyOf, forms, muhammadAt, STEM_LETTERS } from './shape';
 import type { Family, Form, GlyphDef, Poly, SkelPt, Stroke, StrokeDef, ThuluthStyle } from './types';
 
@@ -192,6 +194,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     return cache.get(k)!;
   }
 
+  /** A drawing scaled by the body, made once (so that a piece written again is known for the same). */
+  const bodies = new WeakMap<GlyphDef, GlyphDef>();
+  function bodied(g: GlyphDef): GlyphDef {
+    let b = bodies.get(g);
+    if (!b) bodies.set(g, (b = scaleGlyph(g, st.body)));
+    return b;
+  }
+
   /** Set a line: letters joined, words right to left (x decreasing), kashida where asked. */
   function setLine(text: string, o: LineOptions = {}): Placed[] {
     const nib = st.nib,
@@ -200,7 +210,9 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       wordGap = o.wordGap ?? 1.6;
     const words = text.trim().split(/\s+/),
       names = st.allah ? nameSpans(text, o) : [],
-      placed: Placed[] = [];
+      placed: Placed[] = [],
+      // where each piece (a connected group) begins in `placed`
+      starts: number[] = [];
     let x = 0,
       y = 0;
     words.forEach((w, wi) => {
@@ -217,11 +229,11 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         rise = mu >= 0 ? MUHAMMAD!.drop * st.body : 0;
       fs.forEach((f, i) => {
         let g = glyphFor(f.c, f.form);
-        if (mu >= 0 && i >= mu) g = scaleGlyph(MUHAMMAD!.letters[i - mu], st.body);
+        if (mu >= 0 && i >= mu) g = bodied(MUHAMMAD!.letters[i - mu]);
         if (LED && (i ? STEM_LETTERS.has(fs[i - 1].c) : wi === 0 && o.afterStem)) g = LED[FAM[f.c]]?.[f.form] ?? g;
         if (allah >= 0 && i === allah - 1) g = NAME.ini;
         if (allah >= 0 && i === allah) g = NAME.lam;
-        if (allah >= 0 && i === allah + 1 && name!.final) g = scaleGlyph(NAME.heh, st.body);
+        if (allah >= 0 && i === allah + 1 && name!.final) g = bodied(NAME.heh);
         if (!g) {
           x -= 2;
           joined = false;
@@ -240,6 +252,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           y = i === mu ? rise : 0;
           const xs = g.s.flatMap(s => s.pts.map(p => p[0]));
           ox = x - (Math.max(...xs) + nib * 0.5);
+          starts.push(placed.length);
         }
         placed.push({ g, ox, oy: y, c: f.c, form: f.form, li: i, wi });
         if (g.exit != null) {
@@ -276,16 +289,112 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         }
       });
     });
+    if (SPACED && starts.length > 1) spaceLine(placed, starts, o);
     return placed;
   }
 
-  /** Pen strokes for a line: joins run as one continuous stroke (the pen never lifts within a group). */
-  function buildStrokes(text: string, o: LineOptions = {}): Built {
+  // ---- ink spacing (style.pieceGap, wordSpace; spacing.ts) ----
+  const SPACED = st.pieceGap != null || st.wordSpace != null,
+    glyphIds = new WeakMap<GlyphDef, number>(),
+    pieceSides = new Map<string, Sides>(),
+    roomOf = slideRooms();
+  let glyphCount = 0;
+  /** A piece's ink (its letters as the pen draws them, and its dots) seen from its sides, with x counted from its
+   *  first letter's place: measured once for each piece as written (its letters' drawings, its kashidas). */
+  function sidesOfPiece(piece: readonly Placed[], o: LineOptions): Sides {
+    const at = (piece[0] as PlacedLetter).ox,
+      f = (v: number) => Math.round((v - at) * 1e4) / 1e4;
+    let key = `${o.sag ?? ''}|${o.tail ? o.tail.sx + ',' + o.tail.sy : ''}`;
+    for (const p of piece) {
+      if ('kash' in p) key += `|k${f(p.ox)},${p.oy},${p.len}`;
+      else if ('conn' in p) key += `|c${f(p.from[0])},${p.from[1]},${f(p.to[0])},${p.to[1]}`;
+      else {
+        let id = glyphIds.get(p.g);
+        if (id == null) glyphIds.set(p.g, (id = glyphCount++));
+        key += `|${id},${p.c}${p.form},${f(p.ox)},${p.oy}`;
+      }
+    }
+    let s = pieceSides.get(key);
+    if (!s) {
+      s = sidesOf(
+        [
+          ...penStrokes(piece, o).flatMap(k => strokePolys(k)),
+          ...dotsOf(piece).dots.flatMap(([x, y]) => dotPolysAt(x, y)),
+        ],
+        -at,
+      );
+      if (pieceSides.size > 4000) pieceSides.clear();
+      pieceSides.set(key, s);
+    }
+    return s;
+  }
+  /** Set the pieces of a line by their ink. In a word, each piece in turn slides along the baseline until the
+   *  clearance asked is left between it and every earlier piece of the word (pieceGap; STEM_SPACE times that between
+   *  two stems that face each other). The word then slides, as it stands, until wordSpace is left between it and the
+   *  two words before it. Where a clearance is not set, the piece (the word) keeps the place its box gave it. */
+  function spaceLine(placed: Placed[], starts: readonly number[], o: LineOptions) {
     const nib = st.nib,
-      ang = st.ang,
-      placed = setLine(text, o),
-      strokes: Stroke[] = [],
-      dots: Dot[] = [];
+      cIn = st.pieceGap != null ? st.pieceGap * nib : null,
+      cWord = st.wordSpace != null ? st.wordSpace * nib : null;
+    let lastGlyph = -1;
+    placed.forEach((p, pi) => {
+      if (isLetter(p)) lastGlyph = pi;
+    });
+    const pieces = starts.map((from, k) => {
+      const to = starts[k + 1] ?? placed.length,
+        piece = placed.slice(from, to),
+        first = piece[0] as PlacedLetter,
+        last = piece.filter(isLetter).pop()!;
+      let left = Infinity;
+      for (const p of piece) if (isLetter(p)) for (const sd of p.g.s) for (const q of sd.pts) left = Math.min(left, p.ox + q[0]); // prettier-ignore
+      // (the stretched tail is the last letter's alone)
+      return { from, to, wi: first.wi, at: first.ox, left, t: 0, stems: [STEM_LETTERS.has(first.c), STEM_LETTERS.has(last.c)], sides: sidesOfPiece(piece, lastGlyph >= from && lastGlyph < to ? o : { ...o, tail: null }) }; // prettier-ignore
+    });
+    for (let a = 0, e: number; a < pieces.length; a = e) {
+      e = a + 1;
+      while (e < pieces.length && pieces[e].wi === pieces[a].wi) e++;
+      // the word's pieces against each other
+      for (let j = a + 1; j < e; j++) {
+        const B = pieces[j];
+        let t = Infinity;
+        if (cIn != null)
+          for (let i = j - 1; i >= a; i--) {
+            const A = pieces[i],
+              c = i === j - 1 && A.stems[1] && B.stems[0] ? cIn * STEM_SPACE : cIn;
+            t = Math.min(t, A.at + A.t + roomOf(A.sides, B.sides, c) - B.at);
+          }
+        // (nothing asked, or a piece that faces nothing at any height: as its box set it)
+        B.t = t === Infinity ? pieces[j - 1].t : t;
+      }
+      if (!a) continue;
+      // then the word, as it stands, against the two words before it
+      let t = Infinity;
+      if (cWord != null)
+        for (let j = a; j < e; j++)
+          for (let i = a - 1; i >= 0 && pieces[i].wi >= pieces[a].wi - 2; i--)
+            t = Math.min(t, pieces[i].at + pieces[i].t + roomOf(pieces[i].sides, pieces[j].sides, cWord) - pieces[j].at - pieces[j].t); // prettier-ignore
+      if (t === Infinity) {
+        // as its box set it: after everything of the word before it
+        const P = pieces[a - 1];
+        for (let i = a - 1; i >= 0 && pieces[i].wi === P.wi; i--)
+          t = Math.min(t, pieces[i].left + pieces[i].t - P.left);
+      }
+      for (let j = a; j < e; j++) pieces[j].t += t;
+    }
+    for (const B of pieces) {
+      if (!B.t) continue;
+      for (let i = B.from; i < B.to; i++) {
+        const p = placed[i];
+        if ('conn' in p) placed[i] = { conn: true, from: [p.from[0] + B.t, p.from[1]], to: [p.to[0] + B.t, p.to[1]] };
+        else p.ox += B.t;
+      }
+    }
+  }
+
+  /** Pen strokes for placed letters: joins run as one continuous stroke (the pen never lifts within a group). */
+  function penStrokes(placed: readonly Placed[], o: LineOptions): Stroke[] {
+    const ang = st.ang,
+      strokes: Stroke[] = [];
     type Raw = { ang: number; pts: [number, number, number, number?][]; own: number[]; wi: number };
     const raws: Raw[] = [];
     let open: Raw | null = null;
@@ -378,6 +487,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       const spans = sampleSpans(r.pts);
       strokes.push({ ang: r.ang, s: sampleStroke(r.pts, st.tension), raw: r.pts.map(q => [q[0], q[1]]), own: spans.map(k => r.own[k]), wi: r.wi }); // prettier-ignore
     });
+    return strokes;
+  }
+  /** Pen strokes for a line, with its dots and the signs of the name of God. */
+  function buildStrokes(text: string, o: LineOptions = {}): Built {
+    const nib = st.nib,
+      ang = st.ang,
+      placed = setLine(text, o),
+      strokes = penStrokes(placed, o);
     // the name of God: shadda and a small upright alif above the second lam
     // (the lab's own letters keep the lab's rule for a line, as its references were drawn: only a text that is the
     // name alone, or that writes it الله, has these marks)
@@ -422,7 +539,14 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           }
         }
       });
-    const dotGroups: DotGroup[] = [];
+    const d = dotsOf(placed);
+    return { strokes, dots: d.dots, placed, dotGroups: d.dotGroups };
+  }
+  /** The dots of placed letters, centred over or under each letter's body. */
+  function dotsOf(placed: readonly Placed[]): Pick<Built, 'dots' | 'dotGroups'> {
+    const nib = st.nib,
+      dots: Dot[] = [],
+      dotGroups: DotGroup[] = [];
     placed.forEach(p => {
       if (!isLetter(p)) return;
       const dd = DOTS[p.c],
@@ -444,7 +568,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           dotGroups.push({ x: cx, y: by + (n === 3 ? nib * 0.5 * side : 0), n, side, li: p.li, wi: p.wi, x0: p.ox + Math.min(...xs), x1: p.ox + Math.max(...xs), top: oy + top, bot: oy + bot }); // prettier-ignore
         });
     });
-    return { strokes, dots, placed, dotGroups };
+    return { dots, dotGroups };
   }
 
   /** The ink of a stroke and of a dot, as polygons in pen units. */

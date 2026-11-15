@@ -10,73 +10,16 @@ import type { Placed, PlacedItem } from '../src/compose/placed';
 import { metrics } from '../src/evolve/critic';
 import { emptySpace } from '../src/evolve/space';
 import { centrelines } from '../src/fabricate';
-import type { Composition, Style } from '../src/model/schema';
 import { isValidComposition } from '../src/model/schema';
-import { PRESETS, TEXTS } from '../src/model/presets';
-import { DEFAULT_STYLE, PALETTES } from '../src/model/style';
+import { DEFAULT_STYLE } from '../src/model/style';
 import { renderPlaced } from '../src/render/composition';
 import { kufi } from '../src/script/kufi';
 import { scriptFor, thuluthStyleOf } from '../src/script/registry';
 import { parsePolys } from '../src/script/vector';
+import { style, TH, THULUTH_CASES as CASES } from './helpers/thuluth-cases';
 import { toPNG } from '../scripts/raster.mjs';
 
-const TH: Partial<Style> = { script: 'thuluth', pen: { preset: 'band' } };
-const slot = (text: string) => ({ text, repeat: 'fill' as const, wordGap: 2 });
-const style = (o: Partial<Style> = {}): Style => ({ ...structuredClone(DEFAULT_STYLE), ...o }) as Style;
 const strips = (p: Placed) => p.items.filter((i): i is Extract<PlacedItem, { type: 'strip' }> => i.type === 'strip');
-
-/** The cases kept as goldens: borders on a circle and a polygon, a line fill, and a Kufic ring round thuluth. */
-const CASES: Record<string, Composition> = {
-  'circle-names': {
-    version: 1,
-    seed: 11,
-    canvas: { shape: 'square', margin: 3 },
-    style: style({ ...TH, palette: { ...PALETTES.cobalt }, colouring: 'byRing' }),
-    texts: { names: slot(TEXTS.names) },
-    root: {
-      type: 'frame',
-      child: {
-        type: 'region',
-        outline: { kind: 'circle' },
-        borders: [{ type: 'textBorder', text: 'names', separator: { kind: 'braid', width: 2 } }],
-      },
-    },
-  },
-  'octagon-shahada': (() => {
-    const c = structuredClone(PRESETS.find(p => p.id === 'octagon-panel')!.comp);
-    c.style = { ...c.style, ...TH } as Style;
-    return c;
-  })(),
-  'mihrab-lines': (() => {
-    const c = structuredClone(PRESETS.find(p => p.id === 'mihrab-ayat-al-kursi')!.comp);
-    c.style = { ...c.style, ...TH } as Style;
-    return c;
-  })(),
-  'kufic-ring-thuluth-centre': {
-    version: 1,
-    seed: 7,
-    canvas: { shape: 'square', margin: 3 },
-    style: style({ palette: { ...PALETTES.goldOnLapis } }),
-    texts: { ring: slot('محمد علي فاطمة الحسن الحسين'), centre: slot('مودة ورحمة') },
-    root: {
-      type: 'frame',
-      child: {
-        type: 'region',
-        outline: { kind: 'circle' },
-        borders: [{ type: 'textBorder', text: 'ring', separator: { kind: 'braid', width: 2 } }],
-        fill: {
-          type: 'region',
-          node: {
-            type: 'region',
-            style: TH,
-            outline: { kind: 'circle' },
-            borders: [{ type: 'textBorder', text: 'centre', separator: { kind: 'pearls', width: 2 } }],
-          },
-        },
-      },
-    },
-  },
-};
 
 describe('thuluth in compositions', () => {
   it('validates the script and the pen', () => {

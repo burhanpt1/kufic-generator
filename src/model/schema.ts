@@ -31,6 +31,11 @@ export interface ThuluthPen {
   /** Baseline between two joined loop letters (body units). */
   loopGap?: number;
   heh?: 'round' | 'almond' | 'eye';
+  /** Ink spacing on lines, rings and bands (ThuluthStyle.pieceGap, wordSpace), in nibs: the clear space between the
+   *  unjoined pieces of a word (about 0.45), and between words (about 1.5). Unset, each stays as the letters' boxes
+   *  set it. */
+  pieceGap?: number;
+  wordSpace?: number;
 }
 export type ScriptId = 'kufi' | 'thuluth';
 export interface Style {
@@ -543,6 +548,8 @@ const pen = z.object({
   floor: z.number().min(0).max(0.8).optional(),
   loopGap: z.number().min(0).max(4).optional(),
   heh: z.enum(['round', 'almond', 'eye']).optional(),
+  pieceGap: z.number().min(0).max(3).optional(),
+  wordSpace: z.number().min(0).max(6).optional(),
 });
 const script = z.enum(['kufi', 'thuluth']);
 export const StyleSchema = z.object({
