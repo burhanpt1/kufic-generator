@@ -15,28 +15,44 @@ import { MARGIN, NIB, cradleCompose, svgOf, th } from './helpers/char-first';
 import { pureLine } from './helpers/char-pure';
 import type { Canopied } from './helpers/char-roundel';
 import { arrange, carriers, cradleWide, labelled, modesWide, nested, plain } from './helpers/char-roundel';
-import { ALL_TEXTS, TUNED, UNSEEN } from './helpers/char-texts';
+import { ALL_TEXTS, FRESH, TUNED, UNSEEN } from './helpers/char-texts';
 
 // ---- the six set aside (before any rule was changed) ----
 const HELD_SEED = 20261115,
   HELD = 6;
-/** Six of the unseen texts, by a seeded shuffle (mulberry32, Fisher-Yates). */
-export function heldOut(): string[] {
-  let a = HELD_SEED;
+/** `n` of some ids, by a seeded shuffle (mulberry32, Fisher-Yates). */
+function pick(all: readonly string[], n: number, seed: number): string[] {
+  let a = seed;
   const rnd = () => {
       a = (a + 0x6d2b79f5) | 0;
       let t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     },
-    ids = UNSEEN.map(([id]) => id);
+    ids = all.slice();
   for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
     [ids[i], ids[j]] = [ids[j], ids[i]];
   }
-  return ids.slice(0, HELD).sort();
+  return ids.slice(0, n).sort();
 }
-const setOf = (id: string) => (TUNED.some(t => t[0] === id) ? 'tuned' : heldOut().includes(id) ? 'held' : 'fit');
+/** Six of the unseen texts, set aside in the first round. */
+export const heldOut = () => pick(UNSEEN.map(([id]) => id), HELD, HELD_SEED); // prettier-ignore
+// ---- round two: the third set (FRESH), drawn once by the rules as they stood (`fresh-before`), then split by a
+// fixed seed into seven the rules may be fitted on (`ffit`) and seven not looked at again until the end (`fheld`) ----
+const FRESH_SEED = 20261116;
+export const freshHeld = () => pick(FRESH.map(([id]) => id), 7, FRESH_SEED); // prettier-ignore
+const EVERY: [string, string][] = [...ALL_TEXTS, ...FRESH.map(([id, t]) => [id, t] as [string, string])];
+const setOf = (id: string) =>
+  TUNED.some(t => t[0] === id)
+    ? 'tuned'
+    : FRESH.some(t => t[0] === id)
+      ? freshHeld().includes(id)
+        ? 'fheld'
+        : 'ffit'
+      : heldOut().includes(id)
+        ? 'held'
+        : 'fit';
 
 type Drawn = { R: number; polys: [number, number][][] };
 interface Result {
@@ -98,6 +114,8 @@ describe('the rules on the wider set of texts', () => {
     expect(held).toHaveLength(6);
     expect(heldOut()).toEqual(held);
     expect(held.every(id => UNSEEN.some(t => t[0] === id))).toBe(true);
+    expect(freshHeld()).toHaveLength(7);
+    expect(freshHeld().every(id => FRESH.some(t => t[0] === id))).toBe(true);
   });
   it('names the letters that carry the arcs of every text, without drawing', () => {
     const all = ALL_TEXTS.map(([id, t]) => `${id}: ${carriers(t)}`);
@@ -144,7 +162,7 @@ describe('the rules on the wider set of texts', () => {
       const out = process.env.WIDE_OUT ?? join(import.meta.dirname, '../docs/wide');
       const only = process.env.WIDE_ONLY?.split(','),
         sets = process.env.WIDE_SET?.split(',') ?? ['tuned', 'fit', 'held'],
-        texts = ALL_TEXTS.filter(([id]) => (!only || only.includes(id)) && sets.includes(setOf(id)));
+        texts = EVERY.filter(([id]) => (!only || only.includes(id)) && sets.includes(setOf(id)));
       for (const stage of process.env.WIDE_STAGE?.split(',') ?? ['after']) {
         mkdirSync(join(out, stage), { recursive: true });
         const res = texts.map(([id, t]) => {
@@ -167,14 +185,14 @@ describe('the rules on the wider set of texts', () => {
           });
           if (rs.length) writeFileSync(join(out, `${name}.png`), toPNG(labelled(rows, caps, cell), Math.min(rs.length, per) * cell)); // prettier-ignore
         };
-        if (!only && sets.length === 3) sheet(`wide-${stage}`, res, 6, 480);
+        const tag = only || sets.join() !== 'tuned,fit,held' ? `-${(only ?? sets).join('-')}` : '';
+        sheet(`wide-${stage}${tag}`, res, 6, 480);
         for (const set of sets) {
           const rs = res.filter(r => setOf(r.id) === set);
           const per = set === 'tuned' ? 4 : 3;
           for (let i = 0; i < rs.length; i += per)
             sheet(`${stage}-${set}${set === 'tuned' ? '' : `-${i / per + 1}`}`, rs.slice(i, i + per), 4, 480);
         }
-        const tag = only || sets.length < 3 ? `-${(only ?? sets).join('-')}` : '';
         writeFileSync(join(out, `wide-${stage}-facts${tag}.txt`), res.map(r => `${r.id} [${setOf(r.id)}] ${r.text}\n${r.facts.map(f => `    ${f}`).join('\n')}`).join('\n') + '\n'); // prettier-ignore
         expect(res.length).toBe(texts.length);
       }
