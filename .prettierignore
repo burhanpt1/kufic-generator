@@ -22,3 +22,4 @@ docs/placement-brief/kit.json
 docs/placement-brief/entries/*/placements.json
 docs/placement-brief/experiments/*.json
 docs/letters-first/grade.html
+.claude/
