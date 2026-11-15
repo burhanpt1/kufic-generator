@@ -1,6 +1,8 @@
 // The sweep: many roundels per text, across reading-path families, seeds and sampled recipes, each with its critic
 // features, genre and fitted taste score, and checks, ready to look at and to rate (scripts: `npm run sweep`).
 import type { Thuluth } from '../engine';
+import { thuluth } from '../engine';
+import type { ThuluthAlts } from '../types';
 import type { FrameOptions } from './bowl';
 import type { RoundelOptions } from './compose';
 import type { RoundelChecks } from './checks';
@@ -46,6 +48,8 @@ export interface SweepItem {
   frame?: FrameOptions;
   variant?: 'off' | 'on';
   pairOf?: string;
+  /** The drafted letter alternatives this side is written with, if any. */
+  alts?: ThuluthAlts;
 }
 
 export function sweep(th: Thuluth, texts: readonly string[], o: SweepOptions = {}): SweepItem[] {
@@ -102,8 +106,15 @@ export interface OptionPair {
   seed: number;
   /** What both sides share; the toggled settings must not be left to sampleRecipe. */
   base?: RoundelOptions;
-  off: { compose?: RoundelOptions; frame?: FrameOptions };
-  on: { compose?: RoundelOptions; frame?: FrameOptions };
+  off: PairSide;
+  on: PairSide;
+}
+/** One side of a pair: its compose and frame settings, and (for a pair on the letters themselves) the drafted
+ *  alternatives it is written with. */
+export interface PairSide {
+  compose?: RoundelOptions;
+  frame?: FrameOptions;
+  alts?: ThuluthAlts;
 }
 
 /** Build each pair's two sides. A pair whose sides came out the same (nearSame) is dropped: there is nothing to
@@ -121,13 +132,19 @@ export function sweepPairs(
       given = { ...p.base, ...p.off.compose, ...p.on.compose },
       shared: RoundelOptions = { elongate: true, cross: true, kern: true, ...sampleRecipe(given, words, p.seed), ...p.base, tries: o.tries ?? 3, iters: o.iters ?? 3000, seed: p.seed }; // prettier-ignore
     const side = (v: 'off' | 'on') => {
+      // a side that names alternatives is written with them, on the same pen
+      const alts = p[v].alts,
+        pen = alts ? thuluth({ ...th.style, alts }) : th;
+      return sideWith(pen, v, alts);
+    };
+    const sideWith = (th: Thuluth, v: 'off' | 'on', alts?: ThuluthAlts) => {
       const recipe: RoundelOptions = { ...shared, ...p[v].compose },
         b = buildRoundel(th, { text: p.text, compose: recipe, frame: { ornaments: true, density: 0.35, ...p[v].frame } }); // prettier-ignore
       if (!b) return null;
       const family: SweepFamily = recipe.ruled ? 'ruled' : recipe.lanes ? 'lanes' : 'free',
         features = roundelFeatures(th, b.r, b.f),
         genre = genreOf(p.text);
-      return { text: p.text, family, seed: p.seed, recipe, frame: p[v].frame, features, checks: roundelChecks(th, b.r, b.f), genre, score: tasteScore(features, genre), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }), option: p.option, variant: v }; // prettier-ignore
+      return { text: p.text, family, seed: p.seed, recipe, frame: p[v].frame, ...(alts && { alts }), features, checks: roundelChecks(th, b.r, b.f), genre, score: tasteScore(features, genre), svg: renderRoundel(th, b.r, b.f, { U: o.U ?? 8 }), option: p.option, variant: v }; // prettier-ignore
     };
     const a = side('off'),
       b = side('on');

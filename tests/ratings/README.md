@@ -63,3 +63,9 @@ and then they are renamed back.
 
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
+
+Round 3 (`rounds/2026-11-15`, ids `q…`, not yet published): 32 on/off pairs on the legibility work, each on fitted
+lanes and on ruled lines. `wordGap` (2.4 in lanes, 1.6 ruled) against none; `innerGap` 0.7 on top of wordGap; and, on
+top of both, the drafted letters: `stems` c, `muhammad` c, and the two together (`letters`). A pair on the letters
+names its alternatives on the side that has them (`alts` in `pairs.json` and on the item); the sweep writes that side
+with them on the same pen.
