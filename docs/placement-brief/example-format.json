@@ -1,0 +1,26 @@
+{
+  "entry": "format-example",
+  "principle": "(one paragraph: the idea your procedure follows)",
+  "reading": "(one sentence: how a reader finds the order of the words)",
+  "layouts": {
+    "names": {
+      "radius": 24,
+      "words": [
+        {
+          "variant": 0,
+          "x": 9.5,
+          "y": 4,
+          "rotate": 0,
+          "scale": 1
+        },
+        {
+          "variant": 0,
+          "x": 8,
+          "y": -11,
+          "rotate": 0,
+          "scale": 1
+        }
+      ]
+    }
+  }
+}

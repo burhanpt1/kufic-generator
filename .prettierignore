@@ -18,3 +18,4 @@ src/script/thuluth/roundel/calliar.data.ts
 src/script/thuluth/roundel/fits.data.ts
 tests/ratings/
 tests/ratings/rounds/*/vote.html
+docs/placement-brief/kit.json
