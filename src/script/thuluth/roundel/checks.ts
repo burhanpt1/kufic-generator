@@ -9,7 +9,8 @@
 //   letters (the tightest gap between two such words; how many pairs stand no further apart than the pieces inside
 //   one of them do).
 import type { Thuluth } from '../engine';
-import { STEM_LETTERS } from '../shape';
+import type { MarkName } from '../shape';
+import { BELOW, STEM_LETTERS } from '../shape';
 import type { Poly, Stroke } from '../types';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
@@ -371,6 +372,43 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
     }
   const { wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn } = wordGaps(th, r);
   return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn, ...alignment(r, nib) }; // prettier-ignore
+}
+
+export interface MarkReading {
+  /** The vowels placed. */
+  marks: number;
+  /** Vowels nearer another letter's ink than their own letter's by more than a pen (strayDots' rule, for vowels: the
+   *  strictest reading, which a vowel lifted over a stroke that covers its letter fails by its nature). */
+  notNearest: number;
+  /** Pairs of vowels of two letters of one word, on the same side, that stand in the other order along the line than
+   *  their letters do (by more than half a pen): a vowel past its neighbour's reads as the neighbour's. */
+  crossed: number;
+}
+/** How surely each vowel reads as its own letter's: reported numbers, as the checks are. */
+export function markReading(th: Thuluth, r: Roundel, f: Finished): MarkReading {
+  const nib = th.style.nib,
+    pts = inkPoints(r),
+    marks = (f.solved?.items ?? []).flatMap(it => {
+      if (it.kind !== 'mark' || !it.key) return [];
+      const [g, li] = it.key.split(':').map(Number),
+        own = pts.filter(p => p.g === g && p.li === li);
+      if (!own.length) return [];
+      return [{ it, g, li, word: r.groups[g].word, below: BELOW.has(it.m as MarkName), cx: own.reduce((a, p) => a + p.x, 0) / own.length }]; // prettier-ignore
+    });
+  let notNearest = 0,
+    crossed = 0;
+  marks.forEach((a, i) => {
+    const own = nearest(pts, a.it.x, a.it.y, p => p.g === a.g && p.li === a.li),
+      other = nearest(pts, a.it.x, a.it.y, p => (p.g !== a.g || p.li !== a.li) && p.li >= 0);
+    if (other + nib < own) notNearest++;
+    for (const b of marks.slice(i + 1)) {
+      if (b.word !== a.word || b.below !== a.below || (b.g === a.g && b.li === a.li)) continue;
+      const letters = a.cx - b.cx,
+        theirs = a.it.x - b.it.x;
+      if (Math.abs(letters) > nib && Math.abs(theirs) > 0.5 * nib && letters * theirs < 0) crossed++;
+    }
+  });
+  return { marks: marks.length, notNearest, crossed };
 }
 
 /** Letters with an eye (a closed or nearly closed head): a crossing there blinds it. */

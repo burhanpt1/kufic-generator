@@ -124,6 +124,17 @@ export interface SolveOptions {
   /** The pen of the ornaments in the gaps, as a share of the letters' at full size (0.38; the lab drew 0.42 before
    *  the three-pen rule). */
   ornPen?: number;
+  /** Marks lifted over what covers their letter (on by default with RoundelOptions.innerGap, which runs a piece in
+   *  over the letter before it: the hah's head over the ra of الرحمن). The search moves a mark by small steps and
+   *  pays for every step on ink, so it cannot carry a mark across a stroke: a vowel whose place over (or under) its
+   *  letter is taken by ink stayed there. With this, such a vowel is seated before the search in the nearest free
+   *  place (sideways counting double, so in its letter's column where it can), and anchored there: beyond the
+   *  covering stroke, no further than the tallest (lowest) ink of its line, no nearer another line's letters than
+   *  its own, not past the vowel of another letter of its word, and a vowel over its shadda; beside an alif or a
+   *  lam (a narrow letter, a tall stem) it may stand clear of the stem, by its upper half. Whatever the search then
+   *  leaves on ink, vowel or dots, is seated the same way where it stands (dots a little further from their letter
+   *  than the search lets them), and a fatha is not centred in its run onto ink. */
+  markLift?: boolean;
   /** Ink that is not the roundel's letters but blocks marks (a companion text). */
   extraInk?: { strokes: Stroke[]; dots: Dot[] } | null;
 }
@@ -167,6 +178,8 @@ interface Item {
   top: number;
   bot: number;
   sc: number;
+  /** Its letter's centre (markLift). */
+  lx?: number;
 }
 
 export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solved {
@@ -199,24 +212,28 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
   }
   const ink = A.mask(60);
   // distance from every cell to the nearest ink (chamfer), to measure the gaps
-  const dist = new Float32Array(Wd * Hd);
-  for (let i = 0; i < Wd * Hd; i++) dist[i] = ink[i] ? 0 : 1e6;
-  for (let y = 0; y < Hd; y++)
-    for (let x = 0; x < Wd; x++) {
-      const i = y * Wd + x;
-      if (x) dist[i] = Math.min(dist[i], dist[i - 1] + 1);
-      if (y) dist[i] = Math.min(dist[i], dist[i - Wd] + 1);
-      if (x && y) dist[i] = Math.min(dist[i], dist[i - Wd - 1] + 1.414);
-      if (y && x < Wd - 1) dist[i] = Math.min(dist[i], dist[i - Wd + 1] + 1.414);
-    }
-  for (let y = Hd - 1; y >= 0; y--)
-    for (let x = Wd - 1; x >= 0; x--) {
-      const i = y * Wd + x;
-      if (x < Wd - 1) dist[i] = Math.min(dist[i], dist[i + 1] + 1);
-      if (y < Hd - 1) dist[i] = Math.min(dist[i], dist[i + Wd] + 1);
-      if (x < Wd - 1 && y < Hd - 1) dist[i] = Math.min(dist[i], dist[i + Wd + 1] + 1.414);
-      if (y < Hd - 1 && x) dist[i] = Math.min(dist[i], dist[i + Wd - 1] + 1.414);
-    }
+  const chamfer = (ink: Uint8Array): Float32Array => {
+    const dist = new Float32Array(Wd * Hd);
+    for (let i = 0; i < Wd * Hd; i++) dist[i] = ink[i] ? 0 : 1e6;
+    for (let y = 0; y < Hd; y++)
+      for (let x = 0; x < Wd; x++) {
+        const i = y * Wd + x;
+        if (x) dist[i] = Math.min(dist[i], dist[i - 1] + 1);
+        if (y) dist[i] = Math.min(dist[i], dist[i - Wd] + 1);
+        if (x && y) dist[i] = Math.min(dist[i], dist[i - Wd - 1] + 1.414);
+        if (y && x < Wd - 1) dist[i] = Math.min(dist[i], dist[i - Wd + 1] + 1.414);
+      }
+    for (let y = Hd - 1; y >= 0; y--)
+      for (let x = Wd - 1; x >= 0; x--) {
+        const i = y * Wd + x;
+        if (x < Wd - 1) dist[i] = Math.min(dist[i], dist[i + 1] + 1);
+        if (y < Hd - 1) dist[i] = Math.min(dist[i], dist[i + Wd] + 1);
+        if (x < Wd - 1 && y < Hd - 1) dist[i] = Math.min(dist[i], dist[i + Wd + 1] + 1.414);
+        if (y < Hd - 1 && x) dist[i] = Math.min(dist[i], dist[i + Wd - 1] + 1.414);
+      }
+    return dist;
+  };
+  const dist = chamfer(ink);
   const inkHits = (cx: number, cy: number, w: number, h: number) => {
     const ax = Math.floor(X(cx - w / 2)),
       bx = Math.ceil(X(cx + w / 2)),
@@ -264,7 +281,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
           w = w0 * ms * sc,
           h = h0 * ms * sc;
         const ay = below ? L.bot - h / 2 - 0.5 * sc : Math.max(L.top, oy + 2.2 * sc) + h / 2 + 0.5 * sc + j * 1.2 * sc;
-        items.push({ kind: 'mark', key: i + ':' + k, m, side: below ? -1 : 1, w, h, x: L.lx, y: ay, ax: L.lx, ay, lx0: L.x0, lx1: L.x1, top: L.top, bot: L.bot, sc }); // prettier-ignore
+        items.push({ kind: 'mark', key: i + ':' + k, m, side: below ? -1 : 1, w, h, x: L.lx, y: ay, ax: L.lx, ay, lx0: L.x0, lx1: L.x1, top: L.top, bot: L.bot, sc, ...(o.markLift ? { lx: L.lx } : {}) }); // prettier-ignore
       });
     });
     if (o.ornaments && (o.markDensity == null || o.markDensity >= 0.6))
@@ -303,17 +320,31 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     ];
   };
   // where an item may go: on its letter's side, within reach of the letter, inside the disc
-  const allowed = (it: Item) => {
+  const allowed = (it: Item, wide = false) => {
     const [w, h] = boxOf(it),
       reach = (it.kind === 'dots' ? 1.6 : 3.0) * it.sc;
     // dots stand over (or under) their letter's centre and close to it; vowels stay roughly over their letter
-    if (it.kind === 'dots' && (Math.abs(it.x - it.ax) > 0.35 * it.sc || Math.abs(it.y - it.ay) > 1.4 * it.sc))
+    // (wide: a dot group without room, seated by markLift, may stand a little further off)
+    if (
+      it.kind === 'dots' &&
+      (Math.abs(it.x - it.ax) > (wide ? 1.0 : 0.35) * it.sc || Math.abs(it.y - it.ay) > (wide ? 2.2 : 1.4) * it.sc)
+    )
+      // prettier-ignore
       return false;
-    if (it.kind === 'mark' && Math.abs(it.x - (it.lx0 + it.lx1) / 2) > (it.lx1 - it.lx0) / 2 + 1.0 * it.sc)
+    // (wide: beside a narrow letter, an alif or a lam, a vowel seated by markLift may stand clear of its stem)
+    if (
+      it.kind === 'mark' &&
+      Math.abs(it.x - (it.lx0 + it.lx1) / 2) >
+        (it.lx1 - it.lx0) / 2 +
+          (wide && (it.lx1 - it.lx0 < 3 * it.sc || it.top - it.bot > 5 * it.sc) ? w / 2 + 1.8 * it.sc : 1.0 * it.sc)
+    )
+      // prettier-ignore
       return false;
     if (it.kind === 'mark' && o.markReach && (it.side > 0 ? it.y - h / 2 - Math.max(it.top, it.ay - h / 2 - 0.5 * it.sc) : Math.min(it.bot, it.ay + h / 2) - (it.y + h / 2)) > o.markReach * it.sc) return false; // prettier-ignore
     if (it.x < it.lx0 - reach || it.x > it.lx1 + reach) return false;
-    if (it.side > 0 ? it.y - h / 2 < Math.min(it.top, it.ay - h / 2) - (it.kind === 'dots' ? 1.2 : 0.2) * it.sc : it.y + h / 2 > Math.max(it.bot, it.ay + h / 2) + (it.kind === 'dots' ? 1.2 : 0.2) * it.sc) return false; // prettier-ignore
+    // (wide: a vowel may stand beside the upper half of a tall stem, where the space over its top is taken)
+    const stem = wide && it.kind === 'mark' && it.top - it.bot > 5 * it.sc ? (it.top - it.bot) / 2 : 0;
+    if (it.side > 0 ? it.y - h / 2 < Math.min(it.top, it.ay - h / 2) - stem - (it.kind === 'dots' ? 1.2 : 0.2) * it.sc : it.y + h / 2 > Math.max(it.bot, it.ay + h / 2) + (it.kind === 'dots' ? 1.2 : 0.2) * it.sc) return false; // prettier-ignore
     return FT.inside(it.x, it.y, Math.hypot(w, h) / 2);
   };
   // gaps: on a coarse grid inside the disc, the distance to the nearest ink or mark
@@ -494,6 +525,124 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     for (let a = 0; a < nI; a++) for (let b = a + 1; b < nI; b++) c += pairs[a * nI + b];
     return e + c + orderCost() + 8 * gapCost();
   };
+  // markLift: the vowels whose places are taken by ink are seated in the nearest free place, before the search and
+  // after it
+  const lifting = () => {
+    // the lines: the pieces whose baselines lie within three pens of a piece's own, and the rest of its word
+    const base = r.shapes.map((S, i) => {
+        const p = S.b.placed.find(isLetter);
+        return r.st[i].y + ((p && isLetter(p) && p.oy) || 0);
+      }),
+      masks = r.shapes.map((S, i) => {
+        const B = new Alpha(Wd, Hd);
+        S.b.strokes.forEach(
+          s =>
+          B.fill(toPixels(th.strokePolys({ ...s, s: s.s.map(q => ({ x: q.x + r.st[i].x, y: q.y + r.st[i].y, w: q.w })) }, 1.35), X, Y)), // prettier-ignore
+        );
+        return B.mask(60);
+      }),
+      lines = new Map<string, { top: number; bot: number; own: Float32Array; other: Float32Array }>(),
+      lineOf = (g: number) => {
+        const mine = r.groups.map((q, i) => q.word === r.groups[g].word || Math.abs(base[i] - base[g]) < 3 * nib),
+          id = mine.map(v => +v).join('');
+        let L = lines.get(id);
+        if (!L) {
+          const own = new Uint8Array(Wd * Hd),
+            other = new Uint8Array(Wd * Hd);
+          masks.forEach((m, i) => {
+            const to = mine[i] ? own : other;
+            for (let q = 0; q < m.length; q++) if (m[q]) to[q] = 1;
+          });
+          // the line's tallest and lowest ink, as drawn (a risen stem is taller than its letter's design)
+          const first = own.indexOf(1),
+            end = own.lastIndexOf(1),
+            top = first < 0 ? -Infinity : y1 - Math.floor(first / Wd) / K,
+            bot = first < 0 ? Infinity : y1 - Math.floor(end / Wd) / K;
+          lines.set(id, (L = { top, bot, own: chamfer(own), other: chamfer(other) }));
+        }
+        return L;
+      },
+      at = (d: Float32Array, x: number, y: number) => {
+        const ix = Math.round(X(x)),
+          iy = Math.round(Y(y));
+        return ix >= 0 && iy >= 0 && ix < Wd && iy < Hd ? d[iy * Wd + ix] / K : 1e6;
+      },
+      pad = 0.5 + 2 * clear,
+      gap = Math.max(0.4, clear),
+      wordOf = (it: Item) => r.groups[+it.key!.split(':')[0]].word,
+      onInk = (it: Item, by = pad) => inkHits(it.x, it.y, boxOf(it)[0] + by, boxOf(it)[1] + by) > 0;
+    /** The nearest free place for an item to where it stands, clear of the items in `set`; false when there is none
+     *  (the item is left where it was). */
+    const seat = (it: Item, set: Iterable<Item>): boolean => {
+      const was = { x: it.x, y: it.y, arr: it.arr },
+        L = lineOf(+it.key!.split(':')[0]),
+        word = wordOf(it),
+        fixed = [...set].filter(q => q !== it),
+        // the marks of the other letters of its word on its side: a mark does not stand past its neighbour's
+        others = it.kind === 'mark' ? fixed.filter(q => q.kind === 'mark' && q.side === it.side && q.key !== it.key && wordOf(q) === word && Math.abs(q.lx! - it.lx!) > it.sc) : [], // prettier-ignore
+        past = (x: number) => others.some(q => (q.lx! < it.lx! ? x < q.x - 0.5 * it.sc : x > q.x + 0.5 * it.sc)),
+        far = it.kind === 'mark' ? (it.lx1 - it.lx0) / 2 + boxOf(it)[0] / 2 + 2 * it.sc + Math.abs(was.x - (it.lx0 + it.lx1) / 2) : 1.4 * it.sc; // prettier-ignore
+      let best: { x: number; y: number; arr?: string } | null = null,
+        cost = Infinity;
+      for (const arr of it.kind === 'dots' ? it.arrs! : [it.arr]) {
+        it.arr = arr;
+        const [w, h] = boxOf(it),
+          // no further out than the tallest (lowest) ink of its line
+          lim = it.side > 0 ? L.top + h / 2 + 0.6 * it.sc : L.bot - h / 2 - 0.6 * it.sc,
+          rise = it.kind === 'mark' ? Math.max(Math.abs(lim - was.y), (it.top - it.bot) / 2 + 2 * it.sc) : 2.4 * it.sc;
+        for (let j = 0; j * 0.25 <= rise; j++)
+          for (const dy of j ? [j * 0.25, -j * 0.25] : [0])
+            for (let k = 0; k * 0.25 <= far; k++)
+              for (const dx of k ? [k * 0.25, -k * 0.25] : [0]) {
+                // (sideways counts double: a mark stays in its letter's column where it can)
+                const c = (2 * dx * dx + dy * dy) / (it.sc * it.sc) + (arr === was.arr ? 0 : 0.5);
+                if (c >= cost) continue;
+                it.x = was.x + dx;
+                it.y = was.y + dy;
+                if (it.side > 0 ? it.y > lim : it.y < lim) continue;
+                if (!allowed(it, true) || inkHits(it.x, it.y, w + pad, h + pad) > 0 || past(it.x)) continue;
+                if (fixed.some(q => Math.abs(it.x - q.x) < (w + boxOf(q)[0]) / 2 + gap && Math.abs(it.y - q.y) < (h + boxOf(q)[1]) / 2 + gap)) continue; // prettier-ignore
+                // nearer its own line's letters than another's
+                if (at(L.other, it.x, it.y) + 0.5 * nib < at(L.own, it.x, it.y)) continue;
+                best = { x: it.x, y: it.y, arr };
+                cost = c;
+              }
+      }
+      Object.assign(it, best ?? was);
+      return !!best;
+    };
+    return {
+      // before the search: each vowel whose place is taken by ink, in turn (a letter's shadda before its vowel)
+      first() {
+        // the items that stand where they will stay: the dots, the marks with room, and the marks seated so far
+        const set = new Set(items.filter(it => it.kind !== 'mark' || !onInk(it))),
+          lifted = new Map<string, Item>();
+        for (const it of items) {
+          if (it.kind !== 'mark') continue;
+          const was = { x: it.x, y: it.y, ax: it.ax, ay: it.ay },
+            under = lifted.get(it.key! + it.side);
+          if (!under && !onInk(it)) continue;
+          if (under) {
+            // over a mark of its letter that was lifted (the vowel over its shadda)
+            it.x = under.x;
+            it.y = under.y + it.side * (boxOf(under)[1] / 2 + boxOf(it)[1] / 2 + 0.25 * it.sc);
+          }
+          if (!seat(it, set)) {
+            Object.assign(it, was);
+            continue;
+          }
+          it.ax = it.x;
+          it.ay = it.y;
+          set.add(it);
+          lifted.set(it.key! + it.side, it);
+        }
+      },
+      // after it: whatever the search left on ink, vowel or dots, is seated again where it stands
+      last() {
+        for (const it of items) if (it.kind !== 'orn' && onInk(it, 0)) seat(it, items);
+      },
+    };
+  };
   // start from the plain positions, nudged into free space, then search
   const R = parkMiller(12345);
   items.forEach(v => {
@@ -510,6 +659,8 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       it.y = it.ay;
     }
   });
+  const lift = o.markLift ? lifting() : null;
+  lift?.first();
   let E = energy(),
     T = 6;
   const iters = o.markIters || 2500;
@@ -531,6 +682,7 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     else Object.assign(it, old);
     T = Math.max(0.02, T * Math.pow(0.02 / 6, 1 / iters));
   }
+  lift?.last();
   // ornaments in the largest gaps that remain, as many as the density asks for
   const fillers: { m: Ornament; x: number; y: number; w: number; h: number; sz: number }[] = [];
   if (o.ornaments) {
@@ -607,6 +759,26 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       const lo = it.fathaLen / 2 - run[1],
         hi = run[0] - it.fathaLen / 2,
         shift = lo <= hi ? Math.max(lo, Math.min(hi, 0)) : (run[0] - run[1]) / 2;
+      if (lift) {
+        // markLift: not where that would lay a fatha that had room on ink; and a fatha that would still run onto the
+        // letters (the short one is longer than the room a vowel is found) is drawn only as long as it stays clear
+        const hits = (x: number, y: number, len: number) => {
+          for (let s2 = -len / 2; s2 <= len / 2; s2 += 0.2) {
+            const gx = Math.round(X(x + dx * s2)),
+              gy = Math.round(Y(y + dy * s2));
+            if (gx >= 0 && gy >= 0 && gx < Wd && gy < Hd && dist[gy * Wd + gx] < 0.3 * nib * K) return true;
+          }
+          return false;
+        };
+        if (!(
+          inkHits(it.x, it.y, it.w!, it.h!) === 0 && inkHits(it.x + dx * shift, it.y + dy * shift, it.w!, it.h!) > 0
+        )) {
+          it.x += dx * shift;
+          it.y += dy * shift;
+        }
+        while (it.fathaLen > 1.5 * nib * it.sc && hits(it.x, it.y, it.fathaLen)) it.fathaLen -= 0.25 * nib;
+        return;
+      }
       it.x += dx * shift;
       it.y += dy * shift;
     });
