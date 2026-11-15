@@ -9,41 +9,24 @@
 //      and rises to the circle if it can reach it; lines slide and word spaces open to make bays
 //   c  as b, and uneven bays between the uprights cost more
 // `COLONNADE=1 COLONNADE_OUT=<dir> npx vitest run tests/char-stems-sheet.test.ts --maxWorkers=2` writes the sheet.
+// (Finding the stems, redrawing one taller and the ink on a grid are in tests/helpers/char-first.ts, with their
+// numbers; the crown and cradle shares them.)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { toPNG } from '../scripts/raster.mjs';
-import { ROUNDEL_PEN, thuluth } from '../src/script/thuluth';
-import { CHOSEN } from '../src/script/thuluth/alts';
 import type { Built } from '../src/script/thuluth/engine';
-import { isLetter } from '../src/script/thuluth/engine';
 import { cleanOutline } from '../src/script/thuluth/outline';
 import { Alpha, toPixels } from '../src/script/thuluth/raster';
-import { allahSpan } from '../src/script/thuluth/shape';
-import type { Poly, Sample, Stroke } from '../src/script/thuluth/types';
+import type { Poly, Stroke } from '../src/script/thuluth/types';
+import type { Cols, Profile, Pt, Stem } from './helpers/char-first';
+import { CAP, CELL, NIB, TEXTS, colsOf, findStems, hull, need, profile, raise, room, settle, th } from './helpers/char-first'; // prettier-ignore
 
-const th = thuluth({ ...ROUNDEL_PEN, alts: CHOSEN, pieceGap: 0.45, wordSpace: 1.4 });
-const NIB = th.style.nib,
-  TEXTS: [string, string][] = [
-    ['names', 'محمد علي'],
-    ['basmala', 'بسم الله الرحمن الرحيم'],
-    ['salawat', 'اللهم صل على محمد وآل محمد'],
-    ['ikhlas', 'قل هو الله أحد الله الصمد لم يلد ولم يولد ولم يكن له كفوا أحد'],
-  ];
-
-// ---- every number of the rule, in one place (pen units unless it says nibs) ----
+// ---- the numbers of the composition (pen units unless it says nibs) ----
 const MARGIN = 0.9 * NIB, // between the ink and the circle
   CLEAR = 0.3 * NIB, // between two separate inks
-  LINE_SPACE = 0.55 * NIB, // between the inks of neighbouring lines (baselines-first)
-  CELL = 0.2, // the grid the ink is measured on
-  STEM_RUN = 4.5, // a stem is a near-upright run of a stroke at least this long...
-  STEM_TOP = 6, // ...whose top stands at least this far above its line
-  UPRIGHT = 0.2, // near-upright: no more than this much sideways for each unit of rise
-  SPLIT = 3, // a stem is never cut lower than this above its line: the body of the letters is below
-  FULL = 0.985, // the shaft is where the pen has this share of its full weight
   MIN_RISE = 0.15, // a stem of a lower line rises by at least this share of its height, or not at all
   MAX_SLIDE = 1.5 * NIB, // a line below the top one is slid from the middle by no more than this
-  CAP = 3, // a stem is drawn no taller than this many times its height as written
   WANT = 1.7, // the uprights of the top line stand, at the median, this many times their height as written
   STEM_HALF = 0.75, // half the width a shaft takes on its way up
   HEAD_RIGHT = 0.9, // how much further the head's serif reaches to the right
@@ -57,103 +40,6 @@ const MARGIN = 0.9 * NIB, // between the ink and the circle
   VOID = 0.6, // what an empty band under the writing costs (its share of the circle's height)
   UNEVEN = 0.3; // (variant c) what uneven bays cost
 
-// ---- 1. finding the stems, and 2. redrawing one taller ----
-interface Stem {
-  /** The stroke, and the last sample of its head side: samples 0..cut rise (a stem is written from its top). */
-  si: number;
-  cut: number;
-  /** The word it belongs to, and whether that word is the name of God (whose stems rise together). */
-  wi: number;
-  name: boolean;
-  /** Where the shaft stands at the split, its direction there (sideways for each unit of rise), and its line. */
-  x: number;
-  y: number;
-  lean: number;
-  base: number;
-  /** The top of its ink as written, above its line. */
-  top: number;
-  /** Other strokes that ride with its head: marks above it (the shadda of the name) and strokes of its own letter
-   *  that lie wholly above the split (the shoulder of a kaf). */
-  riders: number[];
-}
-/** The tall stems of a written line, by their geometry: a run of a letter's stroke, near upright, at least STEM_RUN
- *  long, whose top is at least STEM_TOP above the line. The split is the lowest point of the run where the pen still
- *  has its full weight, and never lower than SPLIT. */
-function findStems(b: Built, text: string): Stem[] {
-  const words = text.trim().split(/\s+/),
-    letters = b.placed.filter(isLetter),
-    out: Stem[] = [];
-  b.strokes.forEach((st, si) => {
-    if (!st.own || st.nib) return;
-    const s = st.s;
-    // the longest near-upright run, written downwards
-    let best: [number, number] | null = null;
-    for (let i = 0; i + 1 < s.length;) {
-      let j = i;
-      // (a spline may waver by a hair where two of its points stand close: that does not end a run)
-      while (j + 1 < s.length && s[j].y - s[j + 1].y > -0.02 && Math.abs(s[j + 1].x - s[j].x) <= UPRIGHT * Math.abs(s[j].y - s[j + 1].y) + 0.02) j++; // prettier-ignore
-      if (j > i && (!best || s[i].y - s[j].y > s[best[0]].y - s[best[1]].y)) best = [i, j];
-      i = Math.max(j, i + 1);
-    }
-    if (!best) return;
-    const [i0, i1] = best,
-      li = st.own[Math.min(i0 + 1, st.own.length - 1)],
-      letter = letters.find(p => p.wi === st.wi && p.li === li),
-      base = letter?.oy ?? 0;
-    if (s[i0].y - s[i1].y < STEM_RUN || s[i0].y - base < STEM_TOP) return;
-    let wmax = 0;
-    for (let i = i0; i <= i1; i++) wmax = Math.max(wmax, s[i].w);
-    let cut = -1;
-    for (let i = i0 + 2; i < i1; i++) if (s[i].w >= FULL * Math.min(1, wmax) && s[i].y >= base + SPLIT) cut = i;
-    if (cut < 0) return;
-    const k = Math.max(i0, cut - 4),
-      top =
-        Math.max(
-          ...th
-            .strokePolys(st)
-            .flat()
-            .map(p => p[1]),
-        ) - base;
-    out.push({ si, cut, wi: st.wi ?? 0, name: !!allahSpan(words[st.wi ?? 0] ?? ''), x: s[cut].x, y: s[cut].y, lean: (s[k].x - s[cut].x) / (s[k].y - s[cut].y), base, top, riders: [] }); // prettier-ignore
-  });
-  // what rides with a head: a mark over it, or another stroke of its letter that lies wholly above the split
-  b.strokes.forEach((st, si) => {
-    if (out.some(m => m.si === si)) return;
-    const ys = st.s.map(q => q.y),
-      xm = st.s.reduce((t, q) => t + q.x, 0) / st.s.length,
-      lo = Math.min(...ys);
-    let near: Stem | null = null;
-    for (const m of out) {
-      const dx = Math.abs(xm - (m.x + m.lean * (lo - m.y)));
-      if (lo < m.y || dx > (st.nib ? 1.6 : 2.6)) continue;
-      // (a letter's own stroke: of the same word, and joined to the stem's top)
-      if (!st.nib && (st.wi !== m.wi || lo < m.base + m.top - 2.5)) continue;
-      if (!near || dx < Math.abs(xm - near.x)) near = m;
-    }
-    near?.riders.push(si);
-  });
-  return out.sort((p, q) => q.x - p.x);
-}
-/** A line's strokes with some stems redrawn taller: `extra[k]` is added to the height of stem k. Everything on the
- *  head side of the split moves up along the stem's own direction, whole; the shaft between is drawn straight, with
- *  samples along it. */
-function raise(b: Built, stems: readonly Stem[], extra: readonly number[]): Stroke[] {
-  const out = b.strokes.slice();
-  stems.forEach((m, k) => {
-    const e = extra[k];
-    if (!(e > 0)) return;
-    const st = b.strokes[m.si],
-      up = (q: Sample): Sample => ({ ...q, x: q.x + m.lean * e, y: q.y + e }),
-      a = up(st.s[m.cut]),
-      z = st.s[m.cut + 1],
-      n = Math.ceil(e / 0.8),
-      shaft: Sample[] = [];
-    for (let i = 1; i < n; i++) shaft.push({ x: a.x + ((z.x - a.x) * i) / n, y: a.y + ((z.y - a.y) * i) / n, w: a.w + ((z.w - a.w) * i) / n }); // prettier-ignore
-    out[m.si] = { ...st, s: [...st.s.slice(0, m.cut + 1).map(up), ...shaft, ...st.s.slice(m.cut + 1)], own: undefined };
-    for (const r of m.riders) out[r] = { ...b.strokes[r], s: b.strokes[r].s.map(up), own: undefined };
-  });
-  return out;
-}
 const inkOf = (strokes: readonly Stroke[], b: Built, fat = 1): Poly[] => [
   ...strokes.flatMap(s => th.strokePolys(s, fat)),
   ...b.dots.flatMap(([x, y]) => th.dotPolysAt(x, y, fat)),
@@ -175,47 +61,6 @@ function specimen(polys: readonly Poly[], width = 700) {
 }
 
 // ---- a stretch of the text written as one line, and what the composer needs of it ----
-type Pt = [number, number];
-/** The convex hull of some points (Andrew's chain). */
-function hull(pts: readonly Pt[]): Pt[] {
-  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]),
-    cross = (o: Pt, a: Pt, b: Pt) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]),
-    half = (list: Pt[]) => {
-      const h: Pt[] = [];
-      for (const q of list) {
-        while (h.length >= 2 && cross(h[h.length - 2], h[h.length - 1], q) <= 0) h.pop();
-        h.push(q);
-      }
-      h.pop();
-      return h;
-    };
-  return p.length < 3 ? p : [...half(p), ...half(p.reverse())];
-}
-/** Some ink on the grid: for each column from c0 its lowest and highest inked row (lo > hi where there is none). */
-interface Cols {
-  c0: number;
-  lo: Int16Array;
-  hi: Int16Array;
-}
-function colsOf(polys: readonly Poly[]): Cols {
-  const pts = polys.flat(),
-    c0 = Math.floor(Math.min(...pts.map(p => p[0])) / CELL) - 1,
-    r0 = Math.floor(Math.min(...pts.map(p => p[1])) / CELL) - 1,
-    W = Math.ceil(Math.max(...pts.map(p => p[0])) / CELL) + 1 - c0,
-    H = Math.ceil(Math.max(...pts.map(p => p[1])) / CELL) + 1 - r0,
-    A = new Alpha(W, H),
-    lo = new Int16Array(W).fill(32767),
-    hi = new Int16Array(W).fill(-32768);
-  A.fill(toPixels(polys, x => x / CELL - c0, y => H - (y / CELL - r0))); // prettier-ignore
-  for (let py = 0; py < H; py++)
-    for (let px = 0; px < W; px++)
-      if (A.a[py * W + px] > 100) {
-        const r = r0 + H - 1 - py;
-        if (r < lo[px]) lo[px] = r;
-        if (r > hi[px]) hi[px] = r;
-      }
-  return { c0, lo, hi };
-}
 interface Span {
   b: Built;
   stems: Stem[];
@@ -320,59 +165,6 @@ function offsets(cfg: Cfg): number[][] {
     let G = 0;
     return cfg.gaps[i].map(g => shift - (G += g));
   });
-}
-type Profile = Map<number, [number, number]>;
-/** Some inks on the grid as one, each where it stands. */
-function profile(parts: readonly (readonly [Cols, number])[]): Profile {
-  const m: Profile = new Map();
-  for (const [c, at] of parts) {
-    const d = Math.round(at / CELL) + c.c0;
-    for (let i = 0; i < c.lo.length; i++) {
-      if (c.hi[i] < c.lo[i]) continue;
-      const e = m.get(i + d);
-      if (!e) m.set(i + d, [c.lo[i], c.hi[i]]);
-      else {
-        e[0] = Math.min(e[0], c.lo[i]);
-        e[1] = Math.max(e[1], c.hi[i]);
-      }
-    }
-  }
-  return m;
-}
-/** The least pitch at which a line and the one under it keep LINE_SPACE of ink (baselines-first, step 2). */
-function need(A: Profile, B: Profile): number {
-  const reach = Math.ceil(LINE_SPACE / CELL);
-  let p = 0;
-  for (const [c, [, top]] of B)
-    for (let d = -reach; d <= reach; d++) {
-      const a = A.get(c + d);
-      if (a) p = Math.max(p, top - a[0] + 1 + Math.ceil(Math.sqrt(reach * reach - d * d)));
-    }
-  return p * CELL;
-}
-/** How much taller a stem can be drawn before what rises of it meets the circle (-1: it is outside as written). */
-function room(head: readonly Pt[], dx: number, dy: number, lean: number, Rin: number): number {
-  let e = Infinity;
-  for (const p of head) {
-    const x = p[0] + dx,
-      y = p[1] + dy,
-      a = lean * lean + 1,
-      b = x * lean + y,
-      c = x * x + y * y - Rin * Rin;
-    if (c > 0) return -1;
-    e = Math.min(e, (-b + Math.sqrt(b * b - a * c)) / a);
-  }
-  return e;
-}
-/** 3. Where the stems of a line stop: each at the circle, none taller than CAP times its height as written; and the
- *  stems of the name of God by one factor, the least of theirs, so that its lams keep their proportion to its alif. */
-function settle(stems: readonly Stem[], free: readonly number[]): number[] {
-  const e = stems.map((m, k) => Math.max(0, Math.min(free[k], (CAP - 1) * m.top)));
-  return stems.map((m, k) =>
-    m.name
-      ? (Math.min(...stems.map((o, j) => (o.name && o.wi === m.wi ? 1 + e[j] / o.top : Infinity))) - 1) * m.top
-      : e[k],
-  );
 }
 const median = (v: number[]) => v.slice().sort((p, q) => p - q)[Math.floor((v.length - 1) / 2)];
 const NONE: ReadonlySet<string> = new Set<string>();
