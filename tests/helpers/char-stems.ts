@@ -44,7 +44,6 @@
 //       With `uprights` the whole tier is so sheared about its line (the short uprights lean too); without, only
 //       the ribs, each about its foot.
 // Nothing here names a text or a word.
-import './char-pure';
 import { isLetter } from '../../src/script/thuluth';
 import type { Built } from '../../src/script/thuluth/engine';
 import { cleanOutline } from '../../src/script/thuluth/outline';
