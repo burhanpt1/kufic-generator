@@ -124,7 +124,7 @@ describe('fill from the bottom', () => {
         }
         sheet('stems', rows, caps);
       }
-      const pair = (id: string, text: string, mark: string) => {
+      const pair = (id: string, text: string, mark: string, o: RimOptions = {}) => {
         const now: Drawn | null =
           (() => {
             try {
@@ -135,7 +135,7 @@ describe('fill from the bottom', () => {
           })() ?? cradleCompose(text, { cradle: false });
         const said: string[] = [],
           t0 = Date.now(),
-          l = rim(text, {}, said);
+          l = rim(text, o, said);
         tell(`${id}${mark} ${text} (${((Date.now() - t0) / 1000).toFixed(0)} s)`, l, said);
         if (now)
           facts.push(`      as it stands: radius ${nibs(now.R)} nibs, ${pct(emptyShare(now.polys, now.R))} empty`);
@@ -164,7 +164,9 @@ describe('fill from the bottom', () => {
         sheet(sets.length === 2 ? 'pairs' : `pairs-${sets.join('-')}`, rows, caps, 420);
       }
       if (parts.includes('ikhlas')) {
-        const p = pair('ikhlas', textOf('ikhlas'), ' [comparison only]');
+        // (every split of fifteen words takes hours: RIM_IKHLAS=5,5,5 gives the tiers, from the bottom up)
+        const tiers = process.env.RIM_IKHLAS?.split(',').map(Number),
+          p = pair('ikhlas', textOf('ikhlas'), ' [comparison only]', tiers ? { tiers } : {});
         sheet('ikhlas-compare', [p.row], [p.caps], 700);
       }
       writeFileSync(join(out, `facts-${parts.join('-')}-${sets.join('-')}.txt`), facts.join('\n') + '\n');
