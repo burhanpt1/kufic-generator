@@ -33,36 +33,58 @@ What is already done is listed at the end only as milestones; the commit history
      pair whose sides are both scattered says nothing about the option. Towers changed nothing in two of its four
      pairs, which were dropped.
    - **Who does what:** I sweep and publish the round; you vote. The loop is in `tests/ratings/README.md`.
-2. **[!] Round 3 (15 November): 18 of 31 pairs "both poor"; no option decided.** The spacing options and the
+2. **[~] Letters first: a new basis for roundels (owner, 15 November).** Round 3 showed the composer that drops
+   words into a circle and scores the result is the wrong foundation; ten outside attempts at placing whole words
+   all came to level lines, which is typesetting. The principle, in the owner's words: _letter placement and
+   embellishment is the founding principle, and then text forms as a consequence of letters. This leads to the
+   classical embellishments of stacking and nesting in bowls._
+   - **What has held up** (experiments, `tests/char-*-sheet.test.ts`, each an env-gated sheet):
+     - **The cradle:** one letter's bowl redrawn as a great sweep along the lower rim, the words after it inside.
+     - **The ground line:** stem-bearing words on one low line, their stems redrawn to rise to the rim, the other
+       words in the bays between them.
+     - **The canopy:** an opening stroke led along the upper rim into the first letter (the owner's choice for the
+       basmala: the arc into the ب; a word bent to fit the rim, with no letter leading it, was rejected).
+     - Under trial: nested arcs (a sub-canopy and sub-cradle on circles concentric with the rim); stems curved as
+       meridians (each keeps its share of the circle's width as it rises), with serifs mirrored left of the axis.
+   - **Each stroke has its place on the circle:** where the rim runs the way the pen is already going. Measured on
+     the chosen letters: openings of ب ي س at the top right; heads of stems rising up the right side; the roof of ح
+     and the head of ع at the top left; tails of ر ز و م and the foot of د at the lower right; bowls of ن ي ل ق س ص
+     along the bottom and up the left; returning bowls (ح ع) at the lower left.
+   - **Decisions (owner, 15 November):** beauty first, so long as someone who knows the text can follow it; the
+     name of God is treated like other words (its stems may curve, fan and carry arcs); long texts stay in one
+     roundel, at smaller writing; vowels come later, once the letters are settled.
+   - **Not yet:** nothing here is in `src/`; a text of fifteen words has no arrangement; rules are tuned on four
+     texts and must be tried on the wider set in `tests/helpers/char-texts.ts`.
+3. **[!] Round 3 (15 November): 18 of 31 pairs "both poor"; no option decided.** The spacing options and the
    drafted letters were rated as on/off pairs (`tests/ratings/rounds/2026-11-15`, voted on
    https://claude.ai/artifact/3xqoZGMAQc4BVbtqKwsAPe). Decided pairs split 7 on, 6 off; the critic called 7 of 13.
    None of its features separates the 36 roundels set aside from the 13 chosen. So the options are not what is
    holding the roundels back: the swept roundel itself is. Next: find out from the owner what makes a pair "both
    poor" (the arrangement, the letters, the marks, the ornaments, the sampled recipe), and rate the options again on
    bases the owner accepts. Votes held (`votes.held.json`), not refitted.
-3. **[~] Legibility first: one basmala roundel set by hand until it reads, then its rules.** An outside judge could
+4. **[~] Legibility first: one basmala roundel set by hand until it reads, then its rules.** An outside judge could
    read none of round 2's dense roundels (30 October): some letters were clear, the order was not. The owner's plan:
    - pin one basmala by hand on the tuning page, first on a straight line, then in a circle (owner, 31 October) (https://claude.ai/artifact/Nq3Ynm7NjHrfdKrkeRrKz7,
      `demos/tune.html`), until it is right;
    - reverse-engineer it: measure its word spacing, line steps, stacking and marks, and turn them into a reading check
      that every roundel must pass before taste scores it;
    - then train the critic on legibility as well as taste, and refit with round 2's held votes.
-4. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
+5. **[ ] A thuluth inscription band that reads strictly right to left.** Long bands such as Ayat al-Kursi still tangle
    their reading order (lab HANDOVER §11). The lab's `bandCompose` (`refresh/lab/band.js`) is the proposed basis
    (refresh/HANDOVER.md, addendum 2). This is also the first step towards tughra-style thuluth (see Thuluth
    composition).
-5. **[ ] Roundel composition in the worker, with a time cap.** A roundel takes 20–60 s (lab HANDOVER §6). The roundel
+6. **[ ] Roundel composition in the worker, with a time cap.** A roundel takes 20–60 s (lab HANDOVER §6). The roundel
    tests take 30–70 s each, and CI went from about 2 to 6½ minutes with them (run 172).
-6. **[ ] The inscription ring and illumination from the lab's `ring.js`:** rays, panel and Iznik panel round a
+7. **[ ] The inscription ring and illumination from the lab's `ring.js`:** rays, panel and Iznik panel round a
    roundel. They are not ported; the roundel renderer says so (`src/script/thuluth/roundel/render.ts:1`).
-7. **[~] Finish the istif write-up** (`docs/writeup/thuluth-istif.md`):
+8. **[~] Finish the istif write-up** (`docs/writeup/thuluth-istif.md`):
    - rebuild its showpieces on the finished engine;
    - report the critic's accuracy on the second rating round;
    - compare against masters' istif with the same critic.
 
    Candidate venues: Bridges, Nexus Network Journal, the Eurographics expressive track.
 
-8. **[ ] Housekeeping:**
+9. **[ ] Housekeeping:**
    - (none open)
 
 ---
