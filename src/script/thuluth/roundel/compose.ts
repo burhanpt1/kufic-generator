@@ -157,19 +157,22 @@ export interface Roundel {
 /** Where a group's reading starts: the right edge of its first letter, and that letter's baseline, in the group's own
  *  coordinates. Reading order is judged from these, not from boxes: a tall stem or a long tail makes a word's box
  *  reach far from where the eye starts reading it. */
-const HEADS = new WeakMap<GroupShape, { x: number; y: number }>();
+// (kept for each shape with what it was read from: a shape is redrawn in place when its group is scaled, bowl.ts
+// scaleGroup, and what was kept before that is then not its head)
+const HEADS = new WeakMap<GroupShape, { head: { x: number; y: number }; g: unknown; ox: number; oy: number; sc: number; x1: number }>(); // prettier-ignore
 export function headOf(S: GroupShape): { x: number; y: number } {
+  const p = S.b.placed.find(isLetter),
+    ox = p?.ox ?? 0,
+    oy = p?.oy || 0,
+    sc = p?.sc ?? 1;
   let h = HEADS.get(S);
-  if (!h) {
-    const p = S.b.placed.find(isLetter);
-    if (!p || !isLetter(p)) h = { x: S.x1, y: 0 };
-    else {
-      const sc = p.sc ?? 1;
-      h = { x: p.ox + Math.max(...p.g.s.flatMap(st => st.pts.map(q => q[0] * sc))), y: p.oy || 0 };
-    }
-    HEADS.set(S, h);
+  if (!h || h.g !== p?.g || h.ox !== ox || h.oy !== oy || h.sc !== sc || h.x1 !== S.x1) {
+    const head = p
+      ? { x: ox + Math.max(...p.g.s.flatMap(st => st.pts.map(q => q[0] * sc))), y: oy }
+      : { x: S.x1, y: 0 };
+    HEADS.set(S, (h = { head, g: p?.g, ox, oy, sc, x1: S.x1 }));
   }
-  return h;
+  return h.head;
 }
 
 /** Reading order of stacked pieces: a piece lifted above the one before it must stay in its own word's line, not land
