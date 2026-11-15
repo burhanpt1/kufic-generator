@@ -11,9 +11,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { toPNG } from '../scripts/raster.mjs';
-import { MARGIN, NIB, cradleCompose, svgOf } from './helpers/char-first';
+import { MARGIN, NIB, cradleCompose, svgOf, th } from './helpers/char-first';
+import { pureLine } from './helpers/char-pure';
 import type { Canopied } from './helpers/char-roundel';
-import { arrange, carriers, labelled, nested, plain } from './helpers/char-roundel';
+import { arrange, carriers, cradleWide, labelled, modesWide, nested, plain } from './helpers/char-roundel';
 import { ALL_TEXTS, TUNED, UNSEEN } from './helpers/char-texts';
 
 // ---- the six set aside (before any rule was changed) ----
@@ -53,7 +54,7 @@ const inside = (l: Drawn) => Math.max(...l.polys.flat().map(([x, y]) => Math.hyp
 function describeIt(l: Canopied, said: string[]): { facts: string[]; cap: string[] } {
   const f = l.factors.slice().sort((p, q) => p - q),
     names = ['canopy', 'sub-canopy', 'cradle', 'sub-cradle'] as const,
-    arcs = names.map(n => `${n}: ${l.arcs.filter(a => a.name === n).map(a => `${a.what} (${Math.abs(a.from - a.to).toFixed(0)} degrees)`).join(' + ') || 'none'}`); // prettier-ignore
+    arcs = names.map(n => `${n}: ${l.arcs.filter(a => a.name === n).map(a => `${a.what} (${Math.abs(a.from - a.to).toFixed(0)} degrees: ${a.from.toFixed(0)} to ${a.to.toFixed(0)})`).join(' + ') || 'none'}`); // prettier-ignore
   return {
     facts: [
       `radius ${nibs(l.R)} nibs; lines: ${l.lines.join(' / ')}`,
@@ -101,7 +102,41 @@ describe('the rules on the wider set of texts', () => {
   it('names the letters that carry the arcs of every text, without drawing', () => {
     const all = ALL_TEXTS.map(([id, t]) => `${id}: ${carriers(t)}`);
     expect(all).toHaveLength(22);
-    expect(all.every(v => v.length > 0)).toBe(true);
+    expect(all.every(v => /canopy: .+; cradle: .+; sub-cradle: .+/.test(v))).toBe(true);
+    // the tuned texts keep their letters; the basmala's canopy is the arc led into the ba (owner, 15 November)
+    expect(all.slice(0, 4)).toEqual([
+      'names: canopy: an entry into the م of محمد; cradle: the ي of علي; sub-cradle: none',
+      'basmala: canopy: an entry into the ب of بسم; cradle: the ن of الرحمن; sub-cradle: the م of الرحيم',
+      'salawat: canopy: a stem of اللهم; cradle: the ى of على; sub-cradle: the ل of وآل',
+      'ikhlas: canopy: a stem of قل; cradle: the ن of يكن; sub-cradle: the د of أحد',
+    ]);
+  });
+  it('forces no arc: no word is drawn out, no entry into a tail, no tail returns', () => {
+    for (const [, t] of ALL_TEXTS) expect(modesWide(t.split(' ')[0])).not.toContain('kashida');
+    // a ra, a zay and a waw take no entry; a word with a stem cannot hang from the rim
+    expect(modesWide('رب')).toEqual([null]);
+    expect(modesWide('زينب')).toEqual([null]);
+    expect(modesWide('وما')).toEqual(['stem', null]);
+    expect(modesWide('سبحان')).toEqual(['stem', null]);
+    expect(modesWide('بسم')).toEqual(['entry', null]);
+    // (nor a nun: the arc would swallow its dot)
+    expect(modesWide('نور')).toEqual([null]);
+    // (a roof that starts up and to the right, as this hand's hah does, takes no entry from the right)
+    expect(modesWide('حسين')).toEqual([null]);
+    // a tail runs forth from the last word, and only where there is no bowl
+    expect(cradleWide('نور')).toMatchObject({ cr: { wi: 0, c: 'ر' }, forth: true });
+    expect(cradleWide('نور على نور')).toMatchObject({ cr: { wi: 1, c: 'ى' } });
+    expect(cradleWide('نور على نور').forth).toBeUndefined();
+    // a bowl that returns of itself is a cradle; no bowl and no tail: none
+    expect(cradleWide('الصبر مفتاح الفرج')).toMatchObject({ cr: { wi: 2, c: 'ج' } });
+    expect(cradleWide('الحمد لله').cr).toBeNull();
+    expect(cradleWide('لا إله إلا الله').cr).toBeNull();
+  });
+  it('writes a line the same whatever was written before it', () => {
+    const sig = (t: string) => JSON.stringify(th.buildStrokes(t, {}).strokes.map(k => k.s.map(q => [q.x, q.y]))),
+      alone = JSON.stringify(pureLine('على محمد', {}).strokes.map(k => k.s.map(q => [q.x, q.y])));
+    for (const [, t] of ALL_TEXTS) sig(t);
+    expect(sig('على محمد')).toBe(alone);
   });
   it.runIf(!!process.env.WIDE)(
     'writes the sheets',
