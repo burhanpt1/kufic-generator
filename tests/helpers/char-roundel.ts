@@ -1279,10 +1279,63 @@ export function modeOf(word: string): Mode {
 // end of the top line, and its stroke (rule 5) is drawn out from there; the next stem to its left on the top line is
 // bowed over on the next circle in. The sub-cradle letter must end a line in the bowl. Each arc is shortened until
 // it is CLEAR of the writing.
+// ---- nesting in bowls (N1 to N4), on level lines ----
+// N1. Every line but the first that ends in a bowl letter (NEST_BOWL), above the cradle's line (or above the last
+//     line, where there is no cradle), has that bowl drawn out as a cradle round all the lines after it: the last
+//     NEST_MAX such lines at most.
+// N2. The bowls are concentric with the rim: the earliest in the text on the rim's own circle, each later one STEPIN
+//     further in, the cradle itself innermost; the bottom line keeps clear of the innermost.
+// N3. Each ends SUB_BACK further up the right side than the one inside it: the tips step back inwards.
+// N4. Only if every bowl is CLEAR of all the writing and the circle grows no more than GROW_MAX; else none.
+// Reading: unchanged, the lines from the top down; a bowl closes its line and holds what follows.
+const NESTING = !process.env.WIDE_NONEST,
+  NEST_BOWL = 'نيىلقسشصضجحخعغ',
+  NEST_MAX = 2;
+type Leveled = NonNullable<ReturnType<typeof cradleCompose>>;
+/** N1: the lines whose last letter's bowl is drawn out round the lines after them. */
+function nestLines(l: Leveled): number[] {
+  const end = l.cradle ? l.lines.length - 1 - l.inside : l.lines.length - 1,
+    out: number[] = [];
+  for (let li = 1; li < end; li++) if (NEST_BOWL.includes(finalOf(l.lines[li].split(' ').pop() ?? ''))) out.push(li);
+  return out.slice(-NEST_MAX);
+}
+/** N2 to N4: the nested bowls of an arrangement on level lines, outermost first (null: they do not stand). */
+function nestedBowls(l: Leveled): { li: number; q: Placed; b: Bowl; inset: number }[] | null {
+  const idx = [...nestLines(l), ...(l.cradle ? [l.lines.length - 1 - l.inside] : [])],
+    N = idx.length,
+    made: { li: number; q: Placed; b: Bowl; inset: number }[] = [];
+  let E: number | null = null;
+  for (let j = N - 1; j >= 0; j--) {
+    const li = idx[j],
+      taken = lineOf(l.lines[li], true),
+      q: Placed = { l: taken, off: centred(lineOf(l.lines[li])), dy: l.hs[li], extra: taken.stems.map(() => 0) },
+      end = E,
+      b = bowlOf(q, l.R, null, NECK, j * STEPIN, end == null ? undefined : () => Math.max(-SPAN_MAX, end - (N - 1 - j) * SUB_BACK)); // prettier-ignore
+    if (!b) return null;
+    E ??= b.phiEnd;
+    made.unshift({ li, q, b, inset: j * STEPIN });
+  }
+  const top = lineOf(l.lines[0]),
+    inks = l.lines.map((_, i) => {
+      const m = made.find(v => v.li === i);
+      return m ? inkAt(m.q) : i ? l.pieces[i] : inkAt({ l: top, off: centred(top), dy: l.hs[0], extra: top.stems.map(() => 0) }); // prettier-ignore
+    });
+  if (nearPairs([...inks, ...made.map(m => m.b.loose)], l.R, CLEAR).some(pr => pr[0] >= inks.length || pr[1] >= inks.length)) return null; // prettier-ignore
+  if (Math.max(...made.flatMap(m => m.b.ink.flat()).map(([x, y]) => Math.hypot(x, y))) > l.R - MARGIN + 0.02)
+    return null;
+  return made;
+}
 export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }): Canopied | null {
   const o = { cradle: wide ? wide.cradle : undefined, roof: FLOOR + CLEAR + 0.3 + (nest.canopy ? STEPIN : 0), floor: nest.cradle ? STEPIN : 0 }, // prettier-ignore
-    l = wide ? wideBowls(() => cradleCompose(text, o)) : cradleCompose(text, o);
-  if (!l || (!wide && (l.lines.length < 2 || !l.cradle))) return null;
+    compose = (floor: number) => wide ? wideBowls(() => cradleCompose(text, { ...o, floor })) : cradleCompose(text, o); // prettier-ignore
+  const l0 = compose(o.floor);
+  if (!l0 || (!wide && (l0.lines.length < 2 || !l0.cradle))) return null;
+  // (N4: the nested bowls, if they stand in a circle not much larger)
+  const n0 = wide && NESTING ? nestLines(l0).length : 0,
+    l2 = n0 ? compose(o.floor + n0 * STEPIN) : null,
+    nest2 = l2 && l2.R <= l0.R * GROW_MAX && nestLines(l2).length === n0 ? nestedBowls(l2) : null,
+    l = l2 && nest2 ? l2 : l0,
+    nestB = nest2 ?? [];
   const words = text.split(' '),
     line = lineOf(l.lines[0]),
     R = l.R,
@@ -1298,6 +1351,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     stem = !roofed && k >= 0 && (!entry || lead),
     rest = l.pieces.slice(1),
     arcs: Arc[] = [],
+    nestIn = nestB.length && l.cradle ? nestB.length - 1 : 0, // how many circles in the cradle itself is
     line0 = { tip: TIP, subs: [] as { k: number; r: number; tip: number; run: number }[], note: '' },
     /** Without a canopy (any text): the level lines and what arcs there are; the top line's stems rise (W6). */
     bare = (roof: Roof | null, roofs: Poly[][]): Canopied => {
@@ -1343,6 +1397,11 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         arcs,
       };
     };
+  for (const m of nestB) {
+    rest[m.li - 1] = cleanOutline([...inkAt(m.q), ...m.b.ink]);
+    const w = l.lines[m.li].split(' ').pop() ?? '';
+    arcs.push({ name: 'cradle', what: `the final ${finalOf(w)} of ${w}${nestB.length > 1 ? `, nested on circle ${Math.round(m.inset / STEPIN) + 1} of ${nestB.length}` : ''}`, r: rho - m.inset, from: m.b.phi0 * DEG, to: m.b.phiEnd * DEG }); // prettier-ignore
+  }
   if (!stem && !entry && !roofed) return wide && !nest.canopy ? bare(null, []) : null;
   // ---- the sub-cradle ----
   let bowl2: Bowl | null = null;
@@ -1356,9 +1415,9 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     const whole = lineOf(l.lines[li]),
       taken = lineOf(l.lines[li], true),
       q: Placed = { l: taken, off: centred(whole), dy: l.hs[li], extra: taken.stems.map(() => 0) },
-      others = [inkAt(q), ...l.pieces.filter((_, i) => i !== li)];
+      others = [inkAt(q), ...[l.pieces[0], ...rest].filter((_, i) => i !== li)];
     for (let share = SUB_SHARE; share > 0.2 && !bowl2; share -= 0.08) {
-      const b = bowlOf(q, R, null, NECK, STEPIN, phi0 => Math.max(phi0 - share * (l.ends[0] - l.ends[1]), l.ends[1] + SUB_BACK)); // prettier-ignore
+      const b = bowlOf(q, R, null, NECK, (nestIn + 1) * STEPIN, phi0 => Math.max(phi0 - share * (l.ends[0] - l.ends[1]), l.ends[1] + SUB_BACK)); // prettier-ignore
       if (b && !nearPairs([...others, b.loose], R, CLEAR).some(pr => pr.includes(others.length))) bowl2 = b;
     }
     if (!bowl2) return null;
@@ -1366,7 +1425,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     arcs.push({ name: 'sub-cradle', what: `the final ${sub.c} of ${words[sub.wi]}`, r: rho - STEPIN, from: bowl2.phi0 * DEG, to: bowl2.phiEnd * DEG }); // prettier-ignore
   }
   // ---- a tail running forth from the last line (any text, W3), shortened until it is CLEAR of the writing ----
-  if (wide && !l.cradle && l.lines.length > 1 && TAILS.includes(finalOf(words[words.length - 1]))) {
+  if (wide && !l.cradle && !nestB.length && l.lines.length > 1 && TAILS.includes(finalOf(words[words.length - 1]))) {
     const li = l.lines.length - 1,
       whole = lineOf(l.lines[li]),
       taken = lineOf(l.lines[li], true),
@@ -1387,7 +1446,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
       break;
     }
   }
-  if (l.cradle) arcs.unshift({ name: 'cradle', what: `the final ${l.cradle.c} of ${words[l.cradle.wi]}`, r: rho, from: l.ends[0] * DEG, to: l.ends[1] * DEG }); // prettier-ignore
+  if (l.cradle && !nestB.length) arcs.unshift({ name: 'cradle', what: `the final ${l.cradle.c} of ${words[l.cradle.wi]}`, r: rho, from: l.ends[0] * DEG, to: l.ends[1] * DEG }); // prettier-ignore
   for (let tip = roofed ? ROOF_TIP : TIP; tip > (roofed ? 0.5 : -0.6); tip -= 0.1) {
     let roof: Roof;
     if (roofed) {
