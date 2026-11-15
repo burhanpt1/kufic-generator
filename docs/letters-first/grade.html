@@ -1,0 +1,210 @@
+<title>Letters First Grading</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* layout: one roundel large on the left with its three grades; the tally and the grid of all roundels beside it */
+:root {
+  --bg: #f3efe4; --panel: #fbf9f3; --fg: #1d2440; --muted: #5d6478; --line: #d9d2bf;
+  --accent: #1d4a3a; --accent-fg: #f6f1df; --gold: #b98a2c;
+  --good: #1f6b4a; --fair: #9a6a12; --poor: #9a3b2e;
+  --display: "Space Grotesk", system-ui, sans-serif; --body: Inter, system-ui, sans-serif; --arabic: Amiri, "Noto Naskh Arabic", serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171f; --panel: #1a212c; --fg: #e9e4d4; --muted: #9aa1b2; --line: #2e3745;
+  --accent: #3f8f72; --accent-fg: #0d1512; --gold: #d6ab4f; --good: #5fbf95; --fair: #d9a441; --poor: #e08573; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171f; --panel: #1a212c; --fg: #e9e4d4; --muted: #9aa1b2; --line: #2e3745;
+  --accent: #3f8f72; --accent-fg: #0d1512; --gold: #d6ab4f; --good: #5fbf95; --fair: #d9a441; --poor: #e08573; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font: 600 22px/1.2 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 15px/1.3 var(--display); margin: 0 0 10px; }
+.sub { color: var(--muted); margin: 0; max-width: 62ch; }
+.status { font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+.status.ready { color: var(--good); border-color: var(--good); }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.main { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.stage, .side { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.what { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; align-items: baseline; margin-bottom: 10px; }
+.text { font: 400 22px/1.5 var(--arabic); }
+.meta { color: var(--muted); font-size: 13px; }
+.pic { width: 100%; max-width: 560px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; background: #f3efe4; object-fit: contain; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+button.b { font: 500 14px var(--body); color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+button.b:hover { border-color: var(--fg); }
+button.b:focus-visible, .cell:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button.b[disabled] { opacity: .45; cursor: default; }
+button.g-good.on { background: var(--good); border-color: var(--good); color: var(--accent-fg); }
+button.g-fair.on { background: var(--fair); border-color: var(--fair); color: var(--accent-fg); }
+button.g-poor.on { background: var(--poor); border-color: var(--poor); color: var(--accent-fg); }
+.grow { flex: 1; }
+kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: inherit; opacity: .8; }
+label.n { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 4px; }
+textarea { width: 100%; box-sizing: border-box; min-height: 56px; font: 14px/1.4 var(--body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
+.mine { margin: 12px 0 0; font-size: 13.5px; padding: 8px 10px; border-left: 3px solid var(--line); color: var(--muted); }
+.mine b { color: var(--fg); }
+.note { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.note.err { color: var(--poor); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-weight: 500; color: var(--muted); padding: 4px 6px 6px 0; border-bottom: 1px solid var(--line); }
+td { padding: 7px 6px 7px 0; border-bottom: 1px solid var(--line); }
+td.n, th.n { text-align: right; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.cell { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 8px; border: 2px solid transparent; padding: 2px; position: relative; }
+.cell img { width: 100%; aspect-ratio: 1; display: block; border-radius: 6px; background: #f3efe4; }
+.cell.cur { border-color: var(--gold); }
+.cell .dot { position: absolute; right: 4px; bottom: 4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--panel); }
+.dot.good { background: var(--good); } .dot.fair { background: var(--fair); } .dot.poor { background: var(--poor); }
+.side > section + section { margin-top: 18px; }
+.legend { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Letters first: grade the roundels</h1>
+      <p class="sub">Thirty-six texts drawn by the rules as they stood after round two. Grade each one by eye. Claude's own grade stays hidden until you have given yours.</p>
+    </div>
+    <span class="status" id="status" aria-live="polite">Loading grades…</span>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+
+  <div class="main">
+    <section class="stage" aria-label="The roundel to grade">
+      <div class="what">
+        <span class="text" id="text" lang="ar" dir="rtl"></span>
+        <span class="meta" id="meta"></span>
+      </div>
+      <img class="pic" id="pic" alt="">
+      <div class="acts">
+        <button class="b g-good" id="good" type="button">I'd hang it <kbd>1</kbd></button>
+        <button class="b g-fair" id="fair" type="button">Sound but weak <kbd>2</kbd></button>
+        <button class="b g-poor" id="poor" type="button">Poor <kbd>3</kbd></button>
+        <span class="grow"></span>
+        <button class="b" id="prev" type="button" aria-label="Previous roundel">‹ Back</button>
+        <button class="b" id="next" type="button" aria-label="Next roundel">Skip ›</button>
+      </div>
+      <label class="n" for="why">What's wrong or right with it (optional)</label>
+      <textarea id="why" placeholder="For example: the bowl is too heavy; the top right is empty; can't find the second word"></textarea>
+      <p class="mine" id="mine" hidden></p>
+      <p class="note" id="note">A grade moves on to the next roundel without one. A note is saved when you leave the box.</p>
+    </section>
+
+    <aside class="side">
+      <section>
+        <h2>Your grades against Claude's</h2>
+        <table>
+          <thead><tr><th></th><th class="n">You</th><th class="n">Claude</th></tr></thead>
+          <tbody id="tally"></tbody>
+        </table>
+        <p class="legend" id="agree"></p>
+      </section>
+      <section>
+        <h2>All roundels</h2>
+        <div class="grid" id="grid"></div>
+        <p class="legend">A coloured dot marks one you have graded. Select any to see it again.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const DATA = {"round": "letters-2", "items": [{"id": "alim", "t": "عليم حكيم", "g": "poor", "why": "unchanged: the roof cannot be drawn out past the word's own lam; no arc at all."}, {"id": "ard", "t": "في الأرض", "g": "fair", "why": "identical."}, {"id": "arsh", "t": "العرش", "g": "fair", "why": "unchanged."}, {"id": "asr", "t": "والعصر إن الإنسان لفي خسر إلا الذين آمنوا وعملوا الصالحات", "g": "fair", "why": "unchanged."}, {"id": "basmala", "t": "بسم الله الرحمن الرحيم", "g": "good", "why": "same layout; its risen stems now curve slightly as meridians (neutral to slightly better)."}, {"id": "falaq", "t": "قل أعوذ برب الفلق من شر ما خلق", "g": "fair", "why": "better within the grade: two nested cradles, the qaf's dots on its head."}, {"id": "fatiha1", "t": "الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين", "g": "fair", "why": "better within the grade: the nun that ends the second line and the nun of the last are two nested cradles; the circle is 4% larger."}, {"id": "fatima", "t": "فاطمة", "g": "good", "why": "identical."}, {"id": "hamd", "t": "الحمد لله", "g": "fair", "why": "same layout; the four stems curve (better), the lower third is still empty."}, {"id": "haqq", "t": "الحق", "g": "fair", "why": "as before (canopy from the alif, the qaf's cradle, dots on its head); upper left still empty."}, {"id": "hasbuna", "t": "حسبنا الله ونعم الوكيل", "g": "good", "why": "the hah's roof is drawn out over the top line to 9:30, four stems risen under it, the lam cradling: it now has an opening stroke. Borderline; the join at the roof is a little sharp."}, {"id": "hawla", "t": "لا حول ولا قوة إلا بالله", "g": "fair", "why": "same layout; three top stems curve slightly. Still plain: no bowl, no cradle."}, {"id": "hayy", "t": "الحي القيوم", "g": "good", "why": "identical."}, {"id": "husayn", "t": "حسين", "g": "good", "why": "better: the hah's roof drawn out along the top left and the nun returning below; the word fills the disc."}, {"id": "ikhlas", "t": "قل هو الله أحد الله الصمد لم يلد ولم يولد ولم يكن له كفوا أحد", "g": "fair", "why": "identical: no line above the cradle ends in a bowl, the top line stands too high to curve. Still lines with arcs."}, {"id": "inna", "t": "إنا لله وإنا إليه راجعون", "g": "good", "why": "identical."}, {"id": "kursi1", "t": "الله لا إله إلا هو الحي القيوم لا تأخذه سنة ولا نوم", "g": "fair", "why": "better within the grade: the ya that ends the second line is drawn out as a deep cradle round the two lines after it (was a short tail running forth)."}, {"id": "mashallah", "t": "ما شاء الله", "g": "good", "why": "same layout; five stems curve into a dome."}, {"id": "names", "t": "محمد علي", "g": "good", "why": "identical image."}, {"id": "nasr", "t": "نصر من الله", "g": "fair", "why": "better within the grade: an arc into the nun with its dot riding, the nun of the second word cradling the name; the first word is cramped under its own arc."}, {"id": "nasr2", "t": "إذا جاء نصر الله والفتح", "g": "fair", "why": "identical."}, {"id": "nur", "t": "نور", "g": "fair", "why": "an arc led into the nun (its dot riding outside the neck) replaces the tail running forth; now the lower half is empty instead of the upper. Both arcs cannot be had (rules.md, gaps)."}, {"id": "nurnur", "t": "نور على نور", "g": "good", "why": "an arc led into the first nun, its dot riding outside the neck, over the lam and the ya's cradle: full and readable."}, {"id": "nursamawat", "t": "الله نور السماوات والأرض", "g": "fair", "why": "the dad's dot is back on its head (the named fault); otherwise as before."}, {"id": "rabbi", "t": "رب زدني علما", "g": "fair", "why": "identical."}, {"id": "rizq", "t": "وارزقنا وأنت خير الرازقين", "g": "fair", "why": "three top stems curve; otherwise as before."}, {"id": "sabr", "t": "الصبر مفتاح الفرج", "g": "fair", "why": "identical."}, {"id": "salam", "t": "السلام عليكم ورحمة الله وبركاته", "g": "fair", "why": "unchanged."}, {"id": "salawat", "t": "اللهم صل على محمد وآل محمد", "g": "good", "why": "same layout; canopy, bowed stem and the lam at the left curve into a dome: the best single change of the round."}, {"id": "shahada", "t": "لا إله إلا الله", "g": "fair", "why": "identical (top line above 0.4 of the radius: stems stay straight)."}, {"id": "subhan", "t": "سبحان الله", "g": "good", "why": "better: an arc is now led into the sin where it stands, over the nun's cradle."}, {"id": "tawakkul", "t": "توكلت على الله", "g": "fair", "why": "better within the grade: entry into the ta with riding dots, a bowed kaf, the ya's cradle."}, {"id": "tawfiq", "t": "وما توفيقي إلا بالله", "g": "fair", "why": "identical."}, {"id": "tawhid", "t": "توحيد", "g": "fair", "why": "now has an opening arc led into the ta, its two dots riding outside the neck; nothing at the foot (a dal ends it), so the lower half is empty."}, {"id": "thabit", "t": "ثابت", "g": "fair", "why": "the arc is led into the tha (not bowed out of the alif any more) and the alif rises under it; three dots in a row outside the neck read oddly. Barely FAIR."}, {"id": "zaynab", "t": "زينب وقصي", "g": "fair", "why": "identical."}]};
+const ITEMS = DATA.items, ROUND = DATA.round, KEY = it => ROUND + '__' + it.id;
+const NAME = { good: "I'd hang it", fair: 'Sound but weak', poor: 'Poor' };
+const $ = id => document.getElementById(id);
+const grades = {};           // key -> { grade, note }
+let cur = 0, db = null, canWrite = true, busy = false;
+
+function draw() {
+  const it = ITEMS[cur], g = grades[KEY(it)];
+  $('text').textContent = it.t;
+  $('meta').textContent = `${cur + 1} of ${ITEMS.length}`;
+  $('pic').src = `img/${it.id}.png`; $('pic').alt = 'Roundel of ' + it.t;
+  for (const k of ['good', 'fair', 'poor']) { $(k).classList.toggle('on', !!g && g.grade === k); $(k).disabled = !canWrite; }
+  if (document.activeElement !== $('why')) $('why').value = (g && g.note) || '';
+  $('why').disabled = !canWrite;
+  const mine = $('mine');
+  mine.hidden = !(g && g.grade);
+  if (g && g.grade) {
+    mine.replaceChildren();
+    const b = document.createElement('b'); b.textContent = "Claude's grade: " + (NAME[it.g] || 'none') + '. ';
+    mine.append(b, document.createTextNode(it.why || ''));
+  }
+  $('prev').disabled = cur === 0; $('next').textContent = g && g.grade ? 'Next ›' : 'Skip ›';
+  const done = ITEMS.filter(x => grades[KEY(x)] && grades[KEY(x)].grade);
+  $('bar').style.width = (100 * done.length / ITEMS.length) + '%';
+  const cell = (t, k) => { const td = document.createElement('td'); td.textContent = t; if (k) td.className = k; return td; };
+  $('tally').replaceChildren(...['good', 'fair', 'poor'].map(k => {
+    const tr = document.createElement('tr');
+    tr.append(cell(NAME[k]), cell(done.filter(x => grades[KEY(x)].grade === k).length, 'n'), cell(done.filter(x => x.g === k).length, 'n'));
+    return tr;
+  }));
+  const same = done.filter(x => grades[KEY(x)].grade === x.g).length,
+    harsher = done.filter(x => ['good', 'fair', 'poor'].indexOf(grades[KEY(x)].grade) > ['good', 'fair', 'poor'].indexOf(x.g)).length;
+  $('agree').textContent = done.length
+    ? `Of the ${done.length} you have graded, you and Claude agree on ${same}. You were harsher on ${harsher} and kinder on ${done.length - same - harsher}. Claude's column counts only the ones you have graded.`
+    : "Claude's grades appear here as you grade.";
+  const st = $('status'), all = done.length === ITEMS.length;
+  st.classList.toggle('ready', all);
+  st.textContent = !canWrite ? 'Read only: grades are not saved in this view' : all ? 'All graded: tell Claude to read them back' : `${done.length} of ${ITEMS.length} graded`;
+  $('grid').replaceChildren(...ITEMS.map((x, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'cell' + (i === cur ? ' cur' : '');
+    const im = document.createElement('img'); im.src = `img/${x.id}.png`; im.alt = ''; im.loading = 'lazy'; b.append(im);
+    const gx = grades[KEY(x)];
+    if (gx && gx.grade) { const d = document.createElement('span'); d.className = 'dot ' + gx.grade; b.append(d); }
+    b.setAttribute('aria-label', `Roundel ${i + 1}${gx && gx.grade ? ', graded ' + NAME[gx.grade] : ''}`);
+    b.onclick = () => { cur = i; draw(); };
+    return b;
+  }));
+}
+function say(msg, err) { const n = $('note'); n.textContent = msg; n.classList.toggle('err', !!err); }
+const nextOpen = () => { for (let k = 1; k <= ITEMS.length; k++) { const i = (cur + k) % ITEMS.length; const g = grades[KEY(ITEMS[i])]; if (!g || !g.grade) return i; } return Math.min(cur + 1, ITEMS.length - 1); };
+async function save(patch, advance) {
+  if (busy || !canWrite) return;
+  const it = ITEMS[cur], k = KEY(it), before = grades[k], rec = { id: it.id, round: ROUND, grade: '', note: '', ...before, ...patch, t: Date.now() };
+  grades[k] = rec; busy = true; draw();
+  try {
+    if (db) await db.doc('grades/' + k).set(rec);
+    busy = false; say(db ? 'Saved.' : 'Not saved: open the page signed in to claude.ai to keep your grades.', !db);
+    if (advance) cur = nextOpen();
+    draw();
+  } catch (e) {
+    busy = false; if (before) grades[k] = before; else delete grades[k];
+    say('That was not saved (' + ((e && e.code) || 'error') + '). Try it again.', true); draw();
+  }
+}
+for (const k of ['good', 'fair', 'poor']) $(k).onclick = () => save({ grade: k, note: $('why').value.trim() }, true);
+$('why').onchange = () => { const g = grades[KEY(ITEMS[cur])]; if ((g && g.note || '') !== $('why').value.trim()) save({ note: $('why').value.trim() }, false); };
+$('prev').onclick = () => { if (cur > 0) { cur--; draw(); } };
+$('next').onclick = () => { cur = Math.min(cur + 1, ITEMS.length - 1); draw(); };
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('textarea, input')) return;
+  const k = { 1: 'good', 2: 'fair', 3: 'poor' }[e.key];
+  if (k) save({ grade: k, note: $('why').value.trim() }, true);
+  else if (e.key === 'ArrowLeft' && cur > 0) { cur--; draw(); }
+  else if (e.key === 'ArrowRight') { cur = Math.min(cur + 1, ITEMS.length - 1); draw(); }
+});
+draw();
+(async () => {
+  const timer = setTimeout(() => { if (!db) $('status').textContent = 'Could not load saved grades'; }, 10000);
+  try {
+    db = window.claude ? await window.claude.use('db') : null;
+    const user = window.claude ? await window.claude.use('user') : null;
+    if (user) { const w = await user.can('data.write'); if (w === false) canWrite = false; }
+    if (db) {
+      let first = true;
+      db.collection('grades').onSnapshot(snap => {
+        clearTimeout(timer);
+        snap.docs.forEach(d => { const v = d.data(); if (v && ITEMS.some(x => KEY(x) === d.id)) grades[d.id] = v; });
+        if (!busy) { if (first) { const g = grades[KEY(ITEMS[cur])]; if (g && g.grade) cur = nextOpen(); } first = false; draw(); }
+      }, () => { clearTimeout(timer); say('Saved grades could not be read. New grades may not be kept.', true); });
+    } else { clearTimeout(timer); say('Grades are not being saved in this view: open the page signed in to claude.ai to keep them.', true); }
+  } catch { clearTimeout(timer); }
+  draw();
+})();
+</script>

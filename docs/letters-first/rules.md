@@ -187,3 +187,13 @@ follow the meridians of the rim's circle (F).
   its dot would lose it to the bowl.
 - A drawn-out join (kashida) to fit a word to its chord, and dots set as weights in an empty part, are not built.
 - The entry search is slow for a three-word text whose opening word hangs (minutes).
+
+## Grading by the owner
+
+The roundels of a round are graded by the owner on a page of their own
+(https://claude.ai/artifact/WyJWzhb5PiRYTsUQ8vEKb2; source `docs/letters-first/grade.html`, published with each text's
+picture as `img/<id>.png`). It shows one roundel at a time with three grades (I'd hang it / sound but weak / poor) and
+a note, and shows the grade the rules' author gave only after the owner's. Grades are kept one document per roundel in
+the page's collection `grades`, named `<round>__<id>`: `{ id, round, grade: 'good' | 'fair' | 'poor', note, t }`. Read
+them back with ArtifactData (list, collection `grades`) and compare with the round's own verdicts: where the owner is
+harsher, the note says what the rules miss.
