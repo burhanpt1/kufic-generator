@@ -8,8 +8,13 @@
 // (WIDE_STAGE=before,after), `<stage>/<id>.png`, `wide-<stage>.png` (all the texts, captioned), smaller sheets by set
 // (`<stage>-tuned`, `-fit-N`, `-held-N`) and `wide-<stage>-facts.txt`; WIDE_ONLY=<ids>, WIDE_SET=tuned,fit,held.
 // Round two: WIDE_SET also takes ffit and fheld (the third set of texts, split below), round three f2fit and f2held; WIDE_STRAIGHT=1 draws risen
-// stems straight, WIDE_NONEST=1 leaves out the nested bowls, WIDE_NOROOF=1 the roofs drawn out, WIDE_NODOTS=1 the
-// entries into dotted teeth (to compare a rule on and off with the layout held).
+// stems straight, WIDE_NONEST=1 leaves out the nested bowls, WIDE_NOROOF=1 the roofs drawn out (round two also had
+// WIDE_NODOTS; entries into dotted teeth are now off unless WIDE_RIDE=1).
+// Round three: WIDE_SET also takes f2fit and f2held (the fourth set); a rule is switched off, the rest held, by
+// WIDE_NOTIERS=1 (level lines at one pitch), WIDE_NOSTACK=1, WIDE_NORISE=1 (lower lines' stems), WIDE_HEAVY=1 (arcs
+// at full weight on small circles), WIDE_SINGLE=99 (a single word's arc at any size), WIDE_NOSLIDE=1, WIDE_HOLLOW=0.4,
+// WIDE_RIDE=1 (entries into dotted teeth, dots riding the arc), WIDE_DOTSGO=1 (a dot goes with its redrawn bowl),
+// WIDE_NOMEND=1 (dots left touching strokes).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';

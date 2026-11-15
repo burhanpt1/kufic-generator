@@ -1,10 +1,15 @@
-# The letters-first roundel: the rule set as it stands (round two)
+# The letters-first roundel: the rule set as it stands (round three)
 
-Source: `tests/helpers/char-roundel.ts` (`arrange`, `ground`, `levels`, `curve`, `nestedBowls`), with the strokes of
-`tests/helpers/char-first.ts` (`sweep`, `bowlPen`, `takeOver`, `findStems`, `raise`, `meridians`, `cradleCompose`).
+Source: `tests/helpers/char-roundel.ts` (`arrange`, `ground`, `tiersCompose`, `levels`, `curve`, `nestedBowls`),
+with the strokes of `tests/helpers/char-first.ts` (`sweep`, `bowlPen`, `takeOver`, `mendDots`, `findStems`, `raise`,
+`meridians`, `cradleCompose`).
 Lengths are in nibs (1 nib = 1.6 pen units) unless a number is an angle. No rule names a text or a word; the only
 words known are the two ligature names (الله, whose stems rise together or not at all and bend as one body, and
 محمد, which is stacked by the engine).
+
+Round three's changes are marked (r3). Two things rank above every other rule (owner, on round two's drawings):
+**a letter must stay readable** (its dots with it, in their written place), and **the calm of plain lines is not
+traded for devices**.
 
 The text is written level. Single strokes follow circles: the rim's own circle (0.9 nib inside the circle, the
 stroke 0.93 nib thick on it) and circles concentric with it, each 2.13 nibs inside the one before. Risen stems may
@@ -16,9 +21,9 @@ follow the meridians of the rim's circle (F).
    least 2.8 nibs long, whose top stands at least 3.75 nibs above its line. A word with a stem is a _stem word_.
 2. **The canopy's letter** is looked for in the first word only. The candidates, in the order they are tried:
    1. its first letter is a tall stem (ا أ إ ل لا ك ط): that stem carries the canopy (_stem_), and nothing else is tried;
-   2. its first letter is a tooth or a head whose stroke starts downward or to the right (ب ي ئ س م ن ت ث ش): an arc
-      is led into it (_entry_). Dots that sit above such a letter are not swallowed: they ride outside the arc's
-      neck (25);
+   2. its first letter is a tooth or a head whose stroke starts downward or to the right and that carries no dot
+      above it (ب ي ئ س م): an arc is led into it (_entry_). (r3) Not into ن ت ث ش: the arc hides the tooth, and
+      a dot moved off its letter to ride the arc makes it unreadable;
    3. its first letter opens with a roof written to the left (ح ج خ ع غ): the roof's own line is drawn on, to the
       left, along the rim (_roof_);
    4. the word has a tall stem further in: its first stem carries the canopy;
@@ -33,11 +38,15 @@ follow the meridians of the rim's circle (F).
 5. **The sub-cradle's letter** (only if there is a cradle with words after its word): among those words, the final
    letter with the best score of: the bowls of 3, م 0.6, ر ز و 0.5, د ذ 0.3; less 0.12 for a word after it; at most
    one word after it.
-6. **A dot belongs to the part of the letter it sat over as written.** When a bowl is redrawn, a dot goes with it
-   only if it sat under the line or beside the kept part of its letter (a ن's, a ي's, a ج's: set along the bowl's
-   floor where the bowl begins). A dot above the line that stands within 0.5 nib of the extent of what is kept of
-   its letter (the head of ق ض, the teeth of ش, the roof of خ غ) stays where it was written. This holds on every
-   kind of line.
+6. **A dot stays with its letter** (r3). A dot written above the line stays where it was written, whatever becomes
+   of its letter's bowl (a ن's dot is not set in the great bowl: it is lost there, and the ن with it). If the new
+   stroke would pass within 0.3 nib of it, it is lifted straight up, 0.3 nib at a time, until it is clear. Words
+   placed afterwards keep 1.5 nibs from such a dot: it must be nearer its own letter than any other writing. Only
+   a dot written under the line (a ي's, a ج's) goes with a redrawn bowl: along its floor, where the bowl begins.
+   **A dot touches no stroke** (r3): a group of dots that touches a stroke as written (closer than 0.12 nib) is
+   moved, whole, by the least of these that clears it: away from the line of writing by 0.5, 1, 1.5 or 2 pen
+   units, along the line by 0.5, 1 or 1.5 either way, or both by 0.7 or 1.4. Three dots stay a pyramid. A group
+   that touches nothing is not moved.
 7. No bowl and no tail: no cradle. No letter by 2: no canopy. Nothing is forced.
 
 ## B. Up to six words: the ground line
@@ -68,23 +77,59 @@ follow the meridians of the rim's circle (F).
     times (1 + 0.6 x the empty share of the height under the writing; 1.0 x with no cradle; nothing for a single
     word).
 14. **Soundness.** A ground-line arrangement is taken only if: no ground word is read out of order; its circle is
-    at most 1.25 times the circle the same text needs on plain level lines; with no cradle, at most 0.4 of the
-    circle's height is empty under the line; and no ink leaves the margin.
+    at most 1.25 times the circle the same text needs on plain level lines; with no cradle, at most 0.2 of the
+    circle's height is empty under the line (r3: was 0.4; a line across the middle with the lower part of the
+    circle bare is refused, and the text is set by C, which fills the circle); and no ink leaves the margin.
 15. **The ladder.** The first sound arrangement of: cradle and canopy; cradle alone; canopy alone; the ground line
     alone. (For the canopy, the candidates of 2 in their order, then none.)
 16. **A single word** is drawn large and stands where its own strokes reach the rim: it may stand up to 14 nibs
-    above its lowest place, and every rung of 15 that is sound is drawn. The rung with the most arcs is taken; of
-    two with as many, the earlier, unless the later takes the arc at the word's other end and draws the word 1.1
-    times larger. It may have both a canopy and a cradle.
+    above its lowest place, and every rung of 15 that is sound is drawn. (r3) A rung whose circle is more than 1.15
+    times the smallest rung's is passed over: an arc that leaves the word small in an empty circle is not worth
+    having. Of the rest, the rung with the most arcs is taken; of two with as many, the earlier, unless the later
+    takes the arc at the word's other end and draws the word 1.1 times larger. It may have both a canopy and a
+    cradle. (r3) If the rung taken has no arc, the word is not a ground line: it stands in the middle of the
+    smallest circle that holds it (C).
 17. If no rung is sound, the text is set by C.
 
-## C. Longer texts, and short texts no ground line suits: level lines in one circle
+## C. Longer texts, and short texts no ground line suits: tiers in one circle (r3)
 
-18. The words are split into level lines, centred, in the smallest circle that holds them (at least 15.5 pen units
-    of pitch, widened if two lines touch); the cradle word (3, among the last four words) ends a line and the words
-    after it sit in its bowl. Writing gets smaller as the text gets longer; the text stays in one roundel.
+18. **Tiers.** The words up to the cradle word (3, among the last four words) are split into lines in their order;
+    the cradle word ends its line, and the words after it are one line or two in its bowl; six lines at most. The
+    cradle's line is never the first. Writing gets smaller as the text gets longer; the text stays in one roundel.
+    1. **Stacking.** A line may be written with its short words stacked: a word of at most three letters that is
+       not the first word of the text, does not carry the cradle, does not end its line in a bowl letter, and does
+       not follow a stacked word, is taken off the line and set above it, at the lowest place where it rests on
+       the writing at 0.55 nib of ink, over no tall stem (its middle at least its half-width and 0.47 nib from
+       every stem), between the right end of the word before it and the left end of the word after it; of places
+       as low (within 0.3 pen unit), the nearest to where those two words meet. A word that finds no place stays
+       on the line. Reading: a stacked word is read after the word under its right and before the word under its
+       left.
+    2. **The lines rest on one another** at 0.55 nib of ink, measured column by column (columns of 0.2 pen unit),
+       not at one pitch: a stem stands up into a gap of the line above.
+    3. **Which split.** Every split, each line plain or stacked, is weighed: its radius (the smallest circle about
+       the lines, each centred; the first line 1.4 nibs further in, for the canopy's room; what stands in the
+       cradle's bowl 1.2 nibs further in, and 2.13 nibs more under each nested bowl of 21), times (1 - 0.04 for
+       each line that ends in a bowl letter, not the first line, above the cradle's: two at most), times (1 + 0.5
+       x the mean share of its chord that a line leaves empty, the chord taken 3 pen units over its baseline),
+       times (1 + 0.06 for each stacked word: the calm of plain lines is worth that). The least is taken; if its
+       bowl cannot be drawn clear, what stands in the bowl is lifted (0.4, 1.2, 2.2, 3.5, 5 pen units); if that
+       fails, the next of the six best.
+    4. **The first line's stem.** Where the canopy's letter (2) is a stem, or may be one that stands in the first
+       two letters of its word, the first line is slid to the right until that stem stands 3 nibs right of the
+       axis.
+    5. **Two ground lines.** Over a line that has two tall stems or more, the gap is opened as far as the circle
+       of 18.3 lets it (at most the height of that line's shortest stem; all such gaps by one share), and the
+       stems of every line but the first rise as in 11: each until it comes within 0.3 nib of the ink above it or
+       meets the margin, never past the baseline of the line above less 0.55 nib, not at all by less than 0.15 of
+       its height; halved (twice at most) until the line is clear, else left. The first line's stems rise to the
+       rim, the lower lines' to the first line's feet.
+    6. If no split stands (a cradle on the first word, a bowl that cannot be drawn), the text is set on level
+       lines at one pitch (15.5 pen units at least), as in round two.
 19. The canopy, if 2 gives one for the first word of the top line, is drawn from where that word stands (stem,
     entry, or roof drawn out); shortened at its tip until it is CLEAR of the writing; dropped if it cannot be.
+    (r3) A roof that cannot be drawn out clear of its own word (a stem stands beside it) gives way to that word's
+    first stem, which carries the canopy. A stem's arc is not drawn if its neck would come within 0.3 nib of a dot
+    of its line.
 20. The top line's other stems rise as in 11 (halved until clear of the canopy and the rim).
 21. **Nesting in bowls.** Every line but the first that ends in a bowl letter (ن ي ى ل ق س ش ص ض ج ح خ ع غ), above
     the cradle's line (above the last line, where there is no cradle), has that bowl drawn out as a cradle round
@@ -108,9 +153,10 @@ follow the meridians of the rim's circle (F).
     of the top; it follows the rim for at least 40 degrees, and on a small circle for at least the least length a
     stroke that thins to a tip can have (9.3 nibs). A stem carries the canopy only if its top stands at least 5
     degrees right of the top of the circle: the arc must cross the top. Left of that the stem only rises.
-25. **Dots that ride**: the dots above a letter that takes an entry are set on the outer side of the arc's
-    neck (the side away from the word), the first 1.3 nibs from the stroke's middle beside where it is taken over,
-    each further dot 1.2 nibs further out; the arrangement stands only if they are inside the margin.
+25. **Arcs scaled to the circle** (r3; round two's rule 25, dots that ride an arc, is withdrawn: an entry is led
+    only into a letter with no dot above it, 2). A stroke that follows a circle whose radius (to the pen's middle)
+    is under 9 nibs is drawn with a lighter pen: its weight is the pen's times that radius over 9 nibs, never less
+    than 0.55. So an inner arc, on a smaller circle, is lighter than the arc outside it.
 26. **The canopy from a roof**: the letter is kept whole. A stroke of its own, begun on the roof a little before
     its highest point, carries the roof's line on to the left, up to the rim's circle and along it, ending 75
     degrees left of the top (9:30), or at 0.85, 0.7 or 0.55 of that: the longest that is CLEAR of its own word.
@@ -152,38 +198,58 @@ follow the meridians of the rim's circle (F).
 
 ## G. Each line depends only on its text
 
-36. Every line is written by an engine of its own (`tests/helpers/char-pure.ts`): the shared engine's piece cache
-    made a line depend on what the run had written before it.
+36. (r3) The engine writes a line the same whatever it wrote before (mended in `src/`), so every line is written
+    by the one shared engine and kept; the engine-per-line helper of round two is gone. Five texts drawn both ways
+    are the same bytes.
 
-## How sure each threshold is (re-derived on the 29 texts that could be looked at)
+## H. Speed (r3; no drawing changes)
 
-- **1.25 times the level-lines circle (14).** Arrangements taken stand at 0.67 to 1.12; those refused for size
-  stand at 1.27 and above (five texts). Any value from 1.13 to 1.26 gives the same 29 results. It separates, but it
-  is not pinned: the nearest text on each side is 0.15 away.
-- **0.4 of the height empty under a line with no cradle (14).** Taken: up to 0.31 (two texts at 0.31, one judged
-  good, one weak). Refused: one text, at 0.44. Any value from 0.32 to 0.43 gives the same results: one text decides
-  it. Weak.
-- **5 degrees right of the top for a stem to carry the canopy (24).** Set on two texts in round one; both now open
-  with another stroke (an entry, a roof), and none of the 29 is refused by it. Sixteen stem canopies land between
-  0 and 44 degrees right of the top. Unsupported by the present texts; kept as a guard.
-- **50 degrees left of the top for an inner arc above (27).** Twelve sub-canopies end between 3 and 50 degrees left
-  of the top; one stands exactly on the limit (and is a good image), one at 46. It binds, on one text. Weak.
-- **5 nibs for a seated arc and for a tail running forth (10, 28).** Not re-derived: no text sits near either.
-- **Three stems, 0.15 of the radius each side, for curved stems (35).** Chosen by looking at the five texts that
-  curve under it (three clearly better, two slightly). A looser rule (two stems, on either side) curved two more
-  texts; those were not judged. Weak.
+37. Each stretch of words is written once and kept with its hull; the lowest place of a line in a circle is found
+    on the hull. A text is composed once for each set of options.
+38. A ground line's first arrangement is not looked for beyond the largest circle its caller would take: 1.25
+    times the level lines' circle for a rung (14), 1.12 times the base for an inner arc (27).
+
+## How sure each threshold is
+
+Round two's notes on 1.25 (14), 5 degrees (24), 50 degrees (27), 5 nibs (10, 28) and the curved stems (35) stand;
+none was re-derived. New or changed in round three, on the 43 texts that could be looked at:
+
+- **0.2 of the height empty under a bare ground line (14).** Lowered from 0.4 because the owner graded the texts
+  it had let through (a line across the middle, the lower part bare) poor. Two texts stood at 0.31 and now go to
+  tiers; single words taken stand at 0.05 to 0.19; rungs refused stand at 0.22 to 0.29. Any value from 0.20 to
+  0.21 gives the same results: it is pinned by one text on each side. Weak.
+- **0.06 of the radius for a stacked word (18.3).** At 0.03, five of the long texts stacked a word or two and
+  looked busier for a circle 3 to 4% smaller; at 0.06 one text stacks (two words, a circle 29% smaller). Set by
+  eye on those six; the owner's "do not trade calm" decided the direction, not the value.
+- **0.5 for the empty share of the chords (18.3).** At 0.5 two long texts come out as five short lines in a
+  column; at 1.2 they come out as three wide lines with the lower third of the circle bare. Neither is right; 0.5
+  was kept because every text had been looked at with it. Unsettled.
+- **1.15 for a single word's arc (16).** One word is refused an arc at 1.40; the words that keep theirs stand at
+  1.00 to 1.11. Any value from 1.12 to 1.39 gives the same results.
+- **9 nibs and 0.55 for the lighter pen (25).** Not fitted: 9 is the brief's "about 9 nibs"; only strokes on
+  circles under it change, by 5 to 30%.
+- **3 nibs for the first line's slide (18.4).** Not fitted; chosen so that the stem stands more than 5 degrees
+  right of the top (24) in every circle up to 34 nibs.
+- **0.12 nib and the list of moves for a touching dot (6).** The threshold is "touching" on a raster of 8 cells
+  to the pen unit; the moves were not tuned.
 
 ## Known gaps (stated so that they are not mistaken for rules)
 
-- Level lines raise only the top line's stems; a second ground line whose stems rise to their own circle is not
-  built, and was not tried.
-- Stacking a short word over its neighbour on level lines is not built; on a ground line the upper words already
-  stand in the bays (12).
-- A roof cannot be drawn out (26) where the word has a tall stem beside the roof: the arc has no way past it, and
-  the word gets no canopy. Found on a held-out text; not mended.
-- A tail running forth and an entry cannot both be had by a short single word: the tail needs the word low, the
-  entry needs it high.
-- A dot stays over a kept head only where the kept part reaches under it (A6); a roof whose kept part ends short of
-  its dot would lose it to the bowl.
-- A drawn-out join (kashida) to fit a word to its chord, and dots set as weights in an empty part, are not built.
-- The entry search is slow for a three-word text whose opening word hangs (minutes).
+- **Nesting inside the text is not built.** A word that follows a bowl letter in mid-line does not sit in that
+  bowl (a bowl drawn a little deeper under its guest). Bowls nest only along the rim (21, the cradle, the
+  sub-cradle). The tiers favour a line that ends in a bowl (18.3), and that is all.
+- **Stacking is rare.** Under 18.3's cost for a stacked word, one text of the 43 stacks. Where a line is all tall
+  stems there is no bay for a stacked word, and it stays on the line.
+- **A kashida to fit a word to its chord is not built**, nor a single word with both an entry and a tail.
+- **Dots as weights were not built**, by the owner's ruling on round two (a dot stays with its letter).
+- **A roof cannot pass a stem beside it.** The arc would have to climb four nibs in two. The stem carries the
+  canopy instead (19); where that stem stands left of the axis and the line cannot slide (18.4), the word has no
+  canopy.
+- **Two-word texts with no bowl** get a canopy from a stem if they have one (19); their final tails do not run
+  forth, because the tail is taken over more than 5 nibs from the rim.
+- **Single words with no arc** are honest and small: a word of three or four letters with no stem and no bowl
+  stands in the middle of its circle with nothing drawn out.
+- **Stroke faults the owner named** are in the letters and the arcs as drawn, not in these rules, and were not
+  mended: a stem that turns into the canopy shows a seam where the arc's pen takes over; the lam after a waw; a
+  final jim as a cradle; the final mim.
+- The lower lines' stems are straight (F curves only the first line's).
