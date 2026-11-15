@@ -1427,9 +1427,15 @@ function tierOf(words: readonly string[], a: number, b: number, stack: boolean, 
       l = lineOf(text, taken),
       off = centred(l),
       zero = l.stems.map(() => 0),
-      // T8: the first line is slid to the right until the first stem of its first word stands SLIDE_X right of
-      // the axis: a stem on the axis or left of it cannot carry an arc over the top
-      lead = a === 0 ? l.stems.find(q => q.wi === 0) : undefined,
+      // T8: where the canopy's letter is a stem (A2), or may be one that stands in its word's first two letters,
+      // the first line is slid to the right until that stem stands SLIDE_X right of the axis: a stem on the axis
+      // or left of it cannot carry an arc over the top
+      stem0 = a === 0 ? l.stems.find(q => q.wi === 0) : undefined,
+      at0 = stem0
+        ? (l.b.strokes[stem0.si].own?.[Math.min(stem0.cut, (l.b.strokes[stem0.si].own?.length ?? 1) - 1)] ?? 0)
+        : 9,
+      modes0 = a === 0 ? modesWide(words[0]) : [],
+      lead = modes0[0] === 'stem' || (modes0.includes('stem') && at0 <= 1) ? stem0 : undefined,
       slid = lead && !process.env.WIDE_NOSLIDE && lead.x + off[0] < SLIDE_X ? SLIDE_X - (lead.x + off[0]) : 0;
     if (slid) off.forEach((v, j) => (off[j] = v + slid));
     const own = inkAt({ l, off, dy: 0, extra: zero }),
