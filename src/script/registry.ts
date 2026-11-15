@@ -25,6 +25,9 @@ export function thuluthStyleOf(pen?: Partial<ThuluthPen>): ThuluthStyle {
     floor: pen?.floor ?? base.floor,
     loopGap: pen?.loopGap ?? base.loopGap,
     heh: pen?.heh ?? base.heh,
+    // (named only when set, so a pen without them is the style it always was)
+    ...(pen?.pieceGap != null ? { pieceGap: pen.pieceGap } : {}),
+    ...(pen?.wordSpace != null ? { wordSpace: pen.wordSpace } : {}),
   };
 }
 
