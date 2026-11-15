@@ -67,7 +67,9 @@ export interface Head {
 }
 /** How far into the letter's last descent the bowl is taken over, in samples (14 to a span of the skeleton): the pen
  *  has just set off downward and to the left, and the letter's head above it is the engine's. */
-export const CUT_IN = 5;
+export const CUT_IN = 5,
+  /** A dot sits over the kept part of its letter if it stands within this of that part's extent along the line. */
+  DOT_OVER = 0.8;
 /** Where the bowl of a written line's last letter is taken over: the stroke (its index) and the head. */
 export function takeOver(b: Built, cutIn = CUT_IN): { si: number; head: Head } {
   const last = b.placed.filter(isLetter).pop()!;
@@ -92,9 +94,24 @@ export function takeOver(b: Built, cutIn = CUT_IN): { si: number; head: Head } {
     uy = st.s[cut].y - st.s[cut - 1].y,
     ul = Math.hypot(ux, uy),
     pre = st.s.slice(0, cut + 1);
-  // the last letter's dots are the last in the list
-  let mine = 0;
-  for (const g of b.dotGroups) if (g.li === last.li && g.wi === last.wi) mine += g.n;
+  // the last letter's dots are the last in the list. A dot belongs to the part of the letter it sat over as written:
+  // dots over (or under) the bowl that is redrawn go with it (a nun's, a ya's, a jim's); dots over the head that is
+  // kept (a qaf's, a dad's, a shin's, a khah's: above the line, over what is written of the letter before the bowl is
+  // taken over) stay where they are
+  let mine = 0,
+    k0 = Infinity,
+    k1 = -Infinity;
+  b.strokes.forEach((o, i) => {
+    if (o.wi !== last.wi || !o.own) return;
+    o.s.forEach((q, j) => {
+      if (o.own![Math.min(j, o.own!.length - 1)] !== last.li || (i === si && j > cut)) return;
+      k0 = Math.min(k0, q.x);
+      k1 = Math.max(k1, q.x);
+    });
+  });
+  for (const g of b.dotGroups)
+    if (g.li === last.li && g.wi === last.wi && !(g.side > 0 && g.x > k0 - DOT_OVER && g.x < k1 + DOT_OVER))
+      mine += g.n;
   return { si, head: { pre, ang: st.ang, C: [st.s[cut].x, st.s[cut].y], u: [ux / ul, uy / ul], dots: mine } };
 }
 

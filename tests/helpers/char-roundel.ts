@@ -88,12 +88,21 @@ export const TIP = (25 * Math.PI) / 180, // the canopy ends this far past the to
   KASH_EASE = 7, // and its drawn-out join rises to the rim's circle over this length at each end
   KASH_TURN = 0; // the drawn-out word is turned this far clockwise: it opens at the upper right // and its drawn-out join rises to the rim's circle over this length at each end
 // ---- the numbers of the rules for any text (W1 to W7, at the end of this file) ----
-const ENTRY_INTO = 'بيئسحجخعغم', // an entry is led into a tooth, a roof or a head whose dots, if it has any, are below it (the arc arrives from above: it would swallow the dot of a nun, a ta, a tha or a shin)
-  HEAD_DOTS = 'قضش', // a cradle letter whose dots sit on its head keeps them there (a nun's, a ya's and a jim's go into the bowl)
+const ENTRY_INTO = process.env.WIDE_NODOTS ? 'بيئسم' : 'بيئسمنتثش', // an entry is led into a tooth or a head; dots above it ride outside the arc's neck (RIDE)
+  ROOFED = 'حجخعغ', // letters that open with a roof written to the left: the roof's line is drawn on, to the left, along the rim
+  ROOF_TIP = (+(process.env.WIDE_ROOF ?? 75) * Math.PI) / 180, // a roof drawn out ends this far left of the top (9:30),
+  ROOF_TIPS = [1, 0.85, 0.7, 0.55], // or at this share of it, the longest that is clear
+  ROOF_DROPS = [3, 4, 5, 6.5, 8, 10], // how far inside the rim's circle the roof's top stands: the least that stands
+  ROOF_LAP = 8, // the drawn-out roof is a stroke of its own from this many samples before the roof's top
+  RIDE = 1.3 * NIB, // a dot that rides outside the neck of an entry: this far from the stroke's middle,
+  RIDE_STEP = 1.2 * NIB, // each further dot of the letter this much further out
   TAILS = 'رزوم', // final letters whose tail runs forth; they never return as a cradle
   FORTH_RUN = (55 * Math.PI) / 180, // a tail running forth follows the rim for this much,
   FORTH_TOP = (10 * Math.PI) / 180, // and ends no nearer the level diameter than this
   FORTH_DROP = +(process.env.WIDE_DROP ?? 5) * NIB, // a tail runs forth only if it is taken over within this of the rim's circle: a longer way down would make a stem of it
+  SEAT_DROP = +(process.env.WIDE_SEAT ?? 5) * NIB, // an opening stroke is led to the rim from a word on the ground line only from within this of the rim's circle
+  SINGLE_LIFTS = Array.from({ length: 16 }, (_, i) => i * 1.5), // a single word may stand this far above its lowest place: it is drawn large, and stands where its strokes reach the rim
+  SINGLE_LARGER = 1.1, // a single word takes the arc at its other end instead, if it is then drawn this much larger
   SUB_END = 50, // an inner arc above stays over the top: it ends no further left of the top than this (degrees), or its stem is not bowed
   HOLLOW_MAX = +(process.env.WIDE_HOLLOW ?? 0.4), // a ground line with no cradle is sound only if no more than this share of the circle's height is empty under it
   MAX_BARE = 4, // a ground line with no cradle word holds no more words than this
@@ -121,7 +130,7 @@ export interface Plan {
   forth?: boolean;
 }
 /** Which stroke is drawn out: an entry into the first letter (a), a join of the first word (b), a stem (c). */
-export type Mode = 'entry' | 'kashida' | 'stem' | null;
+export type Mode = 'entry' | 'kashida' | 'stem' | 'roof' | null;
 
 /** CANOPY_SAY=1: what the searches weighed, written beside the sheet (debug.txt). */
 const SAY: string[] | null = process.env.CANOPY_SAY ? [] : null;
@@ -184,15 +193,19 @@ interface Line {
   /** Where the first letter's first stroke is taken over by an entry, and the pen's heading there followed
    *  backwards; null when the pen starts that stroke upwards (a qaf, a fa, a waw). */
   entry: { si: number; cut: number; back: Pt } | null;
+  /** Where the first letter's roof ends (its highest point, written leftwards), and the pen's heading there. */
+  roofed: { si: number; cut: number; u: Pt } | null;
 }
 /** The ink of a line, word by word, with its stems drawn `extra` taller; `body`: without the heads of its stems. And
  *  the samples of the cradle stroke up to where the bowl is taken over. */
 function inked(
-  l: Omit<Line, 'x0' | 'x1' | 'whole' | 'body' | 'cols' | 'heads' | 'entry'>,
+  l: Omit<Line, 'x0' | 'x1' | 'whole' | 'body' | 'cols' | 'heads' | 'entry' | 'roofed'>,
   extra: readonly number[],
   body = false,
   swaps: readonly Swap[] = [],
   stub = false,
+  /** Dots set elsewhere than written (by their place in the line's list). */
+  dots?: ReadonlyMap<number, Pt>,
 ) {
   const raised = raise(l.b, l.stems, extra),
     riders = new Set(l.stems.flatMap(m => m.riders)),
@@ -217,11 +230,26 @@ function inked(
       return void words[l.strokeWord[si]].push(...th.strokePolys({ ...st, s: [...(stub ? [] : swap.s), ...st.s.slice(swap.from, z + 1)], own: undefined })); // prettier-ignore
     words[l.strokeWord[si]].push(...th.strokePolys(a === 0 && z === st.s.length - 1 ? st : { ...st, s: st.s.slice(a, z + 1), own: undefined })); // prettier-ignore
   });
-  l.b.dots.slice(0, l.b.dots.length - (l.take?.head.dots ?? 0)).forEach(([x, y], k) => words[l.dotWord[k] ?? 0].push(...th.dotPolysAt(x, y))); // prettier-ignore
+  l.b.dots.slice(0, l.b.dots.length - (l.take?.head.dots ?? 0)).forEach(([x, y], k) => {
+    const at = dots?.get(k);
+    words[l.dotWord[k] ?? 0].push(...th.dotPolysAt(at ? at[0] : x, at ? at[1] : y));
+  });
   return { words, pre };
 }
-/** A take-over whose letter keeps its dots on its head (HEAD_DOTS): none are set again in the bowl. */
-const dotsKept = (t: { si: number; head: Head }, c: string) => (HEAD_DOTS.includes(c) ? { si: t.si, head: { ...t.head, dots: 0 } } : t); // prettier-ignore
+/** The dots above a line's first letter, set outside the neck of an entry taken over at C (the line's frame), the
+ *  arc leaving C along `back` and bearing left: they ride on its right, the first RIDE from the stroke. */
+function ridden(l: Line, C: Pt, back: Pt): Map<number, Pt> {
+  const out = new Map<number, Pt>();
+  let k = 0,
+    i = 0;
+  for (const g of l.b.dotGroups) {
+    if (g.wi === 0 && g.li === 0 && g.side > 0)
+      for (let j = 0; j < g.n; j++, i++)
+        out.set(k + j, [C[0] + back[0] * 0.3 * NIB + back[1] * (RIDE + i * RIDE_STEP), C[1] + back[1] * 0.3 * NIB - back[0] * (RIDE + i * RIDE_STEP)]); // prettier-ignore
+    k += g.n;
+  }
+  return out;
+}
 const lineCache = new Map<string, Line>();
 function lineOf(text: string, cradle = false): Line {
   const key = (cradle ? '*' : '') + text,
@@ -249,7 +277,7 @@ function lineOf(text: string, cradle = false): Line {
       b,
       nw,
       stems,
-      take: cradle ? dotsKept(FEET.includes([...text].pop() ?? '') ? footOver(b) : takeOver(b, CUT), [...text].pop() ?? '') : undefined, // prettier-ignore
+      take: cradle ? (FEET.includes([...text].pop() ?? '') ? footOver(b) : takeOver(b, CUT)) : undefined,
       strokeWord,
       dotWord,
     },
@@ -266,7 +294,20 @@ function lineOf(text: string, cradle = false): Line {
       cols: ink.map(colsOf),
       heads: stems.map(m => hull([th.strokePolys({ ...b.strokes[m.si], s: b.strokes[m.si].s.slice(0, m.cut + 1) }), ...m.riders.map(r => th.strokePolys(b.strokes[r]))].flat(2))), // prettier-ignore
       entry: null,
+      roofed: null,
     };
+  if (first >= 0 && ROOFED.includes(text[0])) {
+    // the roof: written to the left from the stroke's start, as far as it rises
+    const q = b.strokes[first].s;
+    let top = 0;
+    while (top + 1 < q.length && q[top + 1].x < q[top].x && q[top + 1].y >= q[top].y - 0.005) top++;
+    if (top > ROOF_LAP + 3) {
+      const ux = q[top].x - q[top - 3].x,
+        uy = q[top].y - q[top - 3].y,
+        n = Math.hypot(ux, uy);
+      l.roofed = { si: first, cut: top, u: [ux / n, uy / n] };
+    }
+  }
   if (first >= 0 && !stems.some(m => m.si === first)) {
     const q = b.strokes[first].s;
     let cut = 0;
@@ -287,11 +328,17 @@ interface Placed {
   dy: number;
   extra: number[];
   swaps?: Swap[];
+  /** Dots set elsewhere than written (the line's frame), and ink drawn with the line where it stands (a roof drawn
+   *  out: a stroke of its own). */
+  dots?: ReadonlyMap<number, Pt>;
+  more?: Poly[];
 }
-const inkAt = (p: Placed, stub = false): Poly[] =>
-  inked(p.l, p.extra, false, p.swaps, stub).words.flatMap((w, k) =>
+const inkAt = (p: Placed, stub = false): Poly[] => [
+  ...inked(p.l, p.extra, false, p.swaps, stub, p.dots).words.flatMap((w, k) =>
     w.map(q => q.map(([x, y]) => [x + p.off[k], y + p.dy] as Pt)),
-  );
+  ),
+  ...(stub ? [] : (p.more ?? [])),
+];
 /** How much taller stem s of a placed line can be drawn before what rises of it comes within CLEAR of ink above it
  *  (the canopy): the stems give way. */
 function under(p: Placed, s: number, above: readonly Poly[]) {
@@ -358,10 +405,42 @@ function entryCanopy(l: Line, rho: number, hang: number, drop: number, tip = TIP
     dx,
     dy,
     swap: { si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - dy })) } as Swap,
+    dots: ridden(l, [q.x, q.y], en.back),
     loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }),
     from: arc.phi0 * DEG,
     to: arc.phiEnd * DEG,
   };
+}
+/** A roof drawn out as the canopy: the line stands with its first letter's roof-top at T (the circle's frame), and
+ *  the roof's line is drawn on from there, to the left, up to the rim's circle and along it to `tip` left of the
+ *  top. The letter is kept whole: the drawn-out roof is a stroke of its own, begun a little before the roof's top. */
+function roofArc(l: Line, T: Pt, rho: number, tip: number) {
+  const rf = l.roofed!,
+    st = l.b.strokes[rf.si],
+    q = st.s[rf.cut],
+    arc = canopyArc(T, rf.u, q.w, st.ang, rho, tip);
+  if (!arc) return null;
+  const lead = st.s.slice(rf.cut - ROOF_LAP, rf.cut + 1).map(v => ({ ...v, x: v.x - q.x + T[0], y: v.y - q.y + T[1] })),
+    s = arc.s.slice().reverse();
+  return {
+    ink: th.strokePolys({ ang: st.ang, s: [...lead, ...s] }),
+    loose: th.strokePolys({ ang: st.ang, s: s.slice(STUB) }),
+    from: arc.phi0 * DEG,
+    to: arc.phiEnd * DEG,
+  };
+}
+/** The same for a word hung from the top: centred, or moved `shift` to the right, its roof-top `drop` inside the
+ *  rim's circle. */
+function roofCanopy(l: Line, rho: number, shift: number, drop: number, tip: number) {
+  const rf = l.roofed!,
+    q = l.b.strokes[rf.si].s[rf.cut],
+    dx = -(l.x0 + l.x1) / 2 + shift,
+    x = q.x + dx,
+    r = rho - drop;
+  if (Math.abs(x) >= r) return null;
+  const dy = Math.sqrt(r * r - x * x) - q.y,
+    arc = roofArc(l, [x, q.y + dy], rho, tip);
+  return arc && { dx, dy, ...arc };
 }
 /** Where the rim runs the way a stroke starts: the angle above the level diameter, on the right. */
 const hangOf = (back: Pt) => Math.min(HANG_MAX, Math.max(HANG_MIN, Math.atan2(-back[0], back[1])));
@@ -385,6 +464,13 @@ function free(p: Placed, s: number, Rt: number) {
 /** How far to the right the last word of a placed line reaches. */
 const rightOf = (p: Placed) => Math.max(...p.l.whole[p.l.nw - 1].map(q => q[0])) + p.off[p.l.nw - 1];
 
+/** The cradle stroke of a placed line up to where the bowl is taken over (without a beginning that an entry has
+ *  redrawn: a short word may be one stroke from its first letter to its last). */
+function preOf(p: Placed): Sample[] {
+  const pre = inked(p.l, p.extra).pre,
+    sw = p.swaps?.find(q => q.si === p.l.take!.si);
+  return sw ? pre.slice(sw.from) : pre;
+}
 // ---- the bowl, with its neck mended ----
 interface Bowl {
   /** The whole stroke, from its letter's head, with the letter's dots; and the part that is checked as a piece of
@@ -409,7 +495,7 @@ function bowlOf(
   const { head } = p.l.take!,
     dx = p.off[p.l.nw - 1],
     rho = R - MARGIN - FLOOR / 2 - 0.05 - inset,
-    pre = inked(p.l, p.extra).pre,
+    pre = preOf(p),
     bowl = sweep(
       [-(head.C[0] + dx), head.C[1] + p.dy],
       [-head.u[0], head.u[1]],
@@ -443,7 +529,7 @@ function forthOf(p: Placed, R: number, run = FORTH_RUN): Bowl | null {
   const { head } = p.l.take!,
     dx = p.off[p.l.nw - 1],
     rho = R - MARGIN - FLOOR / 2 - 0.05,
-    pre = inked(p.l, p.extra).pre,
+    pre = preOf(p),
     sw = sweep([head.C[0] + dx, head.C[1] + p.dy], head.u, head.pre[head.pre.length - 1].w, rho, phi0 => Math.max(phi0 - run, -(Math.PI / 2 - FORTH_TOP)), NECK); // prettier-ignore
   if (!sw || rho - Math.hypot(head.C[0] + dx, head.C[1] + p.dy) > FORTH_DROP)
     return no(
@@ -575,26 +661,31 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
   if (!cr && !plan) return null;
   // (no cradle: every word that has a tall stem is on the ground line)
   const ci = cr ? cr.wi : n,
-    onGround = words.map((_, k) => k === ci || (k < ci && stemmed[k])),
+    // (a single word is its own ground line, stem or none)
+    onGround = words.map((_, k) => k === ci || (k < ci && stemmed[k]) || (n === 1 && !!plan)),
     gi = words.map((_, k) => k).filter(k => onGround[k]),
     ui = words.map((_, k) => k).filter(k => k < ci && !onGround[k]),
     g = lineOf(gi.length ? gi.map(k => words[k]).join(' ') : words[0], !!cr),
     uppers = ui.map(k => lineOf(words[k])),
     // the opening word stands apart when it hangs from the canopy or is the canopy
-    apart = (mode === 'entry' || mode === 'kashida') && ui[0] === 0,
+    apart = (mode === 'entry' || mode === 'kashida' || mode === 'roof') && ui[0] === 0,
+    // or, where it is the ground line's first word, stays seated there: the arc is led from where it stands
+    seated = (mode === 'entry' || mode === 'roof') && gi[0] === 0 && !!plan,
     sub = nest.cradle && cr && !plan?.forth ? subCradleOf(words, ci) : null,
     // the words after the cradle word, in its bowl: on one line, or on two
     afters: Line[][] = [];
   if (nest.cradle && !sub) return null;
   if (!gi.length || (!cr && gi.length > MAX_BARE)) return null;
-  if ((mode === 'entry' || mode === 'kashida') && !apart) return null;
-  if (mode === 'entry' && !uppers[0].entry) return null;
+  if ((mode === 'entry' || mode === 'kashida' || mode === 'roof') && !apart && !seated) return null;
+  if (mode === 'entry' && !(seated ? g : uppers[0]).entry) return null;
+  if (mode === 'roof' && !(seated ? g : uppers[0]).roofed) return null;
   // (with a sub-cradle: up to its word on one line, whose last letter it is; the words after it on a line inside it)
   if (sub)
     afters.push([lineOf(words.slice(ci + 1, sub.wi + 1).join(' '), true), ...(sub.wi < n - 1 ? [lineOf(words.slice(sub.wi + 1).join(' '))] : [])]); // prettier-ignore
   else if (ci >= n - 1) afters.push([]);
   for (let k = ci + 2; !sub && k <= n; k++) afters.push([[ci + 1, k], [k, n]].filter(([a, b]) => b > a).map(([a, b]) => lineOf(words.slice(a, b).join(' ')))); // prettier-ignore
   afters.reverse();
+  const roofAt = new Map<number, [Placed, Roof] | null>();
   /** One setting in a circle of radius R. */
   const at = (R: number, slide: number, gaps: number[], lift: number, aft: Line[]): Canopied | null => {
     const Rt = R - MARGIN,
@@ -622,7 +713,33 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
       lid: Poly[] | null = null, // (b) the opening word, drawn out along the rim
       forced = -1;
     const rightmost = Math.max(...g.stems.map(q => q.x + off[q.wi]));
-    if (mode === 'entry') {
+    if (seated) {
+      // the opening word on the ground line: its first stroke is led to the rim from where it stands, if that is
+      // near (a long way up would make a stem of a tooth)
+      const at = mode === 'entry' ? g.entry! : g.roofed!,
+        st = g.b.strokes[at.si],
+        q = st.s[at.cut],
+        C: Pt = [q.x + off[0], q.y + hg];
+      if (rho - Math.hypot(C[0], C[1]) > SEAT_DROP) return no('18');
+      if (mode === 'entry') {
+        const arc = canopyArc(C, g.entry!.back, q.w, st.ang, rho);
+        if (!arc) return no('18');
+        pg.swaps = [{ si: at.si, from: at.cut, s: arc.s.map(v => ({ ...v, x: v.x - off[0], y: v.y - hg })) }];
+        pg.dots = ridden(g, [q.x, q.y], g.entry!.back);
+        roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${words[0]}, where it stands`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
+      } else {
+        // (clear of its own line as written, by points here; the raster decides at the end)
+        const own = inkAt(pg, true).flat();
+        for (const share of ROOF_TIPS) {
+          const arc = roofArc(g, C, rho, ROOF_TIP * share);
+          if (!arc || arc.loose.some(v => v.some(([x, y]) => own.some(w => Math.abs(w[0] - x) < CLEAR + 0.3 && Math.hypot(w[0] - x, w[1] - y) < CLEAR + 0.3)))) continue; // prettier-ignore
+          pg.more = arc.ink;
+          roof = { loose: arc.loose, what: `the roof of the first letter of ${words[0]} drawn out to the left, where it stands`, from: arc.from, to: arc.to }; // prettier-ignore
+          break;
+        }
+        if (!roof) return no('18');
+      }
+    } else if (mode === 'entry') {
       const u = uppers[0];
       // as high as the rim runs the way the stroke starts, or lower if it must: never over a stem, so to the right
       // of them all
@@ -631,13 +748,35 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
           const c = entryCanopy(u, rho, hang, drop);
           if (!c || !within(u.whole[0], c.dx, c.dy, Rt)) continue;
           if (Math.min(...u.whole[0].map(q => q[0])) + c.dx < rightmost + STEM_HALF) break;
-          const q: Placed = { l: u, off: [c.dx], dy: c.dy, extra: [], swaps: [c.swap] };
+          const q: Placed = { l: u, off: [c.dx], dy: c.dy, extra: [], swaps: [c.swap], dots: c.dots };
+          if (c.dots.size && !inkAt(q).every(v => v.every(([x, y]) => Math.hypot(x, y) <= Rt))) continue;
           if (nearPairs([inkAt(q, true), c.loose], R, CLEAR).length) continue;
           hung = q;
           roof = { loose: c.loose, what: `an entry into the first letter of ${words[0]}, taken over ${drop} inside the rim's circle, the word hung ${(hang * DEG).toFixed(0)} degrees above the level diameter`, from: c.from, to: c.to }; // prettier-ignore
           break;
         }
       if (!hung) return no('6');
+    } else if (mode === 'roof') {
+      const u = uppers[0];
+      // hung from the top, centred or a little to the right; the longest roof that is clear of its own word
+      // (it depends on the circle alone: found once for each)
+      if (!roofAt.has(R)) {
+        roofAt.set(R, null);
+        each: for (const shift of [0, 0.12 * Rt, 0.24 * Rt])
+          for (const drop of ROOF_DROPS)
+            for (const share of ROOF_TIPS) {
+              const c = roofCanopy(u, rho, shift, drop, ROOF_TIP * share);
+              if (!c || !within(u.whole[0], c.dx, c.dy, Rt)) continue;
+              const q: Placed = { l: u, off: [c.dx], dy: c.dy, extra: u.stems.map(() => 0), more: c.ink };
+              if (!c.ink.every(v => v.every(([x, y]) => Math.hypot(x, y) <= Rt + 0.02))) continue;
+              if (nearPairs([inkAt(q, true), c.loose], R, CLEAR).length) continue;
+              roofAt.set(R, [q, { loose: c.loose, what: `the roof of the first letter of ${words[0]} drawn out to the left, its top ${drop} inside the rim's circle`, from: c.from, to: c.to }]); // prettier-ignore
+              break each;
+            }
+      }
+      const had = roofAt.get(R);
+      if (!had) return no('17');
+      [hung, roof] = had;
     } else if (mode === 'stem') {
       const c = stemCanopy(pg, 0, rho);
       if (!c || c.extra > (CAP - 1) * g.stems[0].top + 1e-6) return no('7');
@@ -682,7 +821,7 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
         outer = made;
       }
     }
-    const roofs = roof ? [...roof.loose, ...subs.flatMap(q => q.loose)] : [];
+    const roofs = roof ? [...roof.loose, ...subs.flatMap(q => q.loose), ...(mode === 'roof' && hung ? inkAt(hung, true) : [])] : []; // prettier-ignore
     if (roof) g.stems.forEach((_, s) => (f[s] = Math.min(f[s], under(pg, s, roofs))));
     for (const [k2, e] of bowed) f[k2] = e;
     pg.extra = stops(g.stems, f);
@@ -782,7 +921,7 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
         R *
         (1 + UNRISEN * (total ? 1 - reached / total : 0)) *
         (1 + BREACH * breaches) *
-        (1 + (cr ? VOID : VOID_BARE) * hollow) *
+        (1 + (n === 1 && plan ? 0 : cr ? VOID : VOID_BARE) * hollow) *
         (1 + 0.004 * moved),
       // as drawn: the canopy with its stroke
       drawn = [inkAt(pg), ...pas.map(p => inkAt(p)), ...(hung ? [inkAt(hung)] : []), ...(lid ? [lid] : []), ...ups.map(p => inkAt(p)), ...(bowl ? [bowl.ink] : []), ...(bowl2 ? [bowl2.ink] : [])], // prettier-ignore
@@ -816,7 +955,7 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
     for (const slide of mode === 'entry' ? [...SLIDES.filter(v => v <= 0), ...MORE_SLIDES] : SLIDES)
       for (const gaps of opens)
         for (const aft of afters)
-          for (const lift of [0, 2, 5]) {
+          for (const lift of n === 1 ? SINGLE_LIFTS : [0, 2, 5]) {
             const l = at(R, slide, gaps, lift, aft);
             if (!l) continue;
             if (SAY)
@@ -897,7 +1036,10 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     word = l.lines[0].split(' ')[0],
     // (any text: an entry only into a letter that takes one, rule W1)
     entry = !!line.entry && (!wide || ENTRY_INTO.includes(word[0])),
-    stem = k >= 0 && (!entry || line.b.strokes[line.stems[k].si].own?.[0] === 0),
+    lead = k >= 0 && line.b.strokes[line.stems[k].si].own?.[0] === 0,
+    // (any text: a roof drawn out, where the first letter is neither a stem nor takes an entry)
+    roofed = !!wide && !lead && !entry && !!line.roofed && !process.env.WIDE_NOROOF,
+    stem = !roofed && k >= 0 && (!entry || lead),
     rest = l.pieces.slice(1),
     arcs: Arc[] = [],
     /** Without a canopy (any text): the level lines and what arcs there are; the top line's stems rise (W6). */
@@ -933,7 +1075,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         arcs,
       };
     };
-  if (!stem && !entry) return wide && !nest.canopy ? bare(null, []) : null;
+  if (!stem && !entry && !roofed) return wide && !nest.canopy ? bare(null, []) : null;
   // ---- the sub-cradle ----
   let bowl2: Bowl | null = null;
   if (nest.cradle) {
@@ -978,9 +1120,16 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     }
   }
   if (l.cradle) arcs.unshift({ name: 'cradle', what: `the final ${l.cradle.c} of ${words[l.cradle.wi]}`, r: rho, from: l.ends[0] * DEG, to: l.ends[1] * DEG }); // prettier-ignore
-  for (let tip = TIP; tip > -0.6; tip -= 0.1) {
+  for (let tip = roofed ? ROOF_TIP : TIP; tip > (roofed ? 0.5 : -0.6); tip -= 0.1) {
     let roof: Roof;
-    if (stem) {
+    if (roofed) {
+      const rf = line.roofed!,
+        q = line.b.strokes[rf.si].s[rf.cut],
+        arc = roofArc(line, [q.x + p.off[0], q.y + p.dy], rho, tip);
+      if (!arc) continue;
+      p.more = arc.ink;
+      roof = { loose: arc.loose, what: `the roof of the first letter of ${word} drawn out to the left`, from: arc.from, to: arc.to }; // prettier-ignore
+    } else if (stem) {
       const c = stemCanopy(p, k, rho, tip);
       if (!c) {
         no('canopy: the stem cannot reach the rim');
@@ -1000,10 +1149,13 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         arc = canopyArc([q.x + p.off[0], q.y + p.dy], en.back, q.w, st.ang, rho, tip);
       if (!arc) continue;
       p.swaps = [{ si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })) }];
+      p.dots = ridden(line, [q.x, q.y], en.back);
+      if (p.dots.size && !inkAt(p).every(v => v.every(([x, y]) => Math.hypot(x, y) <= R - MARGIN))) continue;
       roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${word}`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
     }
     if (nearPairs([inkAt(p, true), ...rest, roof.loose], R, CLEAR).some(pr => pr.includes(rest.length + 1))) {
       no('canopy: not clear of the writing');
+      p.more = undefined;
       continue;
     }
     arcs.unshift({ name: 'canopy', what: roof.what, r: rho, from: roof.from, to: roof.to });
@@ -1012,7 +1164,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     if (nest.canopy) {
       const k2 = (stem ? k + 1 : 0) + (nest.skip ?? 0),
         m2 = line.stems[k2],
-        one = p.swaps;
+        one = p.swaps ?? [];
       let done = false;
       if (!m2) return null;
       each: for (const steps of SUB_STEPS) {
@@ -1042,6 +1194,8 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
   }
   p.extra = line.stems.map(() => 0);
   p.swaps = undefined;
+  p.dots = undefined;
+  p.more = undefined;
   return wide && !nest.canopy ? bare(null, []) : null;
 }
 
@@ -1135,7 +1289,9 @@ export function modesWide(word: string): Mode[] {
     out: Mode[] = [];
   if (l.stems.some(m => l.b.strokes[m.si].own?.[0] === 0)) out.push('stem');
   else {
-    if (l.entry && !l.stems.length && ENTRY_INTO.includes(word[0])) out.push('entry');
+    // (a word with a stem cannot hang from the rim: its entry is led from where it stands on the ground line)
+    if (l.entry && ENTRY_INTO.includes(word[0])) out.push('entry');
+    if (l.roofed && !process.env.WIDE_NOROOF) out.push('roof');
     if (l.stems.length) out.push('stem');
   }
   return [...out, null];
@@ -1156,10 +1312,15 @@ export function cradleWide(text: string): Plan {
 export function arrange(t: string, said: string[]): Canopied | null {
   const modes = modesWide(t.split(' ')[0]),
     plan = cradleWide(t),
-    name = (m: Mode) => (m === 'entry' ? 'an entry' : m === 'stem' ? 'a stem' : 'no canopy'),
+    name = (m: Mode) =>
+      m === 'entry' ? 'an entry' : m === 'stem' ? 'a stem' : m === 'roof' ? 'a roof drawn out' : 'no canopy',
     flat = short(t) ? cradleCompose(t, { cradle: false }) : null;
   let base: Canopied | null = null,
-    make: ((nest: Nest) => Canopied | null) | null = null;
+    make: ((nest: Nest) => Canopied | null) | null = null,
+    // (a single word: every rung that is sound is drawn; the one with the most arcs is taken, the earlier rung of
+    // two that have as many, unless a rung with the other end's arc draws the word SINGLE_LARGER larger)
+    pick: { base: Canopied; make: (nest: Nest) => Canopied | null; cradled: boolean } | null = null;
+  const single = !t.includes(' ');
   if (short(t))
     for (const p of plan.cr ? [plan, { cr: null }] : [plan]) {
       for (const mode of modes) {
@@ -1173,12 +1334,21 @@ export function arrange(t: string, said: string[]): Canopied | null {
           base = null;
           continue;
         }
-        if (base) make = nest => ground(t, mode, nest, p);
-        else said.push(`the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: does not stand (${[...WHY].map(([k, v]) => `${k}:${v}`).join(' ') || 'not tried'})`); // prettier-ignore
+        if (base) {
+          make = nest => ground(t, mode, nest, p);
+          said.push(`taken: the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: ${flat ? (base.R / flat.R).toFixed(2) : '-'} times the circle of level lines, ${((base.ground?.[3] ?? 0) * 100).toFixed(0)}% of the height empty under it`); // prettier-ignore
+        } else said.push(`the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: does not stand (${[...WHY].map(([k, v]) => `${k}:${v}`).join(' ') || 'not tried'})`); // prettier-ignore
+        if (base && single) {
+          const more = pick ? base.arcs.length - pick.base.arcs.length : 1;
+          if (more > 0 || (more === 0 && !!p.cr !== pick!.cradled && base.R * SINGLE_LARGER < pick!.base.R))
+            pick = { base, make: make!, cradled: !!p.cr };
+          base = null;
+        }
         if (base) break;
       }
       if (base) break;
     }
+  if (pick) ({ base, make } = pick);
   if (!base) {
     const wide = { cradle: !!wideBowls(() => cradleOf(t)) };
     WHY.clear();
@@ -1206,7 +1376,7 @@ export function carriers(t: string): string {
     plan = cradleWide(t),
     sub = plan.cr && !plan.forth ? subCradleOf(words, plan.cr.wi) : null;
   return [
-    `canopy: ${mode === 'entry' ? `an entry into the ${words[0][0]} of ${words[0]}` : mode === 'stem' ? `a stem of ${words[0]}` : 'none'}`,
+    `canopy: ${mode === 'entry' ? `an entry into the ${words[0][0]} of ${words[0]}` : mode === 'stem' ? `a stem of ${words[0]}` : mode === 'roof' ? `the roof of the ${words[0][0]} of ${words[0]}` : 'none'}`,
     `cradle: ${plan.cr ? `the ${plan.cr.c} of ${words[plan.cr.wi]}${plan.forth ? ', running forth' : ''}` : 'none'}`,
     `sub-cradle: ${sub ? `the ${sub.c} of ${words[sub.wi]}` : 'none'}`,
   ].join('; ');

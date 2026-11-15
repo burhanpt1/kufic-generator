@@ -135,12 +135,13 @@ describe('the rules on the wider set of texts', () => {
     expect(modesWide('رب')).toEqual([null]);
     expect(modesWide('زينب')).toEqual([null]);
     expect(modesWide('وما')).toEqual(['stem', null]);
-    expect(modesWide('سبحان')).toEqual(['stem', null]);
+    expect(modesWide('سبحان')).toEqual(['entry', 'stem', null]);
     expect(modesWide('بسم')).toEqual(['entry', null]);
-    // (nor a nun: the arc would swallow its dot)
-    expect(modesWide('نور')).toEqual([null]);
-    // (a roof that starts up and to the right, as this hand's hah does, takes no entry from the right)
-    expect(modesWide('حسين')).toEqual([null]);
+    // (a nun too: its dot rides outside the arc's neck)
+    expect(modesWide('نور')).toEqual(['entry', null]);
+    // (a roof is written to the left: it takes no entry from the right, and is drawn out to the left)
+    expect(modesWide('حسين')).toEqual(['roof', null]);
+    expect(modesWide('عليم')).toEqual(['roof', 'stem', null]);
     // a tail runs forth from the last word, and only where there is no bowl
     expect(cradleWide('نور')).toMatchObject({ cr: { wi: 0, c: 'ر' }, forth: true });
     expect(cradleWide('نور على نور')).toMatchObject({ cr: { wi: 1, c: 'ى' } });
