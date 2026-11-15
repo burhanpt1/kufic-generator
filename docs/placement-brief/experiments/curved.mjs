@@ -19,29 +19,29 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CELL, MARGIN, NIB, WORD_SPACE, kit, lineOf, pitchOf } from '../entries/baselines-first/lines.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const UP = 10, // how far a line's tall strokes rise above it, and
+export const UP = 10, // how far a line's tall strokes rise above it, and
   DOWN = 6, // how far its tails fall below it, when judging how much of a line lies inside the circle
   MAX_LINES = 7;
 
 /** A line through the point (0, h): where it is `s` along it from that point (positive to the right), and its
  *  direction there (radians). */
-const FAMILIES = {
+export const FAMILIES = {
   lens: (h, R) => arc(h, h / (R * R)),
   bow: (h, R) => arc(h, (2.4 * h) / (R * R)),
   pinch: (h, R) => arc(h, (-0.7 * h) / (R * R)),
   flow: (h, R) => streamline(h, 0.22 * R),
 };
-function arc(h, k) {
+export function arc(h, k) {
   if (Math.abs(k) < 1e-7) return { pt: s => [s, h], ang: () => 0 };
   const rho = 1 / k;
   return { pt: s => [rho * Math.sin(s / rho), h - rho + rho * Math.cos(s / rho)], ang: s => -s / rho };
 }
 /** The streamline of a level flow past a disc of radius a that passes through (0, h): y (1 − a²/r²) = const. */
-function streamline(h, a) {
+export function streamline(h, a) {
   const sign = Math.sign(h) || 1,
     H = Math.abs(h),
     psi = H - (a * a) / H,
@@ -80,15 +80,15 @@ function streamline(h, a) {
   };
 }
 /** The heights at which the lines cross the circle's upright axis. */
-function heights(family, n, pitch, R) {
+export function heights(family, n, pitch, R, hole = 0.22 * R) {
   if (family !== 'flow') return Array.from({ length: n }, (_, i) => ((n - 1) / 2 - i) * pitch - 2);
   // above and below the empty centre: the lower half's tall strokes need the room the upper half's tails do not
-  const a = 0.22 * R,
+  const a = hole,
     top = Math.ceil(n / 2);
   return Array.from({ length: n }, (_, i) => (i < top ? a + 1 + (top - 1 - i) * pitch : -(a + UP * 0.75) - (i - top) * pitch)); // prettier-ignore
 }
 /** How long a stretch of the line, centred on the axis, lies inside the circle with its tall strokes and tails. */
-function room(line, R) {
+export function room(line, R) {
   const inside = s => {
     const [x, y] = line.pt(s),
       a = line.ang(s),
@@ -179,29 +179,31 @@ const PRINCIPLES = {
   pinch: 'Lines that bow towards the centre, as a ruled sheet sags round a weight.',
   flow: 'The centre is left empty and the lines part to pass round it, as a stream passes a stone.',
 };
-for (const family of process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(FAMILIES)) {
-  const layouts = {};
-  for (const t of kit.texts) {
-    const open = { space: 1, pitch: 1, radius: 1 };
-    let lay = null,
-      c = null;
-    for (let tries = 0; tries < 30; tries++) {
-      lay = layout(family, t, open);
-      if (!lay) break;
-      c = check(t.id, lay);
-      if (c.inside && c.touching === 0) break;
-      // out of the circle: a larger one; touching: wider spaces, along the line and between lines by turns
-      if (!c.inside) open.radius *= 1.02;
-      else if (tries % 2) open.pitch *= 1.05;
-      else open.space *= 1.12;
+// run as a script (not when its line families are borrowed by tests/curved-letters-sheet.test.ts)
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  for (const family of process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(FAMILIES)) {
+    const layouts = {};
+    for (const t of kit.texts) {
+      const open = { space: 1, pitch: 1, radius: 1 };
+      let lay = null,
+        c = null;
+      for (let tries = 0; tries < 30; tries++) {
+        lay = layout(family, t, open);
+        if (!lay) break;
+        c = check(t.id, lay);
+        if (c.inside && c.touching === 0) break;
+        // out of the circle: a larger one; touching: wider spaces, along the line and between lines by turns
+        if (!c.inside) open.radius *= 1.02;
+        else if (tries % 2) open.pitch *= 1.05;
+        else open.space *= 1.12;
+      }
+      if (!lay) {
+        console.log(`${family} ${t.id}: no arrangement`);
+        continue;
+      }
+      const { lines, ...rest } = lay;
+      layouts[t.id] = rest;
+      console.log(`${family} ${t.id}: ${lines} line${lines > 1 ? 's' : ''}, radius ${lay.radius} (${(lay.radius / NIB).toFixed(1)} nibs)${c.inside && c.touching === 0 ? '' : `  NOT CLEAN: inside ${c.inside}, touching ${c.touching}`}; spaces ×${open.space.toFixed(2)}, pitch ×${open.pitch.toFixed(2)}`); // prettier-ignore
     }
-    if (!lay) {
-      console.log(`${family} ${t.id}: no arrangement`);
-      continue;
-    }
-    const { lines, ...rest } = lay;
-    layouts[t.id] = rest;
-    console.log(`${family} ${t.id}: ${lines} line${lines > 1 ? 's' : ''}, radius ${lay.radius} (${(lay.radius / NIB).toFixed(1)} nibs)${c.inside && c.touching === 0 ? '' : `  NOT CLEAN: inside ${c.inside}, touching ${c.touching}`}; spaces ×${open.space.toFixed(2)}, pitch ×${open.pitch.toFixed(2)}`); // prettier-ignore
+    writeFileSync(join(here, `${family}.json`), JSON.stringify({ entry: `curved-${family}`, principle: PRINCIPLES[family], reading: 'Start at the top line and read each line from right to left.', layouts }, null, 1) + '\n'); // prettier-ignore
   }
-  writeFileSync(join(here, `${family}.json`), JSON.stringify({ entry: `curved-${family}`, principle: PRINCIPLES[family], reading: 'Start at the top line and read each line from right to left.', layouts }, null, 1) + '\n'); // prettier-ignore
-}
