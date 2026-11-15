@@ -22,6 +22,7 @@
 //       led from there into the rim with the direction it has: one stroke, no corner.
 //   B.  The heads: mirrored about the stem's own line for the stems on one side of the upright axis (see SERIF).
 // `MERIDIAN=1 MERIDIAN_OUT=<dir> npx vitest run tests/char-meridian-sheet.test.ts --maxWorkers=2` writes the sheets.
+import './helpers/char-pure';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
