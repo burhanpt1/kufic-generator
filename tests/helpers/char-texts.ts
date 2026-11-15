@@ -51,6 +51,24 @@ export const FRESH: [id: string, text: string, why: string][] = [
   ['falaq', 'قل أعوذ برب الفلق من شر ما خلق', 'eight words, dotted bowls throughout'],
   ['asr', 'والعصر إن الإنسان لفي خسر إلا الذين آمنوا وعملوا الصالحات', 'ten words, long, tails'],
 ];
+/** A fourth set, never yet drawn (added 15 November after round two, whose held-out set is spent): the next
+ *  held-out measure. Everyday phrases, names and short verses, with no thought for what the rules can do. */
+export const FRESH2: [id: string, text: string][] = [
+  ['khadija', 'خديجة'],
+  ['yusuf', 'يوسف'],
+  ['maryam', 'مريم'],
+  ['shukr', 'الشكر لله'],
+  ['tawba', 'أستغفر الله'],
+  ['akbar', 'الله أكبر'],
+  ['ilm', 'العلم نور'],
+  ['hilm', 'الحلم سيد الأخلاق'],
+  ['yusr', 'إن مع العسر يسرا'],
+  ['dua', 'رب اشرح لي صدري'],
+  ['nasr3', 'وما النصر إلا من عند الله'],
+  ['tawakkal', 'ومن يتوكل على الله فهو حسبه'],
+  ['kawthar', 'إنا أعطيناك الكوثر فصل لربك وانحر إن شانئك هو الأبتر'],
+  ['nas', 'قل أعوذ برب الناس ملك الناس إله الناس'],
+];
 export const ALL_TEXTS: [id: string, text: string][] = [
   ...TUNED,
   ...UNSEEN.map(([id, text]) => [id, text] as [string, string]),
