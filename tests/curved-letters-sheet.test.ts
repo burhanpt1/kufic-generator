@@ -45,20 +45,66 @@ function levelLine(text: string) {
   }
   return l;
 }
+/** The name written as a stacked ligature rides a curve whole and is not bent through (the name of God, a row of
+ *  stems, bends well: its stems fan along the line). */
+const RIGID = /^[وفبتك]?محمد$/;
+/** Where on a level line its unbending words lie (the stretch each added to the line when it was written). */
+function rigidSpans(text: string): [number, number][] {
+  if (!BEND.rigid) return [];
+  const words = text.split(' '),
+    out: [number, number][] = [];
+  let right = 1e9;
+  words.forEach((w, k) => {
+    const left = levelLine(words.slice(0, k + 1).join(' ')).x0;
+    if (RIGID.test(w)) out.push([left, k === 0 ? levelLine(w).x1 : right]);
+    right = left;
+  });
+  return out;
+}
+/** The rules under trial: the stacked name rides whole; no line bends tighter than `radius` (pen units; tried and
+ *  dropped: a limit of 9 more than doubled the circle); no written stretch of line leans more than `tilt` degrees. */
+const BEND = { rigid: false, radius: 0, tilt: 0 };
+/** The steepest lean of a curve over a stretch of it, in degrees. */
+function steepest(c: Curve, s0: number, s1: number) {
+  let a = 0;
+  for (let s = s0; s <= s1; s += 0.5) a = Math.max(a, Math.abs(c.ang(s)));
+  return (a * 180) / Math.PI;
+}
+/** The tightest bend of a curve over a stretch of it: the radius of curvature, in pen units. */
+function tightest(c: Curve, s0: number, s1: number) {
+  let k = 0;
+  for (let s = s0; s < s1; s += 0.5) k = Math.max(k, Math.abs(c.ang(s + 0.5) - c.ang(s)) / 0.5);
+  return k ? 1 / k : Infinity;
+}
 /** The ink of a level line bent onto a curve: each skeleton point carried to the curve, the pen turned with it. */
 function bent(text: string, c: Curve, nibScale = 1): Poly[] {
   const { b, x0, x1 } = levelLine(text),
     mid = (x0 + x1) / 2,
-    carry = (x: number, y: number) => {
+    spans = rigidSpans(text),
+    bendAt = (x: number, y: number) => {
       const s = x - mid,
         [px, py] = c.pt(s),
         a = c.ang(s);
       return { x: px - y * Math.sin(a), y: py + y * Math.cos(a), a };
-    };
+    },
+    // a point of an unbending word turns about the middle of its word's stretch of line
+    carry = (x: number, y: number, ref = x) => {
+      const sp = spans.find(([l, r]) => ref >= l && ref < r);
+      if (!sp) return bendAt(x, y);
+      const xc = (sp[0] + sp[1]) / 2,
+        o = bendAt(xc, 0),
+        dx = x - xc;
+      return {
+        x: o.x + dx * Math.cos(o.a) - y * Math.sin(o.a),
+        y: o.y + dx * Math.sin(o.a) + y * Math.cos(o.a),
+        a: o.a,
+      };
+    },
+    middle = (q: { x: number }[]) => q.reduce((t, v) => t + v.x, 0) / q.length;
   return [
     ...b.strokes.flatMap(
       st =>
-      th.strokePolys({ ...st, s: st.s.map(q => { const p = carry(q.x, q.y); return { ...q, x: p.x, y: p.y, rot: (q.rot || 0) + p.a }; }) }, nibScale), // prettier-ignore
+      th.strokePolys({ ...st, s: st.s.map(q => { const p = carry(q.x, q.y, middle(st.s)); return { ...q, x: p.x, y: p.y, rot: (q.rot || 0) + p.a }; }) }, nibScale), // prettier-ignore
     ),
     ...b.dots.flatMap(([x, y, sc, rot]) => {
       const p = carry(x, y);
@@ -73,6 +119,8 @@ interface Laid {
   R: number;
   lines: number;
   polys: Poly[];
+  /** The tightest bend under any written stretch of line (pen units). */
+  bend: number;
 }
 function lay(family: Family, text: string): Laid | null {
   let words = text.split(' ');
@@ -100,13 +148,17 @@ function lay(family: Family, text: string): Laid | null {
           curves = hs.map(h => curveOf(family === 'centre' ? 'flow' : family, h, R, holeOf(R))),
           rooms = curves.map(c => room(c, R - MARGIN));
         if (rooms.some(r => r <= 0)) continue;
+        // the rule on bends: a line that would turn tighter than allowed where it is written is not used
+        if (BEND.radius && curves.some((c, i) => tightest(c, -rooms[i] / 2, rooms[i] / 2) < BEND.radius)) continue;
         const full = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(Infinity)),
           from = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(-1));
         full[0][0] = 0;
         for (let i = 1; i <= m; i++)
           for (let b = i; b <= n; b++)
             for (let a = i - 1; a < b; a++) {
-              const f = Math.max(full[i - 1][a], width(a, b) / rooms[i - 1]);
+              const w = width(a, b),
+                lean = BEND.tilt && steepest(curves[i - 1], -w / 2, w / 2) > BEND.tilt,
+                f = lean ? Infinity : Math.max(full[i - 1][a], w / rooms[i - 1]);
               if (f < full[i][b]) {
                 full[i][b] = f;
                 from[i][b] = a;
@@ -138,7 +190,10 @@ function lay(family: Family, text: string): Laid | null {
         for (let i = 0; i < count.length; i++) if (A.a[i] > 127) count[i]++;
       }
       if (count.some(v => v > 1)) break; // touching: open the pitch and start again
-      return { R, lines: best.cut.length, polys: [...inks.flatMap(k => cleanOutline(k)), ...centred] };
+      const bend = Math.min(
+        ...best.cut.map(([a, b], i) => tightest(best!.curves[i], -width(a, b) / 2, width(a, b) / 2)),
+      );
+      return { R, lines: best.cut.length, polys: [...inks.flatMap(k => cleanOutline(k)), ...centred], bend };
     }
   return null;
 }
@@ -164,14 +219,25 @@ describe('curved axes with bent letters', () => {
       const out = process.env.CURVED_OUT ?? join(import.meta.dirname, '../docs/curved');
       mkdirSync(out, { recursive: true });
       const report: string[] = [];
-      for (const family of ['lens', 'bow', 'flow', 'centre'] as Family[])
-        for (const [id, text] of TEXTS) {
-          const l = lay(family, text);
-          report.push(`${family} ${id}: ${l ? `${l.lines} lines, radius ${l.R.toFixed(1)} (${(l.R / NIB).toFixed(1)} nibs)` : 'no arrangement'}`); // prettier-ignore
-          if (l) writeFileSync(join(out, `${family}-${id}.png`), toPNG(svgOf(l), 480));
-        }
+      // as first tried, then with the stacked name riding whole. CURVED_TILT adds the limit on a line's lean; at 28,
+      // 40 and 55 degrees no arrangement of flow or centre is left: their lines lean more than that beside the centre
+      for (const [tag, rigid, radius] of [
+        ['', false, 0],
+        ['-ruled', true, +(process.env.CURVED_RADIUS ?? 14)],
+      ] as const) {
+        BEND.rigid = rigid;
+        BEND.radius = radius;
+        for (const family of (tag ? ['flow', 'centre'] : ['lens', 'bow', 'flow', 'centre']) as Family[])
+          for (const [id, text] of TEXTS) {
+            const l = lay(family, text);
+            report.push(`${family}${tag} ${id}: ${l ? `${l.lines} lines, radius ${l.R.toFixed(1)} (${(l.R / NIB).toFixed(1)} nibs), tightest bend ${l.bend.toFixed(1)}` : 'no arrangement'}`); // prettier-ignore
+            if (l) writeFileSync(join(out, `${family}${tag}-${id}.png`), toPNG(svgOf(l), 480));
+          }
+      }
+      BEND.rigid = false;
+      BEND.tilt = 0;
       writeFileSync(join(out, 'numbers.txt'), report.join('\n') + '\n');
-      expect(report.length).toBe(16);
+      expect(report.length).toBe(24);
     },
     1_800_000,
   );
