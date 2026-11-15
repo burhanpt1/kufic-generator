@@ -197,3 +197,16 @@ a note, and shows the grade the rules' author gave only after the owner's. Grade
 the page's collection `grades`, named `<round>__<id>`: `{ id, round, grade: 'good' | 'fair' | 'poor', note, t }`. Read
 them back with ArtifactData (list, collection `grades`) and compare with the round's own verdicts: where the owner is
 harsher, the note says what the rules miss.
+
+### Round two (15 Nov 2026): what the owner's grades decided
+
+Grades and notes are in `grades-round2.json`: 6 good, 23 fair, 7 poor (the rules' author had 11, 24, 1).
+
+- **Order of precedence.** The letter is recognisable, with its dots in their classical place (three dots as a
+  pyramid); then the circle is filled; then embellishment, only where a letter offers it.
+- **How much licence, by length (owner's words, paraphrased).** One or two words are talismanic: beauty may lead, and
+  a hard read is acceptable. A longer prayer must be legible, unless it is one a viewer recognises at sight (the
+  basmala, the shahada), which may take more licence.
+- **Opening arcs** suit letters whose tooth stays readable (the ب of the basmala); into ن ت ث they hide the letter.
+- **Short texts** that leave the lower part of the circle empty are poor: start at the lower rim and fill upward.
+- **Long texts on calm level lines** were graded good; do not trade their calm for devices.
