@@ -7,6 +7,7 @@ import type { Built } from '../../src/script/thuluth/engine';
 import { cleanOutline } from '../../src/script/thuluth/outline';
 import type { Poly, Sample } from '../../src/script/thuluth/types';
 import { forms } from '../../src/script/thuluth';
+import './char-pure';
 import type { Cols, Cradle, Head, Pt, Stem } from './char-first';
 import { BOWL, CAP, CLEAR, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, hull, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
 
