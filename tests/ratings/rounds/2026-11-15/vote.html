@@ -1,0 +1,223 @@
+<title>Kufic Round 3 Ratings</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* layout: one pair fills the stage; the tally sits beside it on a wide screen and under it on a phone */
+:root {
+  --bg: #f3efe4; --panel: #fbf9f3; --fg: #1d2440; --muted: #5d6478; --line: #d9d2bf;
+  --accent: #1d4a3a; --accent-fg: #f6f1df; --gold: #b98a2c;
+  --good: #1f6b4a; --warn: #9a6a12; --bad: #9a3b2e;
+  --display: "Space Grotesk", system-ui, sans-serif; --body: Inter, system-ui, sans-serif; --arabic: Amiri, "Noto Naskh Arabic", serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171f; --panel: #1a212c; --fg: #e9e4d4; --muted: #9aa1b2; --line: #2e3745;
+  --accent: #3f8f72; --accent-fg: #0d1512; --gold: #d6ab4f; --good: #5fbf95; --warn: #d9a441; --bad: #e08573; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171f; --panel: #1a212c; --fg: #e9e4d4; --muted: #9aa1b2; --line: #2e3745;
+  --accent: #3f8f72; --accent-fg: #0d1512; --gold: #d6ab4f; --good: #5fbf95; --warn: #d9a441; --bad: #e08573; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font: 600 22px/1.2 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 15px/1.3 var(--display); margin: 0 0 10px; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 0; }
+.status { font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+.status.ready { color: var(--good); border-color: var(--good); }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.main { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.stage, .side { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.what { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; align-items: baseline; margin-bottom: 12px; }
+.text { font: 400 22px/1.5 var(--arabic); }
+.meta { color: var(--muted); font-size: 13px; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.card { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 6px; border: 2px solid transparent; border-radius: 10px; padding: 4px; text-align: center; }
+.card img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 8px; background: #ece6d6; display: block; }
+.card:hover { border-color: var(--line); }
+.card:focus-visible, button:focus-visible, .row:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.card.picked { border-color: var(--accent); }
+.card span { font-size: 13px; color: var(--muted); }
+.card.picked span { color: var(--accent); font-weight: 600; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+button.b { font: 500 14px var(--body); color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+button.b:hover { border-color: var(--fg); }
+button.b.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.b[disabled] { opacity: .45; cursor: default; }
+.grow { flex: 1; }
+kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.note { margin: 12px 0 0; font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.note.err { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-weight: 500; color: var(--muted); padding: 4px 6px 6px 0; border-bottom: 1px solid var(--line); }
+td { padding: 7px 6px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.n, th.n { text-align: right; }
+.verdict { font-weight: 600; white-space: nowrap; }
+.v-yes { color: var(--good); } .v-no { color: var(--bad); } .v-lean { color: var(--warn); } .v-wait { color: var(--muted); font-weight: 500; }
+.rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; margin-top: 4px; }
+.row { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; font: 12px ui-monospace, monospace; padding: 5px 0; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+.row.done { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--fg); border-color: transparent; }
+.row.cur { border-color: var(--gold); color: var(--fg); }
+.side > section + section { margin-top: 18px; }
+.legend { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Round 3: spacing and letters</h1>
+      <p class="sub">Pick the roundel that reads and looks better. The two sides are shuffled, so you vote without knowing which has the option on.</p>
+    </div>
+    <span class="status" id="status" aria-live="polite">Loading votes…</span>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+
+  <div class="main">
+    <section class="stage" aria-label="The pair to vote on">
+      <div class="what">
+        <span class="text" id="text" lang="ar" dir="rtl"></span>
+        <span class="meta" id="meta"></span>
+      </div>
+      <div class="pair">
+        <button class="card" id="left" type="button"><img id="imgL" alt="Left roundel"><span id="capL">Left</span></button>
+        <button class="card" id="right" type="button"><img id="imgR" alt="Right roundel"><span id="capR">Right</span></button>
+      </div>
+      <div class="acts">
+        <button class="b" id="tie" type="button">No difference <kbd>T</kbd></button>
+        <button class="b" id="bad" type="button">Both poor <kbd>B</kbd></button>
+        <span class="grow"></span>
+        <button class="b" id="prev" type="button" aria-label="Previous pair">‹ Back</button>
+        <button class="b" id="next" type="button" aria-label="Next pair">Skip ›</button>
+      </div>
+      <p class="note" id="note"><kbd>←</kbd> <kbd>→</kbd> choose a side. A vote moves on to the next pair without one; you can come back and change any of them.</p>
+    </section>
+
+    <aside class="side">
+      <section>
+        <h2>What the votes say so far</h2>
+        <table>
+          <thead><tr><th>Option</th><th class="n">On</th><th class="n">Off</th><th class="n">Same</th><th class="n">Left</th><th>Reading</th></tr></thead>
+          <tbody id="tally"></tbody>
+        </table>
+        <p class="legend">"Clear" needs the split to be unlikely by chance (sign test, under 5%): with six decided pairs that is six to none; with eight, eight to none. "Leaning" is three in four or better. "Both poor" counts as a vote for neither.</p>
+      </section>
+      <section>
+        <h2>Pairs</h2>
+        <div class="rows" id="rows"></div>
+        <p class="legend">Filled squares are voted. Select one to see it again.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const DATA = {"pairs": [{"a": "q000", "b": "q001", "o": "wordGap", "t": "بسم الله الرحمن الرحيم", "f": "lanes"}, {"a": "q002", "b": "q003", "o": "wordGap", "t": "بسم الله الرحمن الرحيم", "f": "ruled"}, {"a": "q004", "b": "q005", "o": "wordGap", "t": "اللهم صل على محمد وآل محمد", "f": "lanes"}, {"a": "q006", "b": "q007", "o": "wordGap", "t": "اللهم صل على محمد وآل محمد", "f": "ruled"}, {"a": "q008", "b": "q009", "o": "wordGap", "t": "قل هو الله أحد الله الصمد", "f": "lanes"}, {"a": "q010", "b": "q011", "o": "wordGap", "t": "قل هو الله أحد الله الصمد", "f": "ruled"}, {"a": "q012", "b": "q013", "o": "wordGap", "t": "الحمد لله رب العالمين", "f": "lanes"}, {"a": "q016", "b": "q017", "o": "innerGap", "t": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", "f": "lanes"}, {"a": "q018", "b": "q019", "o": "innerGap", "t": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", "f": "ruled"}, {"a": "q020", "b": "q021", "o": "innerGap", "t": "بسم الله الرحمن الرحيم", "f": "lanes"}, {"a": "q022", "b": "q023", "o": "innerGap", "t": "بسم الله الرحمن الرحيم", "f": "ruled"}, {"a": "q024", "b": "q025", "o": "innerGap", "t": "اللهم صل على محمد وآل محمد", "f": "lanes"}, {"a": "q026", "b": "q027", "o": "innerGap", "t": "اللهم صل على محمد وآل محمد", "f": "ruled"}, {"a": "q028", "b": "q029", "o": "innerGap", "t": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", "f": "lanes"}, {"a": "q030", "b": "q031", "o": "innerGap", "t": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", "f": "ruled"}, {"a": "q032", "b": "q033", "o": "stems", "t": "بسم الله الرحمن الرحيم", "f": "lanes"}, {"a": "q034", "b": "q035", "o": "stems", "t": "قل هو الله أحد الله الصمد", "f": "lanes"}, {"a": "q036", "b": "q037", "o": "stems", "t": "الحمد لله رب العالمين", "f": "lanes"}, {"a": "q038", "b": "q039", "o": "stems", "t": "اللهم صل على محمد وآل محمد", "f": "lanes"}, {"a": "q040", "b": "q041", "o": "stems", "t": "بسم الله الرحمن الرحيم", "f": "ruled"}, {"a": "q042", "b": "q043", "o": "stems", "t": "قل هو الله أحد الله الصمد", "f": "ruled"}, {"a": "q044", "b": "q045", "o": "muhammad", "t": "اللهم صل على محمد وآل محمد", "f": "lanes"}, {"a": "q046", "b": "q047", "o": "muhammad", "t": "لا إله إلا الله محمد رسول الله", "f": "lanes"}, {"a": "q048", "b": "q049", "o": "muhammad", "t": "محمد رسول الله", "f": "lanes"}, {"a": "q050", "b": "q051", "o": "muhammad", "t": "اللهم صل على محمد وآل محمد", "f": "ruled"}, {"a": "q052", "b": "q053", "o": "muhammad", "t": "لا إله إلا الله محمد رسول الله", "f": "ruled"}, {"a": "q054", "b": "q055", "o": "letters", "t": "بسم الله الرحمن الرحيم", "f": "lanes"}, {"a": "q056", "b": "q057", "o": "letters", "t": "اللهم صل على محمد وآل محمد", "f": "lanes"}, {"a": "q058", "b": "q059", "o": "letters", "t": "لا إله إلا الله محمد رسول الله", "f": "lanes"}, {"a": "q060", "b": "q061", "o": "letters", "t": "الحمد لله رب العالمين", "f": "lanes"}, {"a": "q062", "b": "q063", "o": "letters", "t": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", "f": "ruled"}], "labels": {"wordGap": "Space between words", "innerGap": "Space inside words", "stems": "Stem heads C", "muhammad": "The name محمد, C", "letters": "Both letter choices"}};
+const PAIRS = DATA.pairs, LABEL = DATA.labels, OPTIONS = [...new Set(PAIRS.map(p => p.o))];
+// which side shows the option on: fixed per pair, so a reload shows the same thing
+const flip = p => { let h = 0; for (const c of p.a + p.b) h = (h * 31 + c.charCodeAt(0)) >>> 0; return (h >> 3) % 2 === 1; };
+const $ = id => document.getElementById(id);
+const votes = {};            // pair id (its off side's id) -> { w: 'a' | 'b' | 'tie', bad }
+let cur = 0, db = null, canWrite = true, busy = false;
+
+const choiceOf = v => !v ? null : v.bad ? 'bad' : v.w === 'tie' ? 'tie' : v.w === 'b' ? 'on' : 'off';
+function binomTwoSided(k, n) {            // chance of a split at least this lopsided from a fair coin
+  if (!n) return 1;
+  const lo = Math.min(k, n - k); let p = 0, c = 1;
+  for (let i = 0; i <= lo; i++) { p += c; c = c * (n - i) / (i + 1); }
+  return Math.min(1, 2 * p / Math.pow(2, n));
+}
+function reading(on, off, left) {
+  const n = on + off, p = binomTwoSided(on, n), lead = Math.max(on, off), who = on >= off ? 'on' : 'off';
+  if (n && p < 0.05) return [who === 'on' ? 'Clear: keep it on' : 'Clear: leave it off', who === 'on' ? 'v-yes' : 'v-no'];
+  if (left) return [n >= 3 && lead / n >= 0.75 ? `Leaning ${who}, ${left} to go` : `${left} to go`, n >= 3 && lead / n >= 0.75 ? 'v-lean' : 'v-wait'];
+  if (!n) return ['No preference', 'v-wait'];
+  if (lead / n >= 0.75) return [`Leaning ${who}; more pairs would settle it`, 'v-lean'];
+  return ['Split: no case either way', 'v-wait'];
+}
+function draw() {
+  const p = PAIRS[cur], f = flip(p), v = choiceOf(votes[p.a]);
+  $('text').textContent = p.t;
+  $('meta').textContent = `Pair ${cur + 1} of ${PAIRS.length} · ${p.f === 'ruled' ? 'ruled lines' : 'fitted lanes'}` + (v ? ` · tests: ${LABEL[p.o]}` : '');
+  const L = f ? p.b : p.a, R = f ? p.a : p.b, onLeft = f;
+  $('imgL').src = `img/${L}.png`; $('imgR').src = `img/${R}.png`;
+  const pickedLeft = v === (onLeft ? 'on' : 'off'), pickedRight = v === (onLeft ? 'off' : 'on');
+  $('left').classList.toggle('picked', pickedLeft); $('right').classList.toggle('picked', pickedRight);
+  const side = isOn => v ? (isOn ? 'option on' : 'option off') : '';
+  $('capL').textContent = 'Left' + (v ? ' · ' + side(onLeft) : '') + (pickedLeft ? ' · your pick' : '');
+  $('capR').textContent = 'Right' + (v ? ' · ' + side(!onLeft) : '') + (pickedRight ? ' · your pick' : '');
+  $('tie').classList.toggle('on', v === 'tie'); $('bad').classList.toggle('on', v === 'bad');
+  $('prev').disabled = cur === 0; $('next').textContent = v ? 'Next ›' : 'Skip ›';
+  for (const id of ['left', 'right', 'tie', 'bad']) $(id).disabled = !canWrite;
+  // tally
+  const done = PAIRS.filter(q => votes[q.a]).length;
+  $('bar').style.width = (100 * done / PAIRS.length) + '%';
+  let clear = 0;
+  $('tally').replaceChildren(...OPTIONS.map(o => {
+    const ps = PAIRS.filter(q => q.o === o), c = { on: 0, off: 0, tie: 0, bad: 0 };
+    let left = 0; ps.forEach(q => { const x = choiceOf(votes[q.a]); if (x) c[x]++; else left++; });
+    const [txt, cls] = reading(c.on, c.off, left); if (cls === 'v-yes' || cls === 'v-no') clear++;
+    const tr = document.createElement('tr');
+    const cell = (t, k) => { const td = document.createElement('td'); td.textContent = t; if (k) td.className = k; return td; };
+    tr.append(cell(LABEL[o]), cell(c.on, 'n'), cell(c.off, 'n'), cell(c.tie + c.bad, 'n'), cell(left, 'n'), cell(txt, 'verdict ' + cls));
+    return tr;
+  }));
+  const st = $('status'), all = done === PAIRS.length;
+  st.classList.toggle('ready', all || clear === OPTIONS.length);
+  st.textContent = !canWrite ? 'Read only: votes are not saved in this view'
+    : all ? 'All voted: tell Claude to read the votes back'
+    : clear === OPTIONS.length ? 'Every option is clear: ready to read back'
+    : `${done} of ${PAIRS.length} voted`;
+  $('rows').replaceChildren(...PAIRS.map((q, i) => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'row' + (votes[q.a] ? ' done' : '') + (i === cur ? ' cur' : '');
+    b.textContent = i + 1; b.setAttribute('aria-label', `Pair ${i + 1}${votes[q.a] ? ', voted' : ''}`);
+    b.onclick = () => { cur = i; draw(); };
+    return b;
+  }));
+}
+function say(msg, err) { const n = $('note'); n.textContent = msg; n.classList.toggle('err', !!err); }
+const nextOpen = () => { for (let k = 1; k <= PAIRS.length; k++) { const i = (cur + k) % PAIRS.length; if (!votes[PAIRS[i].a]) return i; } return Math.min(cur + 1, PAIRS.length - 1); };
+async function vote(choice) {
+  if (busy || !canWrite) return;
+  const p = PAIRS[cur], rec = { a: p.a, b: p.b, w: choice === 'on' ? 'b' : choice === 'off' ? 'a' : 'tie', bad: choice === 'bad', option: p.o, t: Date.now(), round: '2026-11-15' };
+  const before = votes[p.a]; votes[p.a] = rec; busy = true; draw();
+  try {
+    if (db) await db.doc('votes/' + p.a).set(rec);
+    busy = false; say(db ? 'Saved.' : 'Not saved: open the page signed in to claude.ai to keep your votes.', !db);
+    cur = nextOpen(); draw();
+  } catch (e) {
+    busy = false; if (before) votes[p.a] = before; else delete votes[p.a];
+    say('That vote was not saved (' + ((e && e.code) || 'error') + '). Try it again.', true); draw();
+  }
+}
+const sideVote = left => vote(flip(PAIRS[cur]) === left ? 'on' : 'off');
+$('left').onclick = () => sideVote(true); $('right').onclick = () => sideVote(false);
+$('tie').onclick = () => vote('tie'); $('bad').onclick = () => vote('bad');
+$('prev').onclick = () => { if (cur > 0) { cur--; draw(); } };
+$('next').onclick = () => { cur = Math.min(cur + 1, PAIRS.length - 1); draw(); };
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); sideVote(true); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); sideVote(false); }
+  else if (e.key === 't' || e.key === 'T') vote('tie');
+  else if (e.key === 'b' || e.key === 'B') vote('bad');
+});
+draw();
+(async () => {
+  const timer = setTimeout(() => { if (!db) { $('status').textContent = 'Could not load saved votes'; } }, 10000);
+  try {
+    db = window.claude ? await window.claude.use('db') : null;
+    const user = window.claude ? await window.claude.use('user') : null;
+    if (user) { const w = await user.can('data.write'); if (w === false) canWrite = false; }
+    if (db) {
+      db.collection('votes').onSnapshot(snap => {
+        clearTimeout(timer);
+        snap.docs.forEach(d => { const v = d.data(); if (v && PAIRS.some(p => p.a === d.id)) votes[d.id] = v; });
+        if (!busy) { if (votes[PAIRS[cur].a] && cur === 0 && !window.__moved) { window.__moved = true; cur = nextOpen(); } draw(); }
+      }, () => { clearTimeout(timer); say('Saved votes could not be read. New votes may not be kept.', true); });
+    } else { clearTimeout(timer); say('Votes are not being saved in this view: open the page signed in to claude.ai to keep them.', true); }
+  } catch { clearTimeout(timer); }
+  draw();
+})();
+</script>

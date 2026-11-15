@@ -64,8 +64,18 @@ and then they are renamed back.
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
 
-Round 3 (`rounds/2026-11-15`, ids `q…`, not yet published): 32 on/off pairs on the legibility work, each on fitted
+Round 3 (`rounds/2026-11-15`, ids `q…`): 31 on/off pairs (ids keep the sweep's numbering; q014 and q015, a pair
+whose off side came out as a scatter, were dropped) on the legibility work, each on fitted
 lanes and on ruled lines. `wordGap` (2.4 in lanes, 1.6 ruled) against none; `innerGap` 0.7 on top of wordGap; and, on
 top of both, the drafted letters: `stems` c, `muhammad` c, and the two together (`letters`). A pair on the letters
 names its alternatives on the side that has them (`alts` in `pairs.json` and on the item); the sweep writes that side
 with them on the same pen.
+
+Round 3 is voted on its own page (https://claude.ai/artifact/3xqoZGMAQc4BVbtqKwsAPe; source `rounds/2026-11-15/vote.html`,
+published with the round's 62 pictures as `img/<id>.png`). It shows one pair at a time with the sides shuffled, and
+keeps one document per pair in its collection `votes`, named by the pair's off side: `{a, b, w: 'a' | 'b' | 'tie',
+bad, option, t}`, where `a` is the off side, `b` the on side, and `bad` marks "both poor". Beside the pair it reads
+the votes per option: "clear" when the split of decided pairs passes a sign test at 5%, "leaning" at three in four.
+To read the round back (Claude: ArtifactData list on the page's URL, collection `votes`): save the documents as
+`rounds/2026-11-15/votes.json` ({a, b, w, t}, as for the other rounds) and the ids of both sides of every `bad` pair
+as `dislikes.json`. An option whose reading is clear is promoted or dropped on that; the votes also go to the refit.

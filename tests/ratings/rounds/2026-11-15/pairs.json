@@ -6,7 +6,6 @@
   {"option": "wordGap", "text": "قل هو الله أحد الله الصمد", "seed": 23, "base": {"lanes": {}}, "off": {"compose": {"wordGap": 0}}, "on": {"compose": {"wordGap": 2.4}}},
   {"option": "wordGap", "text": "قل هو الله أحد الله الصمد", "seed": 23, "base": {"ruled": true}, "off": {"compose": {"wordGap": 0}}, "on": {"compose": {"wordGap": 1.6}}},
   {"option": "wordGap", "text": "الحمد لله رب العالمين", "seed": 23, "base": {"lanes": {}}, "off": {"compose": {"wordGap": 0}}, "on": {"compose": {"wordGap": 2.4}}},
-  {"option": "wordGap", "text": "الحمد لله رب العالمين", "seed": 23, "base": {"ruled": true}, "off": {"compose": {"wordGap": 0}}, "on": {"compose": {"wordGap": 1.6}}},
   {"option": "innerGap", "text": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", "seed": 131, "base": {"lanes": {}, "wordGap": 2.4}, "off": {"compose": {"innerGap": 0}}, "on": {"compose": {"innerGap": 0.7}}},
   {"option": "innerGap", "text": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", "seed": 131, "base": {"ruled": true, "wordGap": 1.6}, "off": {"compose": {"innerGap": 0}}, "on": {"compose": {"innerGap": 0.7}}},
   {"option": "innerGap", "text": "بسم الله الرحمن الرحيم", "seed": 131, "base": {"lanes": {}, "wordGap": 2.4}, "off": {"compose": {"innerGap": 0}}, "on": {"compose": {"innerGap": 0.7}}},

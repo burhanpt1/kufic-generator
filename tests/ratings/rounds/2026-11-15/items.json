@@ -1,6 +1,6 @@
 {
  "round": "2026-11-15",
- "page": "https://claude.ai/artifact/UcCKG5Zx84ZZEvmoTWSHuj",
+ "page": "https://claude.ai/artifact/3xqoZGMAQc4BVbtqKwsAPe",
  "items": [
   {
    "text": "بسم الله الرحمن الرحيم",
@@ -701,106 +701,6 @@
    "variant": "on",
    "id": "q013",
    "pairOf": "q012"
-  },
-  {
-   "text": "الحمد لله رب العالمين",
-   "family": "ruled",
-   "seed": 23,
-   "recipe": {
-    "elongate": true,
-    "cross": true,
-    "kern": true,
-    "oval": 1.15,
-    "fillTarget": 0.45,
-    "stack": false,
-    "learnedStack": false,
-    "girift": 0.04,
-    "ruled": true,
-    "tries": 3,
-    "iters": 3000,
-    "seed": 23,
-    "wordGap": 0
-   },
-   "features": {
-    "texture": 0,
-    "knots": 0.19327731092436976,
-    "looseTop": 0.009523809523809545,
-    "unity": 0.49754828379865906,
-    "span": 0.8940763881587841,
-    "fill": 0.06351213931613067,
-    "noise": 4.3907174624039005
-   },
-   "checks": {
-    "wordSpace": 1.5000932937955769,
-    "strayMarks": 0,
-    "strayDots": 0,
-    "doubled": 1.2988600096546639,
-    "marksUnplaced": 0,
-    "wordPairs": 0,
-    "wordClear": null,
-    "wordClearNibs": null,
-    "wordInner": 0,
-    "wordsRunOn": 0,
-    "baselines": 3,
-    "stemRhythm": 0,
-    "topLevels": 3.4077097698164835
-   },
-   "genre": "dense",
-   "score": -0.2805127912776754,
-   "option": "wordGap",
-   "variant": "off",
-   "id": "q014",
-   "pairOf": "q015"
-  },
-  {
-   "text": "الحمد لله رب العالمين",
-   "family": "ruled",
-   "seed": 23,
-   "recipe": {
-    "elongate": true,
-    "cross": true,
-    "kern": true,
-    "oval": 1.15,
-    "fillTarget": 0.45,
-    "stack": false,
-    "learnedStack": false,
-    "girift": 0.04,
-    "ruled": true,
-    "tries": 3,
-    "iters": 3000,
-    "seed": 23,
-    "wordGap": 1.6
-   },
-   "features": {
-    "texture": 0.41860038100702124,
-    "knots": 0.03361344537815126,
-    "looseTop": -0.125,
-    "unity": 0.5001689760054072,
-    "span": 0.9035135148666036,
-    "fill": 0.09403203254099403,
-    "noise": 3.024272592186691
-   },
-   "checks": {
-    "wordSpace": 1.5000932937955769,
-    "strayMarks": 0,
-    "strayDots": 0,
-    "doubled": 1.298860009654664,
-    "marksUnplaced": 0,
-    "wordPairs": 1,
-    "wordClear": 3.1457816850901135,
-    "wordClearNibs": 1.9661135531813207,
-    "wordInner": 0,
-    "wordsRunOn": 0,
-    "baselines": 1.5,
-    "stemRhythm": 0.3980251914110716,
-    "topLevels": 0.5670600721044496
-   },
-   "genre": "dense",
-   "score": 0.7968766687065836,
-   "option": "wordGap",
-   "variant": "on",
-   "id": "q015",
-   "pairOf": "q014"
   },
   {
    "text": "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
@@ -3332,10 +3232,6 @@
   [
    "q012",
    "q013"
-  ],
-  [
-   "q014",
-   "q015"
   ],
   [
    "q016",
