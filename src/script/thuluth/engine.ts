@@ -212,9 +212,13 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       names = st.allah ? nameSpans(text, o) : [],
       placed: Placed[] = [],
       // where each piece (a connected group) begins in `placed`
-      starts: number[] = [];
+      starts: number[] = [],
+      // with ink spacing: each piece again as it stands by itself, its first letter at 0 (sidesOfPiece); `lx` is the
+      // cursor there
+      own: Placed[] | null = SPACED ? [] : null;
     let x = 0,
-      y = 0;
+      y = 0,
+      lx = 0;
     words.forEach((w, wi) => {
       if (wi) x -= wordGap;
       const fs = forms(w);
@@ -245,18 +249,22 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           g = { ...gl, dotX: gl.dotX! * lf, s: gl.s.map(s => ({ ...s, pts: s.pts.map(([x2, y2, w2, c]) => [x2 * lf, y2, w2, c] as SkelPt) })) }; // prettier-ignore
         }
         const connects = f.form === 'med' || f.form === 'fin';
-        let ox: number;
+        let ox: number,
+          lox = lx;
         if (connects && joined) ox = x;
         else {
           // a new group starts after a gap: its right edge at the cursor
           y = i === mu ? rise : 0;
           const xs = g.s.flatMap(s => s.pts.map(p => p[0]));
           ox = x - (Math.max(...xs) + nib * 0.5);
+          lox = 0;
           starts.push(placed.length);
         }
         placed.push({ g, ox, oy: y, c: f.c, form: f.form, li: i, wi });
+        own?.push({ g, ox: lox, oy: y, c: f.c, form: f.form, li: i, wi });
         if (g.exit != null) {
           x = ox + g.exit;
+          lx = lox + g.exit;
           joined = true;
           // the hah of محمد ends a storey down
           if (mu >= 0 && i === mu + 1) y -= rise;
@@ -264,7 +272,9 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
           if (stk && i < fs.length - 1) {
             // a stacked join: the next letter is written below and to the right, and the pen comes down to it
             placed.push({ conn: true, from: [x, y], to: [x + stk.dx, y + stk.dy] });
+            own?.push({ conn: true, from: [lx, y], to: [lx + stk.dx, y + stk.dy] });
             x += stk.dx;
+            lx += stk.dx;
             y += stk.dy;
           } else if (i < fs.length - 1) {
             let kl = o.kashMap && o.kashMap[i + 1] != null ? o.kashMap[i + 1] : kashida;
@@ -279,7 +289,9 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
             if (LOOPY.includes(FAM[f.c]) && LOOPY.includes(FAM[fs[i + 1].c])) kl = Math.max(kl, st.loopGap * st.body);
             if (kl > 0) {
               placed.push({ kash: true, ox: x, oy: y, len: kl });
+              own?.push({ kash: true, ox: lx, oy: y, len: kl });
               x -= kl;
+              lx -= kl;
             }
           }
         } else {
@@ -289,7 +301,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         }
       });
     });
-    if (SPACED && starts.length > 1) spaceLine(placed, starts, o);
+    if (own && starts.length > 1) spaceLine(placed, own, starts, o);
     return placed;
   }
 
@@ -300,29 +312,34 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
     roomOf = slideRooms();
   let glyphCount = 0;
   /** A piece's ink (its letters as the pen draws them, and its dots) seen from its sides, with x counted from its
-   *  first letter's place: measured once for each piece as written (its letters' drawings, its kashidas). */
+   *  first letter's place: measured once for each piece as written (its letters' drawings, its kashidas).
+   *
+   *  What is kept must be the same whichever line the piece was first met in. So the piece is given, keyed and
+   *  measured as it stands by itself, its first letter at 0 and the rest where the same joins put them from there
+   *  (setLine's `own`), and never where it stands on a line: there, the same piece has other last bits in every
+   *  coordinate at every place, and the measure is not smooth in them. sidesOf walks each edge of the pen's quads in
+   *  steps of 0.04; a quad's long edges are one nib long, and a nib of 1.6 is forty steps exactly, so noise of 1e-14
+   *  decided between forty steps and forty-one and moved a band's side by up to 0.03. Measured where it stood (and
+   *  keyed by its letters' distances rounded to 1e-4), a piece kept the sides of the first place it was written at,
+   *  and the same line came out differently according to what the engine had written before it
+   *  (tests/thuluth-engine-pure.test.ts). */
   function sidesOfPiece(piece: readonly Placed[], o: LineOptions): Sides {
-    const at = (piece[0] as PlacedLetter).ox,
-      f = (v: number) => Math.round((v - at) * 1e4) / 1e4;
     let key = `${o.sag ?? ''}|${o.tail ? o.tail.sx + ',' + o.tail.sy : ''}`;
     for (const p of piece) {
-      if ('kash' in p) key += `|k${f(p.ox)},${p.oy},${p.len}`;
-      else if ('conn' in p) key += `|c${f(p.from[0])},${p.from[1]},${f(p.to[0])},${p.to[1]}`;
+      if ('kash' in p) key += `|k${p.ox},${p.oy},${p.len}`;
+      else if ('conn' in p) key += `|c${p.from[0]},${p.from[1]},${p.to[0]},${p.to[1]}`;
       else {
         let id = glyphIds.get(p.g);
         if (id == null) glyphIds.set(p.g, (id = glyphCount++));
-        key += `|${id},${p.c}${p.form},${f(p.ox)},${p.oy}`;
+        key += `|${id},${p.c}${p.form},${p.ox},${p.oy}`;
       }
     }
     let s = pieceSides.get(key);
     if (!s) {
-      s = sidesOf(
-        [
-          ...penStrokes(piece, o).flatMap(k => strokePolys(k)),
-          ...dotsOf(piece).dots.flatMap(([x, y]) => dotPolysAt(x, y)),
-        ],
-        -at,
-      );
+      s = sidesOf([
+        ...penStrokes(piece, o).flatMap(k => strokePolys(k)),
+        ...dotsOf(piece).dots.flatMap(([x, y]) => dotPolysAt(x, y)),
+      ]);
       if (pieceSides.size > 4000) pieceSides.clear();
       pieceSides.set(key, s);
     }
@@ -332,7 +349,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
    *  clearance asked is left between it and every earlier piece of the word (pieceGap; STEM_SPACE times that between
    *  two stems that face each other). The word then slides, as it stands, until wordSpace is left between it and the
    *  two words before it. Where a clearance is not set, the piece (the word) keeps the place its box gave it. */
-  function spaceLine(placed: Placed[], starts: readonly number[], o: LineOptions) {
+  function spaceLine(placed: Placed[], own: readonly Placed[], starts: readonly number[], o: LineOptions) {
     const nib = st.nib,
       cIn = st.pieceGap != null ? st.pieceGap * nib : null,
       cWord = st.wordSpace != null ? st.wordSpace * nib : null;
@@ -348,7 +365,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
       let left = Infinity;
       for (const p of piece) if (isLetter(p)) for (const sd of p.g.s) for (const q of sd.pts) left = Math.min(left, p.ox + q[0]); // prettier-ignore
       // (the stretched tail is the last letter's alone)
-      return { from, to, wi: first.wi, at: first.ox, left, t: 0, stems: [STEM_LETTERS.has(first.c), STEM_LETTERS.has(last.c)], sides: sidesOfPiece(piece, lastGlyph >= from && lastGlyph < to ? o : { ...o, tail: null }) }; // prettier-ignore
+      return { from, to, wi: first.wi, at: first.ox, left, t: 0, stems: [STEM_LETTERS.has(first.c), STEM_LETTERS.has(last.c)], sides: sidesOfPiece(own.slice(from, to), lastGlyph >= from && lastGlyph < to ? o : { ...o, tail: null }) }; // prettier-ignore
     });
     for (let a = 0, e: number; a < pieces.length; a = e) {
       e = a + 1;
