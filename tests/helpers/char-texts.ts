@@ -32,6 +32,25 @@ export const UNSEEN: [id: string, text: string, why: string][] = [
   ['fatiha1', 'الحمد لله رب العالمين الرحمن الرحيم مالك يوم الدين', 'nine words, bowls throughout'],
   ['kursi1', 'الله لا إله إلا هو الحي القيوم لا تأخذه سنة ولا نوم', 'twelve words, the name first'],
 ];
+/** A third set, never yet drawn by any rule (added 15 November after the first widening): the next held-out
+ *  measure. It leans on what the first two sets lacked: finals in ق ض ش, openings in ن ت ث ح ع, dots over a carrying
+ *  letter, and more single words and long texts. */
+export const FRESH: [id: string, text: string, why: string][] = [
+  ['haqq', 'الحق', 'one word, ends in a dotted bowl'],
+  ['tawhid', 'توحيد', 'one word, opens with a dotted tooth, ends in a foot'],
+  ['arsh', 'العرش', 'one word, ends in a dotted bowl with teeth'],
+  ['nasr', 'نصر من الله', 'three words, opens with a dotted tooth, the name last'],
+  ['thabit', 'ثابت', 'one word, three dots at the opening'],
+  ['hayy', 'الحي القيوم', 'two words, a returning bowl then a tail'],
+  ['alim', 'عليم حكيم', 'two words, both open with roofed letters and end in tails'],
+  ['ard', 'في الأرض', 'two words, ends in a dotted bowl'],
+  ['tawakkul', 'توكلت على الله', 'three words, kaf and lam stems, the name last'],
+  ['rizq', 'وارزقنا وأنت خير الرازقين', 'four words, tails and a bowl at the very end'],
+  ['salam', 'السلام عليكم ورحمة الله وبركاته', 'five words, lam-alif, the name fourth'],
+  ['nasr2', 'إذا جاء نصر الله والفتح', 'five words, hamza, a returning bowl at the end'],
+  ['falaq', 'قل أعوذ برب الفلق من شر ما خلق', 'eight words, dotted bowls throughout'],
+  ['asr', 'والعصر إن الإنسان لفي خسر إلا الذين آمنوا وعملوا الصالحات', 'ten words, long, tails'],
+];
 export const ALL_TEXTS: [id: string, text: string][] = [
   ...TUNED,
   ...UNSEEN.map(([id, text]) => [id, text] as [string, string]),
