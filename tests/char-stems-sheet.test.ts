@@ -19,6 +19,7 @@ import type { Built } from '../src/script/thuluth/engine';
 import { cleanOutline } from '../src/script/thuluth/outline';
 import { Alpha, toPixels } from '../src/script/thuluth/raster';
 import type { Poly, Stroke } from '../src/script/thuluth/types';
+import './helpers/char-pure';
 import type { Cols, Profile, Pt, Stem } from './helpers/char-first';
 import { CAP, CELL, NIB, TEXTS, colsOf, findStems, hull, need, profile, raise, room, settle, th } from './helpers/char-first'; // prettier-ignore
 
