@@ -151,10 +151,13 @@ type Plan = Generator<RoundelNeed, BuiltRoundel | null, Roundel[] | BuiltRoundel
 
 /** Adjust a composed arrangement (the recipe's tweaks, bowl, tails, rising stems) and finish it (marks, frame). */
 export function finishOne(th: Thuluth, spec: RoundelSpec, r0: Roundel): BuiltRoundel {
-  const r = adjust(th, r0, spec);
+  const r = adjust(th, r0, spec),
+    // innerGap runs a piece in over the letter before it (the hah's head over the ra of الرحمن), where that letter's
+    // vowels stood: they are lifted over it (SolveOptions.markLift), unless the frame says otherwise
+    lift = (spec.compose?.innerGap ?? 0) > 0 ? { markLift: true } : {};
   return {
     r,
-    f: spec.frame === false ? finishRoundel(th, r, spec.companion || '', {}) : fitFrame(th, r, spec.frame || {}),
+    f: spec.frame === false ? finishRoundel(th, r, spec.companion || '', lift) : fitFrame(th, r, { ...lift, ...spec.frame }), // prettier-ignore
   };
 }
 
