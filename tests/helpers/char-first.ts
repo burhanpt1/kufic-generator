@@ -245,6 +245,9 @@ export interface CradleOptions {
   /** Where the bowl ends: as high on the right as it lands on the left (the default), far up the rim, or just past
    *  the line it holds. */
   span?: Span;
+  /** The ink above the level diameter keeps this much further from the circle: a canopy runs along the rim there
+   *  (tests/char-canopy-sheet.test.ts). */
+  roof?: number;
 }
 export interface CradleLaid {
   R: number;
@@ -256,6 +259,9 @@ export interface CradleLaid {
   arc: number;
   /** The lines in the bowl, after the cradle word's own. */
   inside: number;
+  /** Line by line: its ink (the bowl with the cradle word's line) and the height of its baseline. */
+  pieces: Poly[][];
+  hs: number[];
 }
 /** Between the bowl's floor and the ink it holds, at the least (the raster check is what decides). */
 export const CLEAR = 0.3 * NIB,
@@ -281,6 +287,7 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
   const words = text.split(' '),
     n = words.length,
     cr = o.cradle === false ? null : cradleOf(text),
+    roof = o.roof ?? 0,
     ci = cr ? cr.wi : -1,
     span = (a: number, b: number) => lineOf(words.slice(a, b).join(' '), b - 1 === ci),
     width = (a: number, b: number) => span(a, b).x1 - span(a, b).x0;
@@ -294,11 +301,13 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
         return moved(l.ink, -(l.x0 + l.x1) / 2, t.hs[i]);
       }),
       said = t.cut.map(([a, b]) => words.slice(a, b).join(' '));
-    if (Math.max(...pieces.flat(2).map(([x, y]) => Math.hypot(x, y))) > Rt + 1e-6) return 'bowl';
+    if (Math.max(...pieces.flat(2).map(([x, y]) => Math.hypot(x, y) + (y > 0 ? roof : 0))) > Rt + 1e-6) return 'bowl';
     const hit = touching(pieces, R, false);
     if (hit) return hit;
-    if (!cr)
-      return { R, lines: said, polys: pieces.flatMap(k => cleanOutline(k)), cradle: cr, span: 0, arc: 0, inside: 0 };
+    if (!cr) {
+      const outs = pieces.map(k => cleanOutline(k));
+      return { R, lines: said, polys: outs.flat(), cradle: cr, span: 0, arc: 0, inside: 0, pieces: outs, hs: t.hs };
+    }
     const k = t.cut.findIndex(([, b]) => b - 1 === ci),
       l = span(...t.cut[k]),
       head = l.head!,
@@ -330,11 +339,14 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
     if (Math.max(...free.flat().map(([x, y]) => Math.hypot(x, y))) > Rt + 1e-6) return 'bowl';
     if (touching([...pieces, free], R, true)) return 'bowl';
     pieces[k] = [...pieces[k], ...th.strokePolys({ ang: head.ang, s }), ...dots];
-    const bx = bowl.s.map(q => q.x);
+    const bx = bowl.s.map(q => q.x),
+      outs = pieces.map(p => cleanOutline(p));
     return {
       R,
       lines: said,
-      polys: pieces.flatMap(p => cleanOutline(p)),
+      polys: outs.flat(),
+      pieces: outs,
+      hs: t.hs,
       cradle: cr,
       span: (Math.max(...bx) - Math.min(...bx)) / (2 * R),
       arc: ((bowl.phi0 - bowl.phiEnd) * 180) / Math.PI,
@@ -366,7 +378,7 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
           // the words before it, on m lines above; the cradle word ends a line
           for (let m = k ? 1 : 0; m <= Math.min(k, 6); m++) {
             const hs = Array.from({ length: m + 1 }, (_, i) => (cr ? hb + (m - i) * pitch : (m / 2 - i) * pitch - 2)),
-              rooms = hs.map((h, i) => chord(h, Rt, cr && i === m ? Rb : Rt));
+              rooms = hs.map((h, i) => chord(h, Rt - (h + UP > 0 ? roof : 0), cr && i === m ? Rb : Rt));
             if (rooms.some(r => r <= 0)) continue;
             const full = Array.from({ length: m + 1 }, () => new Array<number>(k + 1).fill(Infinity)),
               from = Array.from({ length: m + 1 }, () => new Array<number>(k + 1).fill(-1));
