@@ -7,6 +7,9 @@
 // `WIDE=1 WIDE_OUT=<dir> npx vitest run tests/char-wide-sheet.test.ts --maxWorkers=2` writes, for each stage
 // (WIDE_STAGE=before,after), `<stage>/<id>.png`, `wide-<stage>.png` (all the texts, captioned), smaller sheets by set
 // (`<stage>-tuned`, `-fit-N`, `-held-N`) and `wide-<stage>-facts.txt`; WIDE_ONLY=<ids>, WIDE_SET=tuned,fit,held.
+// Round two: WIDE_SET also takes ffit and fheld (the third set of texts, split below); WIDE_STRAIGHT=1 draws risen
+// stems straight, WIDE_NONEST=1 leaves out the nested bowls, WIDE_NOROOF=1 the roofs drawn out, WIDE_NODOTS=1 the
+// entries into dotted teeth (to compare a rule on and off with the layout held).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';

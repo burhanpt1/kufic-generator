@@ -179,6 +179,8 @@ follow the meridians of the rim's circle (F).
   built, and was not tried.
 - Stacking a short word over its neighbour on level lines is not built; on a ground line the upper words already
   stand in the bays (12).
+- A roof cannot be drawn out (26) where the word has a tall stem beside the roof: the arc has no way past it, and
+  the word gets no canopy. Found on a held-out text; not mended.
 - A tail running forth and an entry cannot both be had by a short single word: the tail needs the word low, the
   entry needs it high.
 - A dot stays over a kept head only where the kept part reaches under it (A6); a roof whose kept part ends short of
