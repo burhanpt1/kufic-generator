@@ -16,7 +16,6 @@ import { toPNG } from '../scripts/raster.mjs';
 import type { Built } from '../src/script/thuluth/engine';
 import { cleanOutline } from '../src/script/thuluth/outline';
 import type { Poly, Sample } from '../src/script/thuluth/types';
-import './helpers/char-pure';
 import type { Cols, Cradle, Head, Pt, Stem } from './helpers/char-first';
 import { CAP, CLEAR, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TEXTS, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, findStems, hull, nearPairs, need, profile, raise, room, sheetOf, svgOf, sweep, takeOver, th } from './helpers/char-first'; // prettier-ignore
 

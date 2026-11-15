@@ -305,14 +305,30 @@ interface Try {
   cut: [number, number][];
   hs: number[];
 }
+const composed = new Map<string, CradleLaid | null>();
+/** (The same text with the same options and the same table of bowls is composed once.) */
 export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid | null {
+  const key = JSON.stringify([text, o.cradle, o.span, o.roof, o.floor, BOWL]);
+  if (!composed.has(key)) composed.set(key, cradleCompose1(text, o));
+  return composed.get(key)!;
+}
+function cradleCompose1(text: string, o: CradleOptions): CradleLaid | null {
   const words = text.split(' '),
     n = words.length,
     cr = o.cradle === false ? null : cradleOf(text),
     roof = o.roof ?? 0,
     ci = cr ? cr.wi : -1,
-    span = (a: number, b: number) => lineOf(words.slice(a, b).join(' '), b - 1 === ci),
-    width = (a: number, b: number) => span(a, b).x1 - span(a, b).x0;
+    // (each stretch of words is written once, and its hull kept: a line is inside a circle when its hull is)
+    spans = new Map<number, Line & { hull: Pt[]; w: number }>(),
+    span = (a: number, b: number) => {
+      let l = spans.get(a * 256 + b);
+      if (!l) {
+        const q = lineOf(words.slice(a, b).join(' '), b - 1 === ci);
+        spans.set(a * 256 + b, (l = { ...q, hull: hull(q.ink.flat() as Pt[]), w: q.x1 - q.x0 }));
+      }
+      return l;
+    },
+    width = (a: number, b: number) => span(a, b).w;
   /** Draw one arrangement and say whether it stands: 'pitch' when two lines touch, 'bowl' when the bowl cannot be
    *  drawn, leaves the circle or touches what it holds. */
   const draw = (t: Try, R: number): CradleLaid | 'pitch' | 'bowl' => {
@@ -404,7 +420,7 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
             const l = span(k, n),
               mid = (l.x0 + l.x1) / 2;
             hb = -Infinity;
-            for (const [x, y] of l.ink.flat())
+            for (const [x, y] of l.hull)
               hb = Math.max(hb, Math.abs(x - mid) < Rb ? -Math.sqrt(Rb * Rb - (x - mid) ** 2) - y : Infinity);
             hb += lift;
             if (hb === Infinity) continue;

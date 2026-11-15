@@ -7,7 +7,6 @@ import type { Built } from '../../src/script/thuluth/engine';
 import { cleanOutline } from '../../src/script/thuluth/outline';
 import type { Poly, Sample } from '../../src/script/thuluth/types';
 import { forms } from '../../src/script/thuluth';
-import './char-pure';
 import type { Bend, Cols, Cradle, Head, Pt, Stem } from './char-first';
 import { BOWL, CAP, CLEAR, EASE, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, hull, meridians, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
 
@@ -882,7 +881,14 @@ export function groundCradle(text: string) {
   const stemmed = text.split(' ').map(w => lineOf(w).stems.length > 0);
   return cradleOf(text, wi => stemmed.slice(0, wi).filter(v => v).length + 1 > MAX_GROUND);
 }
-export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: Plan): Canopied | null {
+export function ground(
+  text: string,
+  mode: Mode = null,
+  nest: Nest = {},
+  plan?: Plan,
+  /** The largest circle the caller would take: no first arrangement is looked for beyond it. */
+  Rmax = Infinity,
+): Canopied | null {
   const words = text.split(' '),
     n = words.length,
     stemmed = words.map(w => lineOf(w).stems.length > 0),
@@ -1197,7 +1203,7 @@ export function ground(text: string, mode: Mode = null, nest: Nest = {}, plan?: 
   for (let k = 1; k < g.nw; k++) opens.splice(0, opens.length, ...opens.flatMap(q => OPEN.map(v => [...q, v])));
   let best: Canopied | null = null,
     args: [number, number, number[], number, Line[]] | null = null;
-  for (let R = 10; R < 150 && !(best && R > best.R * LARGER); R *= 1.02)
+  for (let R = 10; R < 150 && (best ? R <= best.R * LARGER : R <= Rmax); R *= 1.02)
     for (const slide of mode === 'entry' ? [...SLIDES.filter(v => v <= 0), ...MORE_SLIDES] : SLIDES)
       for (const gaps of opens)
         for (const aft of afters)
@@ -1654,7 +1660,7 @@ export function arrange(t: string, said: string[]): Canopied | null {
     for (const p of plan.cr ? [plan, { cr: null }] : [plan]) {
       for (const mode of modes) {
         WHY.clear();
-        base = ground(t, mode, {}, p);
+        base = ground(t, mode, {}, p, flat ? SOUND * flat.R : Infinity);
         if (
           base?.ground &&
           (base.ground[2] > 0 || (flat && base.R > SOUND * flat.R) || (!p.cr && base.ground[3] > HOLLOW_MAX))
@@ -1664,7 +1670,8 @@ export function arrange(t: string, said: string[]): Canopied | null {
           continue;
         }
         if (base) {
-          make = nest => ground(t, mode, nest, p);
+          const got = base;
+          make = nest => ground(t, mode, nest, p, got.R * GROW_MAX);
           said.push(`taken: the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: ${flat ? (base.R / flat.R).toFixed(2) : '-'} times the circle of level lines, ${((base.ground?.[3] ?? 0) * 100).toFixed(0)}% of the height empty under it`); // prettier-ignore
         } else said.push(`the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: does not stand (${[...WHY].map(([k, v]) => `${k}:${v}`).join(' ') || 'not tried'})`); // prettier-ignore
         if (base && single) {

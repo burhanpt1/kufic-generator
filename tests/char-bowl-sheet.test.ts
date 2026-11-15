@@ -15,7 +15,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { toPNG } from '../scripts/raster.mjs';
-import './helpers/char-pure';
 import type { CradleLaid as Laid, CradleOptions as Options, Span } from './helpers/char-first';
 import { NIB, TEXTS, cradleCompose as compose, cradleOf, sheetOf, svgOf } from './helpers/char-first';
 
