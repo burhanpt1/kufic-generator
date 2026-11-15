@@ -746,3 +746,125 @@ export function nearPairs(inks: readonly Poly[][], R: number, clear: number, K =
     }
   return [...pairs].map(p => [Math.floor(p / 1000) - 1, (p % 1000) - 1]);
 }
+
+// ======== the meridians (tests/char-meridian-sheet.test.ts) ========
+// A risen stem keeps its share of the circle's width as it rises: the lines of writing are the parallels of a globe
+// seen from the side, the stems its meridians.
+export const HEAD_LEN = 4.2, // the head of a stem: what lies within this of its top (alts.ts headC is 3.8 long)
+  SHAFT_STEP = 0.4, // a curved shaft is drawn with a sample this often
+  EASE = 3, // the stem leaves its foot upright and has turned to its meridian's direction within about this length
+  LAP = 1.6; // a mirrored head is a stroke of its own, and runs this far down the shaft over the stem's own stroke
+/** How one stem is bent. */
+export interface Bend {
+  /** Where the stem's line stands in the circle (added to its samples), the circle the meridians belong to, and how
+   *  much of the rule's shift is applied (1: the rule). */
+  ox: number;
+  oy: number;
+  rho: number;
+  k: number;
+  /** The foot of the meridian it follows, when that is not its own (the name of God bent as one body). */
+  x0?: number;
+  y0?: number;
+  /** The head mirrored about the stem's own line, or drawn both ways. */
+  head?: 'mirror' | 'both';
+  ease?: number;
+}
+/** The rule: how far sideways a stem that stands at x0 at height y0 has moved by height y (heights from the centre
+ *  of a circle of radius rho), and the slope of that (sideways for each unit of rise). x0 w(y)/w(y0) - x0, times k;
+ *  less the slope it would have at its foot, which is let in over `ease`. */
+export function meridianShift(x0: number, y0: number, y: number, rho: number, k = 1, ease = 0): [number, number] {
+  const w0 = Math.sqrt(rho * rho - y0 * y0),
+    yy = Math.min(y, rho * 0.9995);
+  if (!(w0 > 0) || y <= y0) return [0, 0];
+  const w = Math.sqrt(rho * rho - yy * yy),
+    s0 = (k * x0 * -y0) / (w0 * w0),
+    f = ease > 0 ? Math.exp(-(y - y0) / ease) : 0;
+  return [k * x0 * (w / w0 - 1) - s0 * ease * (1 - f), (k * x0 * -yy) / (w * w0) - s0 * f];
+}
+export interface Bent {
+  /** The line's strokes, as `raise` gives them (a mirrored head's stem starts lower: its head is in `heads`). */
+  strokes: Stroke[];
+  heads: { si: number; stroke: Stroke }[];
+  /** For each stem, what stands above its split, as strokes (the shaft and head, a mirrored head, the riders). */
+  rise: Stroke[][];
+}
+/** `raise`, on the meridians: stem k is drawn `extra[k]` taller and, where `bends[k]` is given, every sample above
+ *  its split is moved sideways by the rule and the pen turned with the stem's direction there; the head (and what
+ *  rides with it) is carried whole on the top, turned with the stem. A mirrored head is the head's skeleton mirrored
+ *  about the stem's own line, written with the mirrored pen. */
+export function meridians(
+  b: Built,
+  stems: readonly Stem[],
+  extra: readonly number[],
+  bends: readonly (Bend | null | undefined)[],
+): Bent {
+  const out = b.strokes.slice(),
+    heads: Bent['heads'] = [],
+    rise: Stroke[][] = stems.map(() => []);
+  stems.forEach((m, k) => {
+    const e = Math.max(0, extra[k] || 0),
+      bd = bends[k],
+      st = b.strokes[m.si],
+      up = (q: Sample): Sample => ({ ...q, x: q.x + m.lean * e, y: q.y + e }),
+      a = up(st.s[m.cut]),
+      z = st.s[m.cut + 1],
+      n = Math.ceil(e / SHAFT_STEP),
+      top: Sample[] = st.s.slice(0, m.cut + 1).map(up);
+    for (let i = 1; i < n; i++) top.push({ x: a.x + ((z.x - a.x) * i) / n, y: a.y + ((z.y - a.y) * i) / n, w: a.w + ((z.w - a.w) * i) / n }); // prettier-ignore
+    const riders = m.riders.map(r => b.strokes[r].s.map(up));
+    if (!bd) {
+      if (e > 0) {
+        out[m.si] = { ...st, s: [...top, ...st.s.slice(m.cut + 1)], own: undefined };
+        m.riders.forEach((r, i) => (out[r] = { ...b.strokes[r], s: riders[i], own: undefined }));
+      }
+      rise[k] = [
+        { ang: st.ang, s: top },
+        ...m.riders.map((r, i) => ({ ...b.strokes[r], s: riders[i], own: undefined })),
+      ];
+      return;
+    }
+    // the head: what lies within HEAD_LEN of the top; it turns about its lowest sample
+    const ymax = Math.max(...top.map(q => q.y));
+    let hi = 0;
+    while (hi < m.cut && top[hi + 1].y > ymax - HEAD_LEN) hi++;
+    const A = top[hi],
+      x0 = bd.x0 ?? z.x + bd.ox,
+      y0 = bd.y0 ?? z.y + bd.oy,
+      tilt = Math.atan(m.lean),
+      at = (y: number) => meridianShift(x0, y0, y + bd.oy, bd.rho, bd.k, bd.ease ?? EASE),
+      turn = (s: number) => tilt - Math.atan(m.lean + s),
+      [dA, sA] = at(A.y),
+      phi = turn(sA),
+      cos = Math.cos(phi),
+      sin = Math.sin(phi),
+      rigid = (q: Sample): Sample => ({ ...q, x: A.x + dA + (q.x - A.x) * cos - (q.y - A.y) * sin, y: A.y + (q.x - A.x) * sin + (q.y - A.y) * cos, rot: (q.rot ?? 0) + phi }), // prettier-ignore
+      bend = (q: Sample, i: number): Sample => {
+        if (i <= hi) return rigid(q);
+        const [d, s] = at(q.y);
+        return { ...q, x: q.x + d, y: q.y, rot: (q.rot ?? 0) + turn(s) };
+      },
+      // (the mirror: about the stem's line through A; a nib at angle a then lies at 2 beta - a, beta the line's own)
+      beta = Math.PI / 2 - tilt,
+      mirror = (q: Sample): Sample => {
+        const t = ((q.x - A.x) * m.lean + (q.y - A.y)) / (m.lean * m.lean + 1),
+          fx = A.x + t * m.lean,
+          fy = A.y + t;
+        return { ...q, x: 2 * fx - q.x, y: 2 * fy - q.y, rot: 2 * beta - (2 * st.ang * Math.PI) / 180 - (q.rot ?? 0) };
+      },
+      bent = top.map(bend),
+      rode = m.riders.map((r, i) => ({ ...b.strokes[r], s: riders[i].map(rigid), own: undefined }));
+    let from = 0;
+    if (bd.head) {
+      let h2 = hi;
+      while (h2 + 1 < top.length && top[h2].y > A.y - LAP) h2++;
+      const stroke: Stroke = { ang: st.ang, s: top.slice(0, h2 + 1).map((q, i) => bend(mirror(q), i)) };
+      heads.push({ si: m.si, stroke });
+      rise[k].push(stroke);
+      if (bd.head === 'mirror') from = hi;
+    }
+    out[m.si] = { ...st, s: [...bent.slice(from), ...st.s.slice(m.cut + 1)], own: undefined };
+    m.riders.forEach((r, i) => (out[r] = rode[i]));
+    rise[k].push({ ang: st.ang, s: bent.slice(from) }, ...rode);
+  });
+  return { strokes: out, heads, rise };
+}
