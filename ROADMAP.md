@@ -126,11 +126,14 @@ What is already done is listed at the end only as milestones; the commit history
   - mark `clearance`, `markDensity` and `fathaGap` (`8271e6f`)
   - `wordGap` and `innerGap`: a clear space between words on a line, and a set space between the unjoined pieces
     inside a word (the kern stopped at 4 pen units, which left 2.5 nibs between ر and ح in الرحمن). Suggested for
-    rating: lanes `wordGap: 2.4`, ruled `wordGap: 1.6`, both with `innerGap: 0.7`. On vocalised texts innerGap leaves
-    1–2 more marks without room: the vowel solver does not yet use the space over a hah's head. Sheets:
+    rating: lanes `wordGap: 2.4`, ruled `wordGap: 1.6`, both with `innerGap: 0.7`. Sheets:
     `WORDGAP=1` and `INNERGAP=1` (`tests/word-gap-sheet.test.ts`, `tests/inner-gap-sheet.test.ts`).
-- [ ] **The straight-line engine spaces unjoined pieces by their boxes** (5.55 pen units in الرحمن; `setLine` in
-      `engine.ts`). Set the next piece by first ink contact at a clearance, as `innerGap` does in roundels.
+- [r] **Thuluth lines, rings and bands spaced by their ink** (`pieceGap`, `wordSpace` on the thuluth pen, in nibs;
+  `src/script/thuluth/spacing.ts`), off by default. Suggested: line 0.6 / 3.0, band 0.5 / 2.6, roundel 0.45 / 2.2.
+  A ring's closing seam is still set by boxes. Sheets: `LINESPACE=1` (`tests/line-spacing-sheet.test.ts`).
+- [r] **With innerGap, a mark covered by another stroke is lifted over it** (`markLift`, `roundel/solve.ts`): on five
+  vocalised texts, marks left on ink fall from 33 to 4. It would also help without innerGap (22 to 6) but is not on
+  there, as it would move the pinned drawings.
 - [ ] **With wordGap on ruled lines, the line count is chosen by a tuned weight** (`largestLetters`,
       `roundel/index.ts`), checked on four texts only.
 - [r] **The Timurid band (Kufic over jali thuluth)** becomes a preset only once it rates well (`bd147de`). It is not
