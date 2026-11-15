@@ -1,0 +1,216 @@
+{
+ "entry": "curved-bow",
+ "principle": "As lens, bent 2.4 times as much.",
+ "reading": "Start at the top line and read each line from right to left.",
+ "layouts": {
+  "names": {
+   "radius": 19.61,
+   "words": [
+    {
+     "variant": 0,
+     "x": 9.7,
+     "y": 5.16,
+     "rotate": -0.01,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 8.5,
+     "y": -9.18,
+     "rotate": -0.08,
+     "scale": 1
+    }
+   ]
+  },
+  "basmala": {
+   "radius": 25.87,
+   "words": [
+    {
+     "variant": 0,
+     "x": 6.9,
+     "y": 12.36,
+     "rotate": 0.21,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 9.8,
+     "y": -2,
+     "rotate": -0.02,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 21.39,
+     "y": -0.8,
+     "rotate": 46.13,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -4.85,
+     "y": -20.5,
+     "rotate": -54.55,
+     "scale": 1
+    }
+   ]
+  },
+  "salawat": {
+   "radius": 28,
+   "words": [
+    {
+     "variant": 0,
+     "x": 12.3,
+     "y": 15.41,
+     "rotate": -0.07,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 8.1,
+     "y": -2,
+     "rotate": 0.01,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 14.38,
+     "y": 9.61,
+     "rotate": 103.45,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 17.14,
+     "y": -11.72,
+     "rotate": 32.03,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -5.16,
+     "y": -19.68,
+     "rotate": -36.29,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -18.1,
+     "y": -9.62,
+     "rotate": -98.75,
+     "scale": 1
+    }
+   ]
+  },
+  "ikhlas": {
+   "radius": 43.29,
+   "words": [
+    {
+     "variant": 0,
+     "x": -1.58,
+     "y": -18.13,
+     "rotate": -173.12,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 17.65,
+     "y": -12.03,
+     "rotate": -118.1,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 25.74,
+     "y": 11.57,
+     "rotate": -56.94,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 6.52,
+     "y": 31.98,
+     "rotate": 7.74,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -20.28,
+     "y": 23.19,
+     "rotate": 72.65,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -25.41,
+     "y": -6.93,
+     "rotate": 150.24,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 27.28,
+     "y": -1.04,
+     "rotate": 3.4,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 7.3,
+     "y": -1.96,
+     "rotate": 0.34,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -14.1,
+     "y": -1.79,
+     "rotate": -3.11,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -2.93,
+     "y": 9.74,
+     "rotate": 164.94,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 20.88,
+     "y": -5.18,
+     "rotate": 95.18,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 17.53,
+     "y": -28.67,
+     "rotate": 26.4,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -8.2,
+     "y": -33.68,
+     "rotate": -33.03,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -21.86,
+     "y": -22.95,
+     "rotate": -91.93,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -14.53,
+     "y": 5.37,
+     "rotate": -166.83,
+     "scale": 1
+    }
+   ]
+  }
+ }
+}

@@ -20,3 +20,4 @@ tests/ratings/
 tests/ratings/rounds/*/vote.html
 docs/placement-brief/kit.json
 docs/placement-brief/entries/*/placements.json
+docs/placement-brief/experiments/*.json

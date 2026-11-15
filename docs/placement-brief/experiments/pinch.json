@@ -1,0 +1,216 @@
+{
+ "entry": "curved-pinch",
+ "principle": "Lines that bow towards the centre, as a ruled sheet sags round a weight.",
+ "reading": "Start at the top line and read each line from right to left.",
+ "layouts": {
+  "names": {
+   "radius": 19.22,
+   "words": [
+    {
+     "variant": 0,
+     "x": 9.7,
+     "y": 5.17,
+     "rotate": 0,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 8.5,
+     "y": -9.16,
+     "rotate": 0.02,
+     "scale": 1
+    }
+   ]
+  },
+  "basmala": {
+   "radius": 26.39,
+   "words": [
+    {
+     "variant": 0,
+     "x": 6.9,
+     "y": 10.99,
+     "rotate": -0.05,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 24.39,
+     "y": -2.5,
+     "rotate": -1.68,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 5.8,
+     "y": -1.8,
+     "rotate": 1.07,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 12.9,
+     "y": -14.99,
+     "rotate": 0.03,
+     "scale": 1
+    }
+   ]
+  },
+  "salawat": {
+   "radius": 30.92,
+   "words": [
+    {
+     "variant": 0,
+     "x": 12.3,
+     "y": 14.05,
+     "rotate": 0.02,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 27.89,
+     "y": -2.52,
+     "rotate": -1.66,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 9.5,
+     "y": -2.01,
+     "rotate": -0.08,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -8.3,
+     "y": -1.98,
+     "rotate": 1.51,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 16.02,
+     "y": -19.52,
+     "rotate": -7.68,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 3.47,
+     "y": -17.51,
+     "rotate": 4.69,
+     "scale": 1
+    }
+   ]
+  },
+  "ikhlas": {
+   "radius": 45.94,
+   "words": [
+    {
+     "variant": 0,
+     "x": 21.78,
+     "y": 28.19,
+     "rotate": 8.65,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 11.1,
+     "y": 26.45,
+     "rotate": 1.51,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -3.54,
+     "y": 25.83,
+     "rotate": -6.64,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 38.55,
+     "y": 9.11,
+     "rotate": 4.04,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 19.8,
+     "y": 7.76,
+     "rotate": 1.4,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 1.19,
+     "y": 7.11,
+     "rotate": -1.99,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -28.58,
+     "y": 8.37,
+     "rotate": -4.73,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 39.46,
+     "y": -14.31,
+     "rotate": -7.49,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 26.76,
+     "y": -12.68,
+     "rotate": -4.45,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 12.6,
+     "y": -11.55,
+     "rotate": -0.82,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -7.6,
+     "y": -11.44,
+     "rotate": 3,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -21.79,
+     "y": -12.15,
+     "rotate": 6.65,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 22.03,
+     "y": -32.57,
+     "rotate": -10.32,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 16.58,
+     "y": -31.04,
+     "rotate": -3.59,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -2.44,
+     "y": -29.74,
+     "rotate": 7.05,
+     "scale": 1
+    }
+   ]
+  }
+ }
+}

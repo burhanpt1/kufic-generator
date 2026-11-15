@@ -1,0 +1,216 @@
+{
+ "entry": "curved-lens",
+ "principle": "Lines that bend as the circle does: straight through the middle, more bent towards the edge, so the outer lines lie along the rim.",
+ "reading": "Start at the top line and read each line from right to left.",
+ "layouts": {
+  "names": {
+   "radius": 19.61,
+   "words": [
+    {
+     "variant": 0,
+     "x": 9.7,
+     "y": 5.17,
+     "rotate": 0,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 8.5,
+     "y": -9.17,
+     "rotate": -0.03,
+     "scale": 1
+    }
+   ]
+  },
+  "basmala": {
+   "radius": 26.39,
+   "words": [
+    {
+     "variant": 0,
+     "x": 6.9,
+     "y": 11.01,
+     "rotate": 0.07,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 24.39,
+     "y": -1.28,
+     "rotate": 2.4,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 5.8,
+     "y": -2.28,
+     "rotate": -1.53,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 12.9,
+     "y": -15.01,
+     "rotate": -0.05,
+     "scale": 1
+    }
+   ]
+  },
+  "salawat": {
+   "radius": 29.72,
+   "words": [
+    {
+     "variant": 0,
+     "x": 12.3,
+     "y": 13.28,
+     "rotate": -0.02,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 27.39,
+     "y": -1.22,
+     "rotate": 2.51,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 9.4,
+     "y": -1.98,
+     "rotate": 0.11,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -7.8,
+     "y": -2.04,
+     "rotate": -2.27,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 15.63,
+     "y": -15.2,
+     "rotate": 11.04,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 3.75,
+     "y": -18.06,
+     "rotate": -6.61,
+     "scale": 1
+    }
+   ]
+  },
+  "ikhlas": {
+   "radius": 45.04,
+   "words": [
+    {
+     "variant": 0,
+     "x": 21.64,
+     "y": 23.25,
+     "rotate": -12.86,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 11.09,
+     "y": 25.83,
+     "rotate": -2.24,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -3.58,
+     "y": 26.74,
+     "rotate": 9.87,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 34.03,
+     "y": 5.46,
+     "rotate": -5.06,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 15.3,
+     "y": 7.15,
+     "rotate": -1.14,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -3.32,
+     "y": 7.81,
+     "rotate": 3.9,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 35.47,
+     "y": -7.9,
+     "rotate": 9.87,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 24.63,
+     "y": -9.76,
+     "rotate": 6.33,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 11.9,
+     "y": -11.11,
+     "rotate": 1.82,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -2.31,
+     "y": -11.6,
+     "rotate": -3.58,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -22.46,
+     "y": -10.09,
+     "rotate": -9.25,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 29.22,
+     "y": -24.16,
+     "rotate": 18.01,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 12.55,
+     "y": -29.15,
+     "rotate": 7.15,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 6.99,
+     "y": -30.63,
+     "rotate": -2.85,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -12.13,
+     "y": -29.83,
+     "rotate": -18.66,
+     "scale": 1
+    }
+   ]
+  }
+ }
+}

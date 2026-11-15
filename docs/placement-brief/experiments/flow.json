@@ -1,0 +1,216 @@
+{
+ "entry": "curved-flow",
+ "principle": "The centre is left empty and the lines part to pass round it, as a stream passes a stone.",
+ "reading": "Start at the top line and read each line from right to left.",
+ "layouts": {
+  "names": {
+   "radius": 20.81,
+   "words": [
+    {
+     "variant": 0,
+     "x": 9.7,
+     "y": 5.1,
+     "rotate": -0.94,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 8.5,
+     "y": -11.78,
+     "rotate": -0.13,
+     "scale": 1
+    }
+   ]
+  },
+  "basmala": {
+   "radius": 32.81,
+   "words": [
+    {
+     "variant": 0,
+     "x": 13.36,
+     "y": -0.77,
+     "rotate": -40.75,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 0.57,
+     "y": 11.55,
+     "rotate": 41.83,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 26.59,
+     "y": -10.52,
+     "rotate": 9.45,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -1.11,
+     "y": -14.55,
+     "rotate": -8.47,
+     "scale": 1
+    }
+   ]
+  },
+  "salawat": {
+   "radius": 32.81,
+   "words": [
+    {
+     "variant": 0,
+     "x": 28.17,
+     "y": 1,
+     "rotate": -2.98,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 4.46,
+     "y": 10.17,
+     "rotate": 20.54,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -10.39,
+     "y": 1.76,
+     "rotate": 1.56,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 25.47,
+     "y": -11.14,
+     "rotate": 7.32,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 4.5,
+     "y": -14.62,
+     "rotate": -2.37,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -6.23,
+     "y": -13.61,
+     "rotate": -7.32,
+     "scale": 1
+    }
+   ]
+  },
+  "ikhlas": {
+   "radius": 48.75,
+   "words": [
+    {
+     "variant": 0,
+     "x": 22.16,
+     "y": 29.94,
+     "rotate": -4.45,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 11.2,
+     "y": 30.95,
+     "rotate": -1.19,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -3.81,
+     "y": 31.3,
+     "rotate": 4.09,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 42.5,
+     "y": 1.38,
+     "rotate": -0.62,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 22.66,
+     "y": -1.25,
+     "rotate": -26.24,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 5.51,
+     "y": 17.77,
+     "rotate": 34.3,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -19.3,
+     "y": 1.81,
+     "rotate": 1.85,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -30.5,
+     "y": 1.5,
+     "rotate": 0.47,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 36.69,
+     "y": -12.33,
+     "rotate": 4.64,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 22.3,
+     "y": -13.46,
+     "rotate": 14.29,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 2.37,
+     "y": -18.39,
+     "rotate": -6.38,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -11.75,
+     "y": -15.73,
+     "rotate": -10.53,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -29.11,
+     "y": -12.9,
+     "rotate": -3.69,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": 19.19,
+     "y": -37.16,
+     "rotate": 1.86,
+     "scale": 1
+    },
+    {
+     "variant": 0,
+     "x": -0.2,
+     "y": -37.81,
+     "rotate": -2.06,
+     "scale": 1
+    }
+   ]
+  }
+ }
+}
