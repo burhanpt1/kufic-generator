@@ -248,6 +248,9 @@ export interface CradleOptions {
   /** The ink above the level diameter keeps this much further from the circle: a canopy runs along the rim there
    *  (tests/char-canopy-sheet.test.ts). */
   roof?: number;
+  /** The bottom line keeps this much further from the bowl's floor: a sub-cradle runs along it there
+   *  (tests/char-nested-sheet.test.ts). */
+  floor?: number;
 }
 export interface CradleLaid {
   R: number;
@@ -257,6 +260,8 @@ export interface CradleLaid {
   /** The bowl's width as a share of the circle's diameter, and the angle of rim it follows (degrees). */
   span: number;
   arc: number;
+  /** Where the bowl lands on the left and ends on the right (radians from the bottom, positive to the left). */
+  ends: [number, number];
   /** The lines in the bowl, after the cradle word's own. */
   inside: number;
   /** Line by line: its ink (the bowl with the cradle word's line) and the height of its baseline. */
@@ -306,7 +311,18 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
     if (hit) return hit;
     if (!cr) {
       const outs = pieces.map(k => cleanOutline(k));
-      return { R, lines: said, polys: outs.flat(), cradle: cr, span: 0, arc: 0, inside: 0, pieces: outs, hs: t.hs };
+      return {
+        R,
+        lines: said,
+        polys: outs.flat(),
+        cradle: cr,
+        span: 0,
+        arc: 0,
+        ends: [0, 0],
+        inside: 0,
+        pieces: outs,
+        hs: t.hs,
+      };
     }
     const k = t.cut.findIndex(([, b]) => b - 1 === ci),
       l = span(...t.cut[k]),
@@ -350,6 +366,7 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
       cradle: cr,
       span: (Math.max(...bx) - Math.min(...bx)) / (2 * R),
       arc: ((bowl.phi0 - bowl.phiEnd) * 180) / Math.PI,
+      ends: [bowl.phi0, bowl.phiEnd],
       inside: t.cut.length - 1 - k,
     };
   };
@@ -358,7 +375,7 @@ export function cradleCompose(text: string, o: CradleOptions = {}): CradleLaid |
     radius: for (let R = 12; R < 170; R *= 1.02) {
       if (found && R > found.R * LARGER) break;
       const Rt = R - MARGIN,
-        Rb = cr ? Rt - FLOOR - CLEAR : Rt,
+        Rb = cr ? Rt - FLOOR - CLEAR - (o.floor ?? 0) : Rt,
         tries: Try[] = [];
       for (const lift of cr ? LIFTS : [0]) {
         let best: Try | null = null;
