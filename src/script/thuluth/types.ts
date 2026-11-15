@@ -58,6 +58,15 @@ export interface ThuluthStyle {
   /** Drafted alternative letterforms (alts.ts), for the owner to judge, and the audit's corrections, which are on
    *  unless `fixes: false`. */
   alts?: ThuluthAlts;
+  /** Ink spacing on a straight line (spacing.ts). Unset, a piece of a word that follows a non-joining letter (ا د ر و
+   *  and their kin) stands a fixed gap from the box of the piece before it, however far apart their inks are (a ra's
+   *  tail tip is low and far left, the next letter's head high). Set, it slides along the baseline until this much
+   *  clear space, in nibs, is left between its ink and the ink of every earlier piece of its word (over a tail, under
+   *  a head), dots counted as ink; two tall stems facing each other (ال) keep twice as much. About 0.45. */
+  pieceGap?: number;
+  /** The same between words: the clear space, in nibs, between a word's ink and the ink of the words before it.
+   *  Unset, words stand apart by their boxes as before. About 1.5. */
+  wordSpace?: number;
 }
 /** Alternative drawings (alts.ts says what each one is): the stems and the name are off unless named, and with
  *  either on the pen also draws its stroke ends clean (pen.ts nibPolys). */
