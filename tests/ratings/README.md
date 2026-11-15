@@ -79,3 +79,11 @@ the votes per option: "clear" when the split of decided pairs passes a sign test
 To read the round back (Claude: ArtifactData list on the page's URL, collection `votes`): save the documents as
 `rounds/2026-11-15/votes.json` ({a, b, w, t}, as for the other rounds) and the ids of both sides of every `bad` pair
 as `dislikes.json`. An option whose reading is clear is promoted or dropped on that; the votes also go to the refit.
+
+Round 3 was voted on 15 November (31 pairs): 18 pairs "both poor", 7 for the option on, 6 for it off. No option is
+clear or even leaning (wordGap 2–1, innerGap 2–1, stems c 1–2, muhammad c 1–1, both letters 1–1), so none is promoted
+or dropped on this round. Its votes are kept as `votes.held.json` and `dislikes.held.json`, like round 2's: a refit
+with them takes dense from 147 rows to 340, of which 248 are made up from the 36 set-aside roundels, and moves the
+dense weights a long way on those rows (real votes held out: 64.1%, 59 of 92, interval 53.9% to 73.2%; one feature
+alone 60.9%). The round's finding is the 18: at the sweep's effort the roundels themselves are judged poor whatever
+the option, and none of the critic's features tells the 36 set aside from the 13 chosen.
