@@ -150,8 +150,9 @@ describe('the rules on the wider set of texts', () => {
     expect(modesWide('وما')).toEqual(['stem', null]);
     expect(modesWide('سبحان')).toEqual(['entry', 'stem', null]);
     expect(modesWide('بسم')).toEqual(['entry', null]);
-    // (a nun too: its dot rides outside the arc's neck)
-    expect(modesWide('نور')).toEqual(['entry', null]);
+    // (not a nun, a ta or a tha: the arc hides the tooth, and its dots stay where they are written)
+    expect(modesWide('نور')).toEqual([null]);
+    expect(modesWide('ثابت')).toEqual(['stem', null]);
     // (a roof is written to the left: it takes no entry from the right, and is drawn out to the left)
     expect(modesWide('حسين')).toEqual(['roof', null]);
     expect(modesWide('عليم')).toEqual(['roof', 'stem', null]);

@@ -64,10 +64,13 @@ export interface Head {
   C: [number, number];
   u: [number, number];
   dots: number;
+  /** The letter's dots that stay where they were written: their place in the line's list, and where they stand. */
+  stay?: { k: number; x: number; y: number }[];
 }
 /** How far into the letter's last descent the bowl is taken over, in samples (14 to a span of the skeleton): the pen
  *  has just set off downward and to the left, and the letter's head above it is the engine's. */
-export const CUT_IN = 5,
+export const DOTS_STAY = !process.env.WIDE_DOTSGO, // a dot written above the line stays where it was written, whatever becomes of its letter's bowl (owner, round two's grades: a nun's dot set in the great bowl is lost, and the nun with it)
+  CUT_IN = 5,
   /** A dot sits over the kept part of its letter if it stands within this of that part's extent along the line. */
   DOT_OVER = 0.8;
 /** Where the bowl of a written line's last letter is taken over: the stroke (its index) and the head. */
@@ -109,10 +112,16 @@ export function takeOver(b: Built, cutIn = CUT_IN): { si: number; head: Head } {
       k1 = Math.max(k1, q.x);
     });
   });
-  for (const g of b.dotGroups)
-    if (g.li === last.li && g.wi === last.wi && !(g.side > 0 && g.x > k0 - DOT_OVER && g.x < k1 + DOT_OVER))
-      mine += g.n;
-  return { si, head: { pre, ang: st.ang, C: [st.s[cut].x, st.s[cut].y], u: [ux / ul, uy / ul], dots: mine } };
+  const stay: NonNullable<Head['stay']> = [];
+  let at = 0;
+  for (const g of b.dotGroups) {
+    if (g.li === last.li && g.wi === last.wi) {
+      if (!(g.side > 0 && (DOTS_STAY || (g.x > k0 - DOT_OVER && g.x < k1 + DOT_OVER)))) mine += g.n;
+      else for (let j = 0; j < g.n; j++) stay.push({ k: at + j, x: b.dots[at + j][0], y: b.dots[at + j][1] });
+    }
+    at += g.n;
+  }
+  return { si, head: { pre, ang: st.ang, C: [st.s[cut].x, st.s[cut].y], u: [ux / ul, uy / ul], dots: mine, stay } };
 }
 
 // ---- 2. how it is drawn ----
@@ -125,6 +134,9 @@ export const LAND_MIN = 8, // (and never less than this)
   TIP_LEN = 9, // the last stretch of the bowl, where it thins,
   TIP_RISE = 1.4, // how far it lifts off the rim there,
   TIP_W = 0.06, // and the share of the pen's width it ends at
+  LIGHT = !process.env.WIDE_HEAVY, // arcs scaled to the circle:
+  LIGHT_R = 9 * NIB, // a stroke on a circle smaller than this (9 nibs) is drawn lighter, its weight as its radius to this,
+  LIGHT_MIN = 0.55, // and never lighter than this share of the pen
   TURN_BY = 0.6, // the pen has turned to the rim's direction by this share of the way down to it
   STEP = 0.14;
 /** A point of the bowl, and how far the pen has turned to the rim's by then (0 to 1). */
@@ -140,7 +152,9 @@ export function sweep(
   neck?: number,
 ) {
   const rC = Math.hypot(C[0], C[1]),
-    drop = rho - rC;
+    drop = rho - rC,
+    // (on a small circle the stroke is drawn with a lighter pen: its weight goes with its circle's radius)
+    full = LIGHT ? Math.min(1, Math.max(LIGHT_MIN, rho / LIGHT_R)) : 1;
   if (drop < 0.6) return null;
   const phi0 = Math.atan2(C[0], -C[1]) - Math.max(LAND * drop, LAND_MIN) / rho,
     phiEnd = end(phi0);
@@ -163,7 +177,7 @@ export function sweep(
     s.push({
       x: a * C[0] + b * L * u[0] + c * A[0] + d * L * t0[0],
       y: a * C[1] + b * L * u[1] + c * A[1] + d * L * t0[1],
-      w: wC + (1 - wC) * (neck ? e : t),
+      w: wC + (full - wC) * (neck ? e : t),
       on: ease,
     });
   }
@@ -171,7 +185,7 @@ export function sweep(
     const left = (phi - phiEnd) * rho,
       v = left < TIP_LEN ? 1 - left / TIP_LEN : 0,
       r = rho - TIP_RISE * v * v;
-    s.push({ x: r * Math.sin(phi), y: -r * Math.cos(phi), w: 1 - (1 - TIP_W) * v * v, on: 1 });
+    s.push({ x: r * Math.sin(phi), y: -r * Math.cos(phi), w: full * (1 - (1 - TIP_W) * v * v), on: 1 });
   }
   return { s, phi0, phiEnd };
 }
@@ -209,6 +223,48 @@ export const MARGIN = 0.9 * NIB, // between the ink and the circle, as the level
   /** How thick the pen draws the bowl's floor: the nib held at its angle to a stroke that runs along the rim. */
   FLOOR = NIB * Math.sin((th.style.ang * Math.PI) / 180);
 
+// ---- dots that touch a stroke (owner, round two's grades: a dot that merges with a stroke is a letter lost) ----
+/** A line as written, with every group of dots that touches a stroke moved clear of it: the least move, straight
+ *  away from the line of writing or along it (DOT_MOVES, nearest first), that leaves DOT_AIR between its dots and
+ *  every stroke. The group moves whole: three dots stay a pyramid. A group that touches nothing is not moved. */
+const DOT_AIR = 0.12 * NIB,
+  DOT_MOVES: [number, number][] = [[0, 0], [0, 0.5], [0.5, 0], [-0.5, 0], [0, 1], [0.7, 0.7], [-0.7, 0.7], [1, 0], [-1, 0], [0, 1.5], [1.5, 0], [-1.5, 0], [0, 2], [1.4, 1.4], [-1.4, 1.4]], // prettier-ignore
+  MEND = !process.env.WIDE_NOMEND;
+export function mendDots(b: Built): Built {
+  if (!MEND || !b.dots.length) return b;
+  const ink = b.strokes.flatMap(st => th.strokePolys(st)),
+    touches = (x: number, y: number) => {
+      const near = ink.filter(q => q.some(v => Math.abs(v[0] - x) < 4 && Math.abs(v[1] - y) < 4));
+      return (
+        near.length > 0 &&
+        nearPairs([near.map(q => q.map(([vx, vy]) => [vx - x, vy - y] as [number, number])), th.dotPolysAt(0, 0)], 5, DOT_AIR, 8).length > 0 // prettier-ignore
+      );
+    },
+    dots = b.dots.map(d => d.slice() as (typeof b.dots)[number]),
+    groups = b.dotGroups.map(g => ({ ...g }));
+  let at = 0,
+    moved = false;
+  for (const g of groups) {
+    const mine = dots.slice(at, at + g.n),
+      up = g.side < 0 ? -1 : 1;
+    for (const [mx, my] of DOT_MOVES) {
+      if (mine.some(d => touches(d[0] + mx, d[1] + up * my))) continue;
+      if (mx || my) {
+        for (const d of mine) {
+          d[0] += mx;
+          d[1] += up * my;
+        }
+        g.x += mx;
+        g.y += up * my;
+        moved = true;
+      }
+      break;
+    }
+    at += g.n;
+  }
+  return moved ? { ...b, dots, dotGroups: groups } : b;
+}
+
 // ---- a level line as the engine writes it ----
 const inkOf = (b: Pick<Built, 'strokes' | 'dots'>): Poly[] => [
   ...b.strokes.flatMap(s => th.strokePolys(s)),
@@ -228,7 +284,7 @@ function lineOf(text: string, cradle = false): Line {
   const key = (cradle ? '*' : '') + text;
   let l = lines.get(key);
   if (l) return l;
-  const b = th.buildStrokes(text, {});
+  const b = mendDots(th.buildStrokes(text, {}));
   if (!cradle) {
     const ink = inkOf(b),
       xs = ink.flat().map(p => p[0]);

@@ -7,8 +7,8 @@ import type { Built } from '../../src/script/thuluth/engine';
 import { cleanOutline } from '../../src/script/thuluth/outline';
 import type { Poly, Sample } from '../../src/script/thuluth/types';
 import { forms } from '../../src/script/thuluth';
-import type { Bend, Cols, Cradle, Head, Pt, Stem } from './char-first';
-import { BOWL, CAP, CLEAR, EASE, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, hull, meridians, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
+import type { Bend, Cols, Cradle, CradleLaid, Head, Profile, Pt, Stem } from './char-first';
+import { BOWL, CAP, CLEAR, EASE, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, hull, mendDots, meridians, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
 
 // ---- the numbers of the nested arcs ----
 export const AIR = +(process.env.NESTED_AIR ?? 1.2) * NIB, // between a stroke on one circle and the stroke on the next circle in
@@ -87,7 +87,7 @@ export const TIP = (25 * Math.PI) / 180, // the canopy ends this far past the to
   KASH_EASE = 7, // and its drawn-out join rises to the rim's circle over this length at each end
   KASH_TURN = 0; // the drawn-out word is turned this far clockwise: it opens at the upper right // and its drawn-out join rises to the rim's circle over this length at each end
 // ---- the numbers of the rules for any text (W1 to W7, at the end of this file) ----
-const ENTRY_INTO = process.env.WIDE_NODOTS ? 'بيئسم' : 'بيئسمنتثش', // an entry is led into a tooth or a head; dots above it ride outside the arc's neck (RIDE)
+const ENTRY_INTO = process.env.WIDE_RIDE ? 'بيئسمنتثش' : 'بيئسم', // an entry is led into a tooth or a head with no dot above it (owner, round two's grades: an arc led into a nun, a ta or a tha hides the letter, and a dot moved off its letter to ride the arc makes it unreadable; WIDE_RIDE=1 shows round two's)
   ROOFED = 'حجخعغ', // letters that open with a roof written to the left: the roof's line is drawn on, to the left, along the rim
   ROOF_TIP = (+(process.env.WIDE_ROOF ?? 75) * Math.PI) / 180, // a roof drawn out ends this far left of the top (9:30),
   ROOF_TIPS = [1, 0.85, 0.7, 0.55], // or at this share of it, the longest that is clear
@@ -101,9 +101,10 @@ const ENTRY_INTO = process.env.WIDE_NODOTS ? 'بيئسم' : 'بيئسمنتثش'
   FORTH_DROP = +(process.env.WIDE_DROP ?? 5) * NIB, // a tail runs forth only if it is taken over within this of the rim's circle: a longer way down would make a stem of it
   SEAT_DROP = +(process.env.WIDE_SEAT ?? 5) * NIB, // an opening stroke is led to the rim from a word on the ground line only from within this of the rim's circle
   SINGLE_LIFTS = Array.from({ length: 16 }, (_, i) => i * 1.5), // a single word may stand this far above its lowest place: it is drawn large, and stands where its strokes reach the rim
+  SINGLE_GROW = +(process.env.WIDE_SINGLE ?? 1.15), // a single word takes no arc that needs a circle this much larger than its smallest
   SINGLE_LARGER = 1.1, // a single word takes the arc at its other end instead, if it is then drawn this much larger
   SUB_END = 50, // an inner arc above stays over the top: it ends no further left of the top than this (degrees), or its stem is not bowed
-  HOLLOW_MAX = +(process.env.WIDE_HOLLOW ?? 0.4), // a ground line with no cradle is sound only if no more than this share of the circle's height is empty under it
+  HOLLOW_MAX = +(process.env.WIDE_HOLLOW ?? 0.2), // a ground line with no cradle is sound only if no more than this share of the circle's height is empty under it
   MAX_BARE = 4, // a ground line with no cradle word holds no more words than this
   VOID_BARE = 1, // what an empty band under a ground line with no cradle costs (VOID's measure): nothing will fill it
   CANOPY_FROM = +(process.env.WIDE_FROM ?? 5), // a stem carries the canopy only if its top stands at least this far right of the top of the circle (degrees): the arc must cross the top
@@ -265,7 +266,7 @@ function lineOf(text: string, cradle = false): Line {
   const key = (cradle ? '*' : '') + text,
     had = lineCache.get(key);
   if (had) return had;
-  const b = th.buildStrokes(text, {}),
+  const b = mendDots(th.buildStrokes(text, {})),
     stems = findStems(b, text),
     nw = text.trim().split(/\s+/).length,
     ext = Array.from({ length: nw }, () => [Infinity, -Infinity]);
@@ -364,6 +365,15 @@ function under(p: Placed, s: number, above: readonly Poly[]) {
   for (const q of above) for (const [x, y] of q) if (x >= x0 && x <= x1 && y > top - 1 && y < low) low = y;
   return low - CLEAR - 0.25 - top;
 }
+/** Whether some ink comes within CLEAR of a dot of a placed line. */
+function nearDots(p: Placed, ink: Poly[]): boolean {
+  const pts = ink.flat();
+  return p.l.b.dots.some(([x, y], k) => {
+    const X = x + p.off[p.l.dotWord[k] ?? 0],
+      Y = y + p.dy;
+    return pts.some(v => Math.hypot(v[0] - X, v[1] - Y) < 0.75 * NIB + CLEAR);
+  });
+}
 /** (c) A stem as the canopy: stem k of a placed line rises until its split stands a little inside the rim's circle,
  *  and its head gives way to the arc. */
 function stemCanopy(p: Placed, k: number, rho: number, tip = TIP, runMin = RUN_MIN) {
@@ -391,6 +401,8 @@ function stemCanopy(p: Placed, k: number, rho: number, tip = TIP, runMin = RUN_M
         );
       continue;
     }
+    // (the arc's neck too keeps clear of every dot of its line: a dot swallowed by the arc is a letter lost)
+    if (nearDots(p, th.strokePolys({ ang: st.ang, s: arc.s }))) continue;
     return {
       extra: e,
       swap: { si: m.si, from: m.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })) } as Swap,
@@ -708,6 +720,24 @@ interface Bowl {
   phi0: number;
   phiEnd: number;
 }
+/** A dot stays with its letter (A6): a dot written above the line, over a bowl that is redrawn, stays where it was
+ *  written; if the new stroke would pass within DOT_CLEAR of it, it is lifted straight up until it is clear. (The
+ *  placed line is given the dot's new place.) */
+const DOT_OWN = 1.5 * NIB, // other words keep this far from a dot that stays over a redrawn bowl
+  DOT_CLEAR = FLOOR / 2 + 0.75 * NIB + CLEAR,
+  DOT_LIFT = 0.3 * NIB;
+function liftDots(p: Placed, head: Head, pen: readonly Sample[], dx: number): number {
+  let n = 0;
+  for (const d of head.stay ?? []) {
+    let y = d.y;
+    const near = () => pen.some(q => Math.hypot(q.x - (d.x + dx), q.y - (y + p.dy)) < DOT_CLEAR);
+    while (near() && y < d.y + 6 * NIB) y += DOT_LIFT;
+    if (y === d.y) continue;
+    p.dots = new Map([...(p.dots ?? []), [d.k, [d.x, y] as Pt]]);
+    n++;
+  }
+  return n;
+}
 /** The great bowl of a placed line's last letter (the cradle's, from the helper). `hold`: how far to the right the
  *  line it holds reaches, when it is to end just past it; otherwise it ends as high on the right as it lands on the
  *  left. `neck`: 0 draws it as the cradle first did. */
@@ -735,8 +765,9 @@ function bowlOf(
   if (!bowl) return null;
   const pen = bowlPen(head, bowl.s),
     s = [...pre.map(q => ({ ...q, x: q.x + dx, y: q.y + p.dy })), ...pen],
+    // (its dots above the line stay with it, lifted clear of the new stroke if they must be)
+    rd = rho - FLOOR / 2 - 1.25 * NIB + 0 * liftDots(p, head, pen, dx),
     // the letter's dots: in the bowl where it begins, along the floor
-    rd = rho - FLOOR / 2 - 1.25 * NIB,
     dots = Array.from({ length: head.dots }, (_, i) => {
       const phi = bowl.phi0 - (2.2 * NIB + i * 1.2 * NIB) / rd;
       return th.dotPolysAt(-rd * Math.sin(phi), -rd * Math.cos(phi), 1, -phi);
@@ -759,6 +790,7 @@ function forthOf(p: Placed, R: number, run = FORTH_RUN): Bowl | null {
     rho = R - MARGIN - FLOOR / 2 - 0.05,
     pre = preOf(p),
     sw = sweep([head.C[0] + dx, head.C[1] + p.dy], head.u, head.pre[head.pre.length - 1].w, rho, phi0 => Math.max(phi0 - run, -(Math.PI / 2 - FORTH_TOP)), NECK); // prettier-ignore
+  if (sw) liftDots(p, head, bowlPen(head, sw.s.map(q => ({ ...q, x: -q.x }))), dx); // prettier-ignore
   if (!sw || rho - Math.hypot(head.C[0] + dx, head.C[1] + p.dy) > FORTH_DROP)
     return no(
       `forth: drop ${(rho - Math.hypot(head.C[0] + dx, head.C[1] + p.dy)).toFixed(1)}, at ${(Math.atan2(head.C[0] + dx, -(head.C[1] + p.dy)) * DEG).toFixed(0)} degrees, u ${head.u.map(v => v.toFixed(2)).join(' ')}, sweep ${sw ? 'drawn' : 'none'}`,
@@ -1083,7 +1115,11 @@ export function ground(
       );
       if (!bowl2) return no('12');
     }
-    const bowls = !bowl ? [] : bowl2 ? [bowl.loose, bowl2.loose] : [bowl.loose];
+    const bowls = !bowl ? [] : bowl2 ? [bowl.loose, bowl2.loose] : [bowl.loose],
+      kept = (g.take?.head.stay ?? []).flatMap(d => {
+        const at = pg.dots?.get(d.k) ?? [d.x, d.y];
+        return th.dotPolysAt(at[0] + off[g.nw - 1], at[1] + hg);
+      });
     // the upper words, each resting on the ground line as risen and on the upper words before it
     const ink = inked(g, pg.extra).words.flatMap((w, k) => w.map(q => q.map(([x, y]) => [x + off[k], y] as Pt))),
       below: [Cols, number][] = [[colsOf(ink), 0]],
@@ -1135,6 +1171,9 @@ export function ground(
           if (!within(u.whole[0], c.x, c.y + up, Rt)) break;
           if (nearPairs([...fixed, ...ups.map(p => inkAt(p)), ink], R, LINE_SPACE).some(pr => pr.includes(k))) continue;
           if (nearPairs([...bowls, ink], R, CLEAR).some(pr => pr.includes(bowls.length))) continue;
+          // (a dot is nearer its own letter than any other writing: an upper word keeps DOT_OWN from the cradle
+          // letter's dots)
+          if (kept.length && nearPairs([kept, ink], R, DOT_OWN).length) continue;
           put = q;
           br = c.br;
         }
@@ -1295,9 +1334,346 @@ export function modeOf(word: string): Mode {
 // N4. Only if every bowl is CLEAR of all the writing and the circle grows no more than GROW_MAX; else none.
 // Reading: unchanged, the lines from the top down; a bowl closes its line and holds what follows.
 const NESTING = !process.env.WIDE_NONEST,
+  RISE_LOWER = !process.env.WIDE_NORISE,
   NEST_BOWL = 'نيىلقسشصضجحخعغ',
   NEST_MAX = 2;
-type Leveled = NonNullable<ReturnType<typeof cradleCompose>>;
+/** An arrangement on lines, as the cradle's level lines give it; the tiers (T1 to T6) add what stands off a line. */
+type Leveled = CradleLaid & {
+  /** Ink that belongs to no line's own piece: the words stacked over a line, each a piece of its own. */
+  floats?: Poly[][];
+  /** For each line: its words' shifts sideways (absent: the line is centred), the last word of the text it holds,
+   *  and what it is called. */
+  offs?: number[][];
+  lastWord?: number[];
+  said?: string[];
+  /** The cradle's bowl, apart from its line. */
+  bowlInk?: Poly[];
+};
+const offOf = (l: Leveled, li: number, as: Line = lineOf(l.lines[li])) => l.offs?.[li] ?? centred(as);
+
+// ======== tiers: short colonnades one over another, short words stacked in the bays (T1 to T6) ========
+// T1. STACKING. A short word (SHORT_MAX letters at most) that is not the first word of the text, does not carry the
+//     cradle, and does not end its line in a bowl, is taken off its line and set above it: at the lowest place,
+//     resting on the writing at LINE_SPACE, over no tall stem, between the right end of the word before it and the
+//     left end of the word after it (nearest their meeting, of places as low). No two words running are stacked; a
+//     word that finds no place stays on the line. Reading: a stacked word is read after the word under its right
+//     and before the word under its left.
+// T2. TIERS. The words up to the cradle word are split into lines in their order (the cradle word ends its line; the
+//     words after it are one line or two in its bowl); each line is written with its short words stacked or not.
+// T3. The lines rest on one another at LINE_SPACE of ink, measured column by column (not at one pitch): a stem
+//     stands up into the gap of the line above.
+// T4. Of all splits and stackings, the one whose circle is smallest: the writing is largest. A line (not the first,
+//     and above the cradle's) that ends in a bowl letter makes the circle count BOWL_END smaller, for two such
+//     lines at most: the next words can nest in that bowl (N1 to N4).
+// T5. The circle holds every line's ink at the margin; the first line FLOOR + CLEAR further in (the canopy's room);
+//     what stands in a bowl, FLOOR + CLEAR further in (and STEPIN more for each nested bowl).
+// T6. STEMS OF THE LOWER LINES rise as the first line's do, each until it comes within CLEAR of the ink above it or
+//     meets the margin, and no further than the baseline of the line above: the upper line's stems to the rim, the
+//     lower's to the upper line's feet.
+// T7. TWO GROUND LINES. Over a line that has COLONNADE tall stems or more, the gap is opened as far as the circle
+//     found by T4 lets it (at most SPREAD times that line's shortest stem; all such gaps by one share): the lower
+//     line stands lower, and its stems rise through the gap (T6).
+const TIERS = !process.env.WIDE_NOTIERS,
+  STACKING = !process.env.WIDE_NOSTACK,
+  SHORT_MAX = 3, // a short word: this many letters at most
+  TIER_MAX = 6, // lines at most
+  BOWL_END = +(process.env.WIDE_BOWLEND ?? 0.04), // what a line that ends in a bowl is worth, as a share of the radius
+  EMPTY = +(process.env.WIDE_EMPTY ?? 0.5), // what the circle left empty beside the lines costs: its mean share of their chords
+  BODY_MID = 3, // (a line's chord is measured this far over its baseline)
+  STACK_COST = +(process.env.WIDE_STACKCOST ?? 0.06), // what each stacked word costs, as a share of the radius
+  COLONNADE = 2, // a line with this many tall stems is a colonnade:
+  SPREAD = +(process.env.WIDE_SPREAD ?? 1), // the gap over it may be opened by this many times its shortest stem, for the stems to fill
+  SLIDE_X = 3 * NIB, // the first line's first stem stands at least this far right of the axis
+  DIRS = 28, // a tier's hull is kept as its extreme points in this many directions
+  TIER_LIFTS = [0.4, 1.2, 2.2, 3.5, 5], // how far what stands in the bowl is lifted off its floor: the least that clears
+  TRY_BEST = 6; // arrangements tried, the smallest first, until one stands
+interface Up {
+  wi: number;
+  q: Placed;
+}
+interface Tier {
+  key: string;
+  a: number;
+  b: number;
+  text: string;
+  l: Line;
+  off: number[];
+  /** The words stacked over the line, in the line's frame. */
+  ups: Up[];
+  prof: Profile;
+  pts: Pt[];
+  half: number;
+  /** Whether its last word is on the line and ends in a bowl. */
+  bowlEnd: boolean;
+}
+const tierCache = new Map<string, Tier>(),
+  pitchCache = new Map<string, number>();
+/** T1: words a to b as one line, its short words stacked (`stack`); `ci`: the cradle word. */
+function tierOf(words: readonly string[], a: number, b: number, stack: boolean, ci: number): Tier {
+  const taken = ci === b - 1,
+    key = `${words.slice(a, b).join(' ')}|${a === 0 ? 1 : 0}${stack ? 1 : 0}${taken ? 1 : 0}`,
+    had = tierCache.get(key);
+  if (had) return { ...had, a, b, ups: had.ups.map(u => ({ ...u, wi: u.wi - had.a + a })) };
+  const up = new Set<number>();
+  if (stack && b - a > 1)
+    for (let k = a; k < b; k++) {
+      if (k === 0 || k === ci || up.has(k - 1) || forms(words[k]).length > SHORT_MAX) continue;
+      if (k === b - 1 && NEST_BOWL.includes(finalOf(words[k]))) continue;
+      up.add(k);
+    }
+  for (;;) {
+    const base = Array.from({ length: b - a }, (_, i) => a + i).filter(k => !up.has(k)),
+      text = base.map(k => words[k]).join(' '),
+      l = lineOf(text, taken),
+      off = centred(l),
+      zero = l.stems.map(() => 0),
+      // T8: the first line is slid to the right until the first stem of its first word stands SLIDE_X right of
+      // the axis: a stem on the axis or left of it cannot carry an arc over the top
+      lead = a === 0 ? l.stems.find(q => q.wi === 0) : undefined,
+      slid = lead && !process.env.WIDE_NOSLIDE && lead.x + off[0] < SLIDE_X ? SLIDE_X - (lead.x + off[0]) : 0;
+    if (slid) off.forEach((v, j) => (off[j] = v + slid));
+    const own = inkAt({ l, off, dy: 0, extra: zero }),
+      below: [Cols, number][] = [[colsOf(own), 0]],
+      ext = (j: number) => {
+        const xs = l.whole[j].map(q => q[0] + off[j]);
+        return [Math.min(...xs), Math.max(...xs)];
+      },
+      ups: Up[] = [];
+    let failed = -1;
+    for (const k of [...up].sort((p, q) => p - q)) {
+      const u = lineOf(words[k]),
+        wide = (u.x1 - u.x0) / 2,
+        pi = base.filter(j => j < k).length - 1,
+        ni = pi + 1 < base.length ? pi + 1 : -1,
+        lo = ni >= 0 ? ext(ni)[0] : ext(pi)[0],
+        hi = pi >= 0 ? ext(pi)[1] : ext(ni)[1],
+        join = pi >= 0 && ni >= 0 ? (ext(pi)[0] + ext(ni)[1]) / 2 : pi >= 0 ? ext(pi)[0] + wide : ext(ni)[1] - wide,
+        under = profile(below);
+      let best: { dx: number; y: number; d: number } | null = null;
+      for (let x = lo + wide; x <= hi - wide + 1e-9; x += SCAN) {
+        if (l.stems.some(q => Math.abs(q.x + off[q.wi] - x) < wide + STEM_HALF)) continue;
+        const dx = x - (u.x0 + u.x1) / 2,
+          y = need(profOf(u, [dx]), under),
+          d = Math.abs(x - join);
+        if (!best || y < best.y - 0.3 || (y < best.y + 0.3 && d < best.d)) best = { dx, y, d };
+      }
+      if (!best) {
+        failed = k;
+        break;
+      }
+      const q: Placed = { l: u, off: [best.dx], dy: best.y, extra: u.stems.map(() => 0) };
+      ups.push({ wi: k, q });
+      below.push([colsOf(inkAt(q)), 0]);
+    }
+    if (failed >= 0) {
+      up.delete(failed);
+      continue;
+    }
+    const ink = [own, ...ups.map(u => inkAt(u.q))].flat(),
+      all = hull(ink.flat() as Pt[]),
+      pts = new Set<Pt>();
+    for (let d = 0; d < DIRS; d++) {
+      const cx = Math.cos((2 * Math.PI * d) / DIRS),
+        cy = Math.sin((2 * Math.PI * d) / DIRS);
+      pts.add(all.reduce((m, q) => (q[0] * cx + q[1] * cy > m[0] * cx + m[1] * cy ? q : m)));
+    }
+    const t: Tier = {
+      key,
+      a,
+      b,
+      text,
+      l,
+      off,
+      ups,
+      prof: profile([[colsOf(ink), 0]]),
+      pts: [...pts],
+      half: Math.max(...all.map(q => Math.abs(q[0]))),
+      bowlEnd: !up.has(b - 1) && NEST_BOWL.includes(finalOf(words[b - 1])),
+    };
+    tierCache.set(key, t);
+    return t;
+  }
+}
+/** T3: how far under a tier's line the next tier's line stands. */
+function pitchOf(A: Tier, B: Tier): number {
+  const key = `${A.key}>${B.key}`;
+  let p = pitchCache.get(key);
+  if (p == null) pitchCache.set(key, (p = need(A.prof, B.prof)));
+  return p;
+}
+const tiersDone = new Map<string, Leveled | null>();
+/** T2 to T5: the text in tiers, as the cradle's level lines are given (so that the arcs are drawn the same way). */
+function tiersCompose(text: string, o: { cradle?: boolean; roof?: number; floor?: number }): Leveled | null {
+  const key = JSON.stringify([text, o.cradle, o.roof, o.floor, BOWL]);
+  if (!tiersDone.has(key)) tiersDone.set(key, tiersCompose1(text, o));
+  return tiersDone.get(key)!;
+}
+function tiersCompose1(text: string, o: { cradle?: boolean; roof?: number; floor?: number }): Leveled | null {
+  const words = text.split(' '),
+    n = words.length,
+    cr = o.cradle === false ? null : cradleOf(text),
+    ci = cr ? cr.wi : -1,
+    roof = o.roof ?? 0,
+    floor = o.floor ?? 0,
+    lowM = (cr ? FLOOR + CLEAR : 0) + floor;
+  if (ci === 0) return null;
+  interface Cand {
+    cost: number;
+    R: number;
+    y0: number;
+    tiers: Tier[];
+    ys: number[];
+  }
+  const cands: Cand[] = [];
+  let bar = Infinity;
+  /** T5: what each line keeps from the circle beyond the margin, and the lines that end in a bowl (N1). */
+  const roomsOf = (tiers: Tier[], lift = 0) => {
+    const T = tiers.length,
+      k = cr ? tiers.findIndex(t => t.b - 1 === ci) : T - 1,
+      nests = tiers.map((t, i) => (i >= 1 && i < k && t.bowlEnd ? i : -1)).filter(i => i >= 0).slice(-NEST_MAX), // prettier-ignore
+      lowFrom = Math.min(cr ? (k === T - 1 ? k : k + 1) : T, floor > 0 && nests.length ? nests[0] + 1 : T);
+    return { nests: nests.length, m: tiers.map((_, i) => (i === 0 ? roof : 0) + (i >= lowFrom ? lowM + (cr ? lift : 0) : 0)) }; // prettier-ignore
+  };
+  /** T3, T7: where each line stands under the first, the gap over each colonnade opened by `s` of what it may be. */
+  const ysOf = (tiers: Tier[], s = 0) => {
+    const ys = [0];
+    for (let i = 1; i < tiers.length; i++) {
+      const tops = tiers[i].l.stems.map(q => q.top),
+        gap = tops.length >= COLONNADE ? SPREAD * Math.min(...tops) : 0;
+      ys.push(ys[i - 1] - pitchOf(tiers[i - 1], tiers[i]) - s * gap);
+    }
+    return ys;
+  };
+  /** The smallest circle (to the ink's margin) about the lines as they stand, and where its centre is. */
+  const fitOf = (tiers: Tier[], ys: number[], m: number[]) => {
+    const rad = (y0: number) => {
+      let r = 0;
+      for (let i = 0; i < tiers.length; i++)
+        for (const q of tiers[i].pts) r = Math.max(r, Math.hypot(q[0], q[1] + ys[i] - y0) + m[i]);
+      return r;
+    };
+    let lo = ys[ys.length - 1] - 12,
+      hi = 12;
+    for (let i = 0; i < 26; i++) {
+      const m1 = lo + (hi - lo) / 3,
+        m2 = hi - (hi - lo) / 3;
+      if (rad(m1) < rad(m2)) hi = m2;
+      else lo = m1;
+    }
+    return { y0: (lo + hi) / 2, r: rad((lo + hi) / 2) };
+  };
+  /** One split with one stacking: its circle. */
+  const weigh = (tiers: Tier[]) => {
+    const T = tiers.length,
+      { nests, m } = roomsOf(tiers),
+      gain = 1 - BOWL_END * nests;
+    if (Math.max(...tiers.map(t => t.half)) * gain >= bar) return;
+    const ys = ysOf(tiers),
+      { y0, r } = fitOf(tiers, ys, m),
+      R = r + MARGIN;
+    // T4: a line much shorter than the circle is wide where it stands leaves the circle empty beside it
+    let empty = 0;
+    for (let i = 0; i < T; i++) {
+      const y = ys[i] - y0 + BODY_MID,
+        chord = Math.sqrt(Math.max(1, r * r - y * y));
+      empty += Math.max(0, 1 - tiers[i].half / chord) / T;
+    }
+    // (a stacking must earn its place: the calm of plain lines is worth STACK_COST of the radius for each stacked word)
+    const cost = R * gain * (1 + EMPTY * empty) * (1 + STACK_COST * tiers.reduce((t, q) => t + q.ups.length, 0));
+    if (cost >= bar) return;
+    cands.push({ cost, R, y0, tiers, ys });
+    cands.sort((p, q) => p.cost - q.cost);
+    if (cands.length > TRY_BEST) cands.pop();
+    if (cands.length === TRY_BEST) bar = cands[TRY_BEST - 1].cost;
+  };
+  /** Every split from word a on, each line plain or stacked. */
+  const split = (a: number, tiers: Tier[], inBowl: number) => {
+    if (a === n) return weigh(tiers);
+    if (tiers.length === TIER_MAX || inBowl === 2) return;
+    const end = a <= ci ? (a === 0 ? ci : ci + 1) : n;
+    for (let b = a + 1; b <= end; b++) {
+      const plainT = tierOf(words, a, b, false, ci);
+      split(b, [...tiers, plainT], a > ci && cr ? inBowl + 1 : 0);
+      if (!STACKING) continue;
+      const st = tierOf(words, a, b, true, ci);
+      if (st.ups.length) split(b, [...tiers, st], a > ci && cr ? inBowl + 1 : 0);
+    }
+  };
+  split(0, [], 0);
+  for (const c of cands)
+    for (const lift of cr ? TIER_LIFTS : [0]) {
+      // (what stands in the bowl is lifted off its floor until the bowl is clear of it)
+      const { m } = roomsOf(c.tiers, lift),
+        f0 = fitOf(c.tiers, c.ys, m),
+        R = f0.r + MARGIN;
+      // T7: the gap over each colonnade is opened as far as the circle lets it
+      let ys = c.ys,
+        y0 = f0.y0;
+      for (let lo = 0, hi = 1, i = 0; i < 12; i++) {
+        const mid = i ? (lo + hi) / 2 : 1,
+          ys2 = ysOf(c.tiers, mid),
+          f = fitOf(c.tiers, ys2, m);
+        if (f.r + MARGIN <= R + 1e-6) {
+          lo = mid;
+          ys = ys2;
+          y0 = f.y0;
+          if (mid === 1) break;
+        } else hi = mid;
+      }
+      const Rt = R - MARGIN,
+        T = c.tiers.length,
+        hs = ys.map(y => y - y0),
+        k = cr ? c.tiers.findIndex(t => t.b - 1 === ci) : -1,
+        placed: Placed[] = c.tiers.map((t, i) => ({ l: t.l, off: t.off, dy: hs[i], extra: t.l.stems.map(() => 0) })),
+        inks = placed.map(q => inkAt(q)),
+        floats = c.tiers.flatMap((t, i) => t.ups.map(u => inkAt({ ...u.q, dy: u.q.dy + hs[i] })));
+      if (Math.max(...[...inks, ...floats].flat(2).map(([x, y]) => Math.hypot(x, y))) > Rt + 0.02) {
+        no('tiers: ink leaves the margin');
+        continue;
+      }
+      let bowl: Bowl | null = null;
+      if (cr) {
+        bowl = bowlOf(placed[k], R, null);
+        if (!bowl) {
+          no('tiers: the bowl cannot be drawn');
+          continue;
+        }
+        if (Math.max(...bowl.ink.flat().map(([x, y]) => Math.hypot(x, y))) > Rt + 0.02) {
+          no('tiers: the bowl leaves the margin');
+          continue;
+        }
+        if (
+          nearPairs([...inks, ...floats, bowl.loose], R, CLEAR).some(pr => pr.includes(inks.length + floats.length))
+        ) {
+          // prettier-ignore
+          no('tiers: the bowl is not clear of the writing');
+          continue;
+        }
+      }
+      if (bowl) inks[k] = inkAt(placed[k]);
+      const pieces = inks.map((q, i) => cleanOutline(i === k && bowl ? [...q, ...bowl.ink] : q)),
+        fl = floats.map(q => cleanOutline(q));
+      return {
+        R,
+        lines: c.tiers.map(t => t.text),
+        said: c.tiers.map(t => t.text + (t.ups.length ? ` [over it: ${t.ups.map(u => words[u.wi]).join(', ')}]` : '')),
+        polys: [...pieces, ...fl].flat(),
+        cradle: cr,
+        span: 0,
+        arc: bowl ? (bowl.phi0 - bowl.phiEnd) * DEG : 0,
+        ends: bowl ? [bowl.phi0, bowl.phiEnd] : [0, 0],
+        inside: cr ? T - 1 - k : 0,
+        pieces,
+        hs,
+        floats: fl,
+        offs: c.tiers.map(t => t.off),
+        lastWord: c.tiers.map(t => t.b - 1),
+        bowlInk: bowl?.ink,
+      };
+    }
+  return null;
+}
+
 /** N1: the lines whose last letter's bowl is drawn out round the lines after them. */
 function nestLines(l: Leveled): number[] {
   const end = l.cradle ? l.lines.length - 1 - l.inside : l.lines.length - 1,
@@ -1314,7 +1690,7 @@ function nestedBowls(l: Leveled): { li: number; q: Placed; b: Bowl; inset: numbe
   for (let j = N - 1; j >= 0; j--) {
     const li = idx[j],
       taken = lineOf(l.lines[li], true),
-      q: Placed = { l: taken, off: centred(lineOf(l.lines[li])), dy: l.hs[li], extra: taken.stems.map(() => 0) },
+      q: Placed = { l: taken, off: offOf(l, li), dy: l.hs[li], extra: taken.stems.map(() => 0) },
       end = E,
       b = bowlOf(q, l.R, null, NECK, j * STEPIN, end == null ? undefined : () => Math.max(-SPAN_MAX, end - (N - 1 - j) * SUB_BACK)); // prettier-ignore
     if (!b) return null;
@@ -1324,8 +1700,9 @@ function nestedBowls(l: Leveled): { li: number; q: Placed; b: Bowl; inset: numbe
   const top = lineOf(l.lines[0]),
     inks = l.lines.map((_, i) => {
       const m = made.find(v => v.li === i);
-      return m ? inkAt(m.q) : i ? l.pieces[i] : inkAt({ l: top, off: centred(top), dy: l.hs[0], extra: top.stems.map(() => 0) }); // prettier-ignore
+      return m ? inkAt(m.q) : i ? l.pieces[i] : inkAt({ l: top, off: offOf(l, 0), dy: l.hs[0], extra: top.stems.map(() => 0) }); // prettier-ignore
     });
+  inks.push(...(l.floats ?? []));
   if (nearPairs([...inks, ...made.map(m => m.b.loose)], l.R, CLEAR).some(pr => pr[0] >= inks.length || pr[1] >= inks.length)) return null; // prettier-ignore
   if (Math.max(...made.flatMap(m => m.b.ink.flat()).map(([x, y]) => Math.hypot(x, y))) > l.R - MARGIN + 0.02)
     return null;
@@ -1333,7 +1710,7 @@ function nestedBowls(l: Leveled): { li: number; q: Placed; b: Bowl; inset: numbe
 }
 export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }): Canopied | null {
   const o = { cradle: wide ? wide.cradle : undefined, roof: FLOOR + CLEAR + 0.3 + (nest.canopy ? STEPIN : 0), floor: nest.cradle ? STEPIN : 0 }, // prettier-ignore
-    compose = (floor: number) => wide ? wideBowls(() => cradleCompose(text, { ...o, floor })) : cradleCompose(text, o); // prettier-ignore
+    compose = (floor: number): Leveled | null => wide ? wideBowls(() => (TIERS ? tiersCompose(text, { ...o, floor }) : null) ?? cradleCompose(text, { ...o, floor })) : cradleCompose(text, o); // prettier-ignore
   const l0 = compose(o.floor);
   if (!l0 || (!wide && (l0.lines.length < 2 || !l0.cradle))) return null;
   // (N4: the nested bowls, if they stand in a circle not much larger)
@@ -1346,16 +1723,19 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     line = lineOf(l.lines[0]),
     R = l.R,
     rho = R - MARGIN - FLOOR / 2 - 0.05,
-    p: Placed = { l: line, off: centred(line), dy: l.hs[0], extra: line.stems.map(() => 0) },
+    p: Placed = { l: line, off: offOf(l, 0), dy: l.hs[0], extra: line.stems.map(() => 0) },
     k = line.stems.findIndex(m => m.wi === 0),
     word = l.lines[0].split(' ')[0],
     // (any text: an entry only into a letter that takes one, rule W1)
     entry = !!line.entry && (!wide || ENTRY_INTO.includes(word[0])),
     lead = k >= 0 && line.b.strokes[line.stems[k].si].own?.[0] === 0,
     // (any text: a roof drawn out, where the first letter is neither a stem nor takes an entry)
-    roofed = !!wide && !lead && !entry && !!line.roofed && !process.env.WIDE_NOROOF,
-    stem = !roofed && k >= 0 && (!entry || lead),
-    rest = l.pieces.slice(1),
+    roofed0 = !!wide && !lead && !entry && !!line.roofed && !process.env.WIDE_NOROOF,
+    stem0 = !roofed0 && k >= 0 && (!entry || lead),
+    floats = l.floats ?? [],
+    rest = [...l.pieces.slice(1), ...floats],
+    // (each lower line as it stands, and the bowl drawn with it: its stems rise at the end, T6)
+    lower = new Map<number, { q: Placed; more: Poly[] }>(),
     arcs: Arc[] = [],
     nestIn = nestB.length && l.cradle ? nestB.length - 1 : 0, // how many circles in the cradle itself is
     line0 = { tip: TIP, subs: [] as { k: number; r: number; tip: number; run: number }[], note: '' },
@@ -1367,7 +1747,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
           f = line.stems.map((m, j) => {
             const e = fixed[j]
               ? p.extra[j]
-              : Math.min(free(p, j, Rt), roofs.length ? under(p, j, roofs.flat()) : Infinity);
+              : Math.min(free(p, j, Rt), roofs.length || floats.length ? under(p, j, [...roofs, ...floats].flat()) : Infinity); // prettier-ignore
             return e < MIN_RISE * m.top ? 0 : e;
           });
         for (let share = 1; share > 0.2; share /= 2) {
@@ -1388,23 +1768,59 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         });
         if (c?.roof && roof) roof.loose = c.roof.loose;
         if (c) line0.note = `; ${p.bends?.filter(v => v).length ?? 0} stems curved as meridians`;
+        // T6: the stems of the lower lines rise to the feet of what is above them
+        if (RISE_LOWER) {
+          const ci2 = l.cradle ? l.lines.length - 1 - l.inside : -1;
+          let risen = 0;
+          for (let li = 1; li < l.lines.length; li++) {
+            const had = lower.get(li),
+              q: Placed = had?.q ?? { l: lineOf(l.lines[li], li === ci2), off: offOf(l, li), dy: l.hs[li], extra: [] },
+              more = had?.more ?? (li === ci2 ? (l.bowlInk ?? null) : []),
+              stems = q.l.stems;
+            if (!more || !stems.length) continue;
+            const others = [inkAt(p), ...rest.filter((_, i) => i !== li - 1), ...roofs],
+              above = others.flat(),
+              f = stems.map((m, j) => {
+                if (m.si === q.l.take?.si) return 0;
+                q.extra = stems.map(() => 0);
+                // (no further than the feet of the line above: a stem that passed them would read with that line)
+                const e = Math.min(free(q, j, Rt), under(q, j, above), l.hs[li - 1] - LINE_SPACE - (q.dy + m.base + m.top)); // prettier-ignore
+                return e < MIN_RISE * m.top ? 0 : e;
+              });
+            for (let share = 1; share > 0.2; share /= 2) {
+              q.extra = stops(stems, f.map(v => v * share)); // prettier-ignore
+              if (!q.extra.some(v => v > 0)) break;
+              const ink = inkAt(q);
+              if (Math.max(...ink.flat().map(([x, y]) => Math.hypot(x, y))) <= Rt + 1e-6 && !nearPairs([ink, ...others, more], R, CLEAR).some(pr => pr.includes(0))) break; // prettier-ignore
+              q.extra = stems.map(() => 0);
+            }
+            if (!q.extra.some(v => v > 0)) continue;
+            rest[li - 1] = cleanOutline([...inkAt(q), ...more]);
+            risen += q.extra.filter(v => v > 0).length;
+          }
+          if (risen) line0.note += `; ${risen} stems of the lower lines risen`;
+        }
       }
       return {
         R,
         polys: [...cleanOutline(inkAt(p)), ...rest.flat()],
-        lines: l.lines,
+        lines: l.said ?? l.lines,
         cradle: l.cradle,
         arc: l.arc,
         stems: line.stems.length,
         factors: line.stems.map((m, j) => 1 + p.extra[j] / m.top).filter(v => v > 1.001),
         cost: 0,
-        note: (l.cradle ? 'the cradle on level lines' : 'level lines') + line0.note,
+        note: (l.offs ? 'tiers' : 'level lines') + (l.cradle ? ' with the cradle' : '') + line0.note,
         roof,
         arcs,
       };
     };
+  // (a roof that cannot be drawn out past a stem of its own word gives way to that stem: it carries the canopy)
+  let roofed = roofed0,
+    stem = stem0;
   for (const m of nestB) {
     rest[m.li - 1] = cleanOutline([...inkAt(m.q), ...m.b.ink]);
+    lower.set(m.li, { q: m.q, more: m.b.ink });
     const w = l.lines[m.li].split(' ').pop() ?? '';
     arcs.push({ name: 'cradle', what: `the final ${finalOf(w)} of ${w}${nestB.length > 1 ? `, nested on circle ${Math.round(m.inset / STEPIN) + 1} of ${nestB.length}` : ''}`, r: rho - m.inset, from: m.b.phi0 * DEG, to: m.b.phiEnd * DEG }); // prettier-ignore
   }
@@ -1416,11 +1832,10 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     if (!sub) return null;
     // the line it ends
     let seen = 0;
-    const li = l.lines.findIndex(t => (seen += t.split(' ').length) === sub.wi + 1);
-    if (li < 1 || li < l.lines.length - l.inside) return null;
-    const whole = lineOf(l.lines[li]),
-      taken = lineOf(l.lines[li], true),
-      q: Placed = { l: taken, off: centred(whole), dy: l.hs[li], extra: taken.stems.map(() => 0) },
+    const li = l.lastWord ? l.lastWord.indexOf(sub.wi) : l.lines.findIndex(t => (seen += t.split(' ').length) === sub.wi + 1); // prettier-ignore
+    if (li < 1 || li < l.lines.length - l.inside || l.lines[li].split(' ').pop() !== words[sub.wi]) return null;
+    const taken = lineOf(l.lines[li], true),
+      q: Placed = { l: taken, off: offOf(l, li), dy: l.hs[li], extra: taken.stems.map(() => 0) },
       others = [inkAt(q), ...[l.pieces[0], ...rest].filter((_, i) => i !== li)];
     for (let share = SUB_SHARE; share > 0.2 && !bowl2; share -= 0.08) {
       const b = bowlOf(q, R, null, NECK, (nestIn + 1) * STEPIN, phi0 => Math.max(phi0 - share * (l.ends[0] - l.ends[1]), l.ends[1] + SUB_BACK)); // prettier-ignore
@@ -1428,15 +1843,23 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     }
     if (!bowl2) return null;
     rest[li - 1] = cleanOutline([...inkAt(q), ...bowl2.ink]);
+    lower.set(li, { q, more: bowl2.ink });
     arcs.push({ name: 'sub-cradle', what: `the final ${sub.c} of ${words[sub.wi]}`, r: rho - STEPIN, from: bowl2.phi0 * DEG, to: bowl2.phiEnd * DEG }); // prettier-ignore
   }
   // ---- a tail running forth from the last line (any text, W3), shortened until it is CLEAR of the writing ----
-  if (wide && !l.cradle && !nestB.length && l.lines.length > 1 && TAILS.includes(finalOf(words[words.length - 1]))) {
+  if (
+    wide &&
+    !l.cradle &&
+    !nestB.length &&
+    l.lines.length > 1 &&
+    TAILS.includes(finalOf(words[words.length - 1])) &&
+    l.lines[l.lines.length - 1].split(' ').pop() === words[words.length - 1]
+  ) {
+    // prettier-ignore
     const li = l.lines.length - 1,
-      whole = lineOf(l.lines[li]),
       taken = lineOf(l.lines[li], true),
-      q: Placed = { l: taken, off: centred(whole), dy: l.hs[li], extra: taken.stems.map(() => 0) },
-      others = [inkAt(q), ...l.pieces.filter((_, i) => i !== li)];
+      q: Placed = { l: taken, off: offOf(l, li), dy: l.hs[li], extra: taken.stems.map(() => 0) },
+      others = [inkAt(q), ...l.pieces.filter((_, i) => i !== li), ...floats];
     for (let run = FORTH_RUN; run > 0.3; run -= 0.15) {
       const b = forthOf(q, R, run);
       if (!b) {
@@ -1448,84 +1871,92 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         continue;
       }
       rest[li - 1] = cleanOutline([...inkAt(q), ...b.ink]);
+      lower.set(li, { q, more: b.ink });
       arcs.push({ name: 'cradle', what: `the final ${finalOf(words[words.length - 1])} of ${words[words.length - 1]}, its tail running forth`, r: rho, from: b.phi0 * DEG, to: b.phiEnd * DEG }); // prettier-ignore
       break;
     }
   }
   if (l.cradle && !nestB.length) arcs.unshift({ name: 'cradle', what: `the final ${l.cradle.c} of ${words[l.cradle.wi]}`, r: rho, from: l.ends[0] * DEG, to: l.ends[1] * DEG }); // prettier-ignore
-  for (let tip = roofed ? ROOF_TIP : TIP; tip > (roofed ? 0.5 : -0.6); tip -= 0.1) {
-    let roof: Roof;
-    if (roofed) {
-      const rf = line.roofed!,
-        q = line.b.strokes[rf.si].s[rf.cut],
-        arc = roofArc(line, [q.x + p.off[0], q.y + p.dy], rho, tip);
-      if (!arc) continue;
-      p.more = arc.ink;
-      roof = { loose: arc.loose, what: `the roof of the first letter of ${word} drawn out to the left`, from: arc.from, to: arc.to }; // prettier-ignore
-    } else if (stem) {
-      const c = stemCanopy(p, k, rho, tip);
-      if (!c) {
-        no('canopy: the stem cannot reach the rim');
+  for (const pass of roofed0 && k >= 0 && !process.env.WIDE_NOSLIDE ? [0, 1] : [0]) {
+    if (pass) {
+      roofed = false;
+      stem = true;
+      p.more = undefined;
+    }
+    for (let tip = roofed ? ROOF_TIP : TIP; tip > (roofed ? 0.5 : -0.6); tip -= 0.1) {
+      let roof: Roof;
+      if (roofed) {
+        const rf = line.roofed!,
+          q = line.b.strokes[rf.si].s[rf.cut],
+          arc = roofArc(line, [q.x + p.off[0], q.y + p.dy], rho, tip);
+        if (!arc) continue;
+        p.more = arc.ink;
+        roof = { loose: arc.loose, what: `the roof of the first letter of ${word} drawn out to the left`, from: arc.from, to: arc.to }; // prettier-ignore
+      } else if (stem) {
+        const c = stemCanopy(p, k, rho, tip);
+        if (!c) {
+          no('canopy: the stem cannot reach the rim');
+          continue;
+        }
+        if (wide && c.at < CANOPY_FROM) {
+          no(`canopy: the stem stands ${c.at.toFixed(0)} degrees right of the top`);
+          break;
+        }
+        p.extra = line.stems.map((_, j) => (j === k ? c.extra : 0));
+        p.swaps = [c.swap];
+        roof = { loose: c.loose, what: `the first stem of ${word}, risen x${(1 + c.extra / line.stems[k].top).toFixed(2)} and turned into the rim`, from: c.from, to: c.to }; // prettier-ignore
+      } else {
+        const en = line.entry!,
+          st = line.b.strokes[en.si],
+          q = st.s[en.cut],
+          arc = canopyArc([q.x + p.off[0], q.y + p.dy], en.back, q.w, st.ang, rho, tip);
+        if (!arc) continue;
+        p.swaps = [{ si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })) }];
+        p.dots = ridden(line, [q.x, q.y], en.back);
+        if (p.dots.size && !inkAt(p).every(v => v.every(([x, y]) => Math.hypot(x, y) <= R - MARGIN))) continue;
+        roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${word}`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
+      }
+      if (nearPairs([inkAt(p, true), ...rest, roof.loose], R, CLEAR).some(pr => pr.includes(rest.length + 1))) {
+        no('canopy: not clear of the writing');
+        p.more = undefined;
         continue;
       }
-      if (wide && c.at < CANOPY_FROM) {
-        no(`canopy: the stem stands ${c.at.toFixed(0)} degrees right of the top`);
-        break;
-      }
-      p.extra = line.stems.map((_, j) => (j === k ? c.extra : 0));
-      p.swaps = [c.swap];
-      roof = { loose: c.loose, what: `the first stem of ${word}, risen x${(1 + c.extra / line.stems[k].top).toFixed(2)} and turned into the rim`, from: c.from, to: c.to }; // prettier-ignore
-    } else {
-      const en = line.entry!,
-        st = line.b.strokes[en.si],
-        q = st.s[en.cut],
-        arc = canopyArc([q.x + p.off[0], q.y + p.dy], en.back, q.w, st.ang, rho, tip);
-      if (!arc) continue;
-      p.swaps = [{ si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })) }];
-      p.dots = ridden(line, [q.x, q.y], en.back);
-      if (p.dots.size && !inkAt(p).every(v => v.every(([x, y]) => Math.hypot(x, y) <= R - MARGIN))) continue;
-      roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${word}`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
-    }
-    if (nearPairs([inkAt(p, true), ...rest, roof.loose], R, CLEAR).some(pr => pr.includes(rest.length + 1))) {
-      no('canopy: not clear of the writing');
-      p.more = undefined;
-      continue;
-    }
-    arcs.unshift({ name: 'canopy', what: roof.what, r: rho, from: roof.from, to: roof.to });
-    const roofs = [roof.loose];
-    // ---- the sub-canopy ----
-    if (nest.canopy) {
-      const k2 = (stem ? k + 1 : 0) + (nest.skip ?? 0),
-        m2 = line.stems[k2],
-        one = p.swaps ?? [];
-      let done = false;
-      if (!m2) return null;
-      each: for (const steps of SUB_STEPS) {
-        const r2 = rho - steps * STEPIN,
-          c0 = stemCanopy(p, k2, r2);
-        if (!c0) continue;
-        for (
-          let tip2 = Math.min(tip - SUB_BACK, (SUB_SHARE * (roof.from - roof.to) - c0.from) / DEG);
-          tip2 > -0.9;
-          tip2 -= 0.1
-        ) {
-          const c = stemCanopy(p, k2, r2, tip2, SUB_RUN_MIN);
-          if (!c || c.extra > (CAP - 1) * m2.top + 1e-6) continue;
-          if (wide && c.to < -SUB_END) continue;
-          p.extra[k2] = c.extra;
-          p.swaps = [...one, c.swap];
-          if (nearPairs([inkAt(p, true), ...rest, roof.loose, c.loose], R, CLEAR).some(pr => pr.includes(rest.length + 2))) continue; // prettier-ignore
-          roofs.push(c.loose);
-          line0.subs = [{ k: k2, r: r2, tip: tip2, run: SUB_RUN_MIN }];
-          arcs.splice(1, 0, { name: 'sub-canopy', what: `the stem of the ${nth(line, k2)} of ${l.lines[0].split(' ')[m2.wi]}, risen x${(1 + c.extra / m2.top).toFixed(2)} and bowed over`, r: r2, from: c.from, to: c.to }); // prettier-ignore
-          done = true;
-          break each;
+      arcs.unshift({ name: 'canopy', what: roof.what, r: rho, from: roof.from, to: roof.to });
+      const roofs = [roof.loose];
+      // ---- the sub-canopy ----
+      if (nest.canopy) {
+        const k2 = (stem ? k + 1 : 0) + (nest.skip ?? 0),
+          m2 = line.stems[k2],
+          one = p.swaps ?? [];
+        let done = false;
+        if (!m2) return null;
+        each: for (const steps of SUB_STEPS) {
+          const r2 = rho - steps * STEPIN,
+            c0 = stemCanopy(p, k2, r2);
+          if (!c0) continue;
+          for (
+            let tip2 = Math.min(tip - SUB_BACK, (SUB_SHARE * (roof.from - roof.to) - c0.from) / DEG);
+            tip2 > -0.9;
+            tip2 -= 0.1
+          ) {
+            const c = stemCanopy(p, k2, r2, tip2, SUB_RUN_MIN);
+            if (!c || c.extra > (CAP - 1) * m2.top + 1e-6) continue;
+            if (wide && c.to < -SUB_END) continue;
+            p.extra[k2] = c.extra;
+            p.swaps = [...one, c.swap];
+            if (nearPairs([inkAt(p, true), ...rest, roof.loose, c.loose], R, CLEAR).some(pr => pr.includes(rest.length + 2))) continue; // prettier-ignore
+            roofs.push(c.loose);
+            line0.subs = [{ k: k2, r: r2, tip: tip2, run: SUB_RUN_MIN }];
+            arcs.splice(1, 0, { name: 'sub-canopy', what: `the stem of the ${nth(line, k2)} of ${l.lines[0].split(' ')[m2.wi]}, risen x${(1 + c.extra / m2.top).toFixed(2)} and bowed over`, r: r2, from: c.from, to: c.to }); // prettier-ignore
+            done = true;
+            break each;
+          }
         }
+        if (!done) return null;
       }
-      if (!done) return null;
+      line0.tip = tip;
+      return bare(roof, roofs);
     }
-    line0.tip = tip;
-    return bare(roof, roofs);
   }
   p.extra = line.stems.map(() => 0);
   p.swaps = undefined;
@@ -1654,8 +2085,9 @@ export function arrange(t: string, said: string[]): Canopied | null {
     make: ((nest: Nest) => Canopied | null) | null = null,
     // (a single word: every rung that is sound is drawn; the one with the most arcs is taken, the earlier rung of
     // two that have as many, unless a rung with the other end's arc draws the word SINGLE_LARGER larger)
-    pick: { base: Canopied; make: (nest: Nest) => Canopied | null; cradled: boolean } | null = null;
-  const single = !t.includes(' ');
+    pick = null as { base: Canopied; make: (nest: Nest) => Canopied | null; cradled: boolean } | null;
+  const single = !t.includes(' '),
+    rungs: { base: Canopied; make: (nest: Nest) => Canopied | null; cradled: boolean }[] = [];
   if (short(t))
     for (const p of plan.cr ? [plan, { cr: null }] : [plan]) {
       for (const mode of modes) {
@@ -1675,15 +2107,28 @@ export function arrange(t: string, said: string[]): Canopied | null {
           said.push(`taken: the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: ${flat ? (base.R / flat.R).toFixed(2) : '-'} times the circle of level lines, ${((base.ground?.[3] ?? 0) * 100).toFixed(0)}% of the height empty under it`); // prettier-ignore
         } else said.push(`the ground line with ${p.cr ? (p.forth ? 'a tail running forth' : 'a cradle') : 'no cradle'} and ${name(mode)}: does not stand (${[...WHY].map(([k, v]) => `${k}:${v}`).join(' ') || 'not tried'})`); // prettier-ignore
         if (base && single) {
-          const more = pick ? base.arcs.length - pick.base.arcs.length : 1;
-          if (more > 0 || (more === 0 && !!p.cr !== pick!.cradled && base.R * SINGLE_LARGER < pick!.base.R))
-            pick = { base, make: make!, cradled: !!p.cr };
+          rungs.push({ base, make: make!, cradled: !!p.cr });
           base = null;
         }
         if (base) break;
       }
       if (base) break;
     }
+  // (an arc that needs a circle SINGLE_GROW larger than the word needs without it leaves the word small in an empty
+  // circle: such a rung is passed over)
+  const least = Math.min(...rungs.map(r => r.base.R));
+  for (const r of rungs) {
+    if (r.base.R > least * SINGLE_GROW) {
+      said.push(
+        `a rung with ${r.base.arcs.length} arc(s) passed over: its circle is ${(r.base.R / least).toFixed(2)} times the smallest`,
+      );
+      continue;
+    }
+    const more = pick ? r.base.arcs.length - pick.base.arcs.length : 1;
+    if (more > 0 || (more === 0 && r.cradled !== pick!.cradled && r.base.R * SINGLE_LARGER < pick!.base.R)) pick = r;
+  }
+  // (a single word that carries no arc is not a ground line: it stands in the middle, by C)
+  if (pick && !pick.base.arcs.length) pick = null;
   if (pick) ({ base, make } = pick);
   if (!base) {
     const wide = { cradle: !!wideBowls(() => cradleOf(t)) };
