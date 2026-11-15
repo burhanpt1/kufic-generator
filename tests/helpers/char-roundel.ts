@@ -934,3 +934,13 @@ export function labelled(rows: ({ R: number; polys: Poly[] } | null)[][], caps: 
   const W = Math.max(...rows.map(r => r.length)) * cell;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${rows.length * H}" width="${W}" height="${rows.length * H}"><rect width="100%" height="100%" fill="#f3efe4"/>${body}</svg>`;
 }
+
+// ======== any text ========
+/** STUB (replaced by the widened rules). */
+export function arrange(t: string, said: string[]): Canopied | null {
+  const base = plain(t);
+  return base && nested(t, base, said);
+}
+export function carriers(t: string): string {
+  return modeOf(t.split(' ')[0]) ?? 'none';
+}
