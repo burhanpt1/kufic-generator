@@ -11,6 +11,22 @@ import { allahSpan } from '../../src/script/thuluth/shape';
 import type { Poly, Sample, Stroke } from '../../src/script/thuluth/types';
 
 export const th = thuluth({ ...ROUNDEL_PEN, alts: CHOSEN, pieceGap: 0.45, wordSpace: 1.4 });
+/** How the strokes are drawn. An arrangement is found with the strokes as rounds one to three drew them (a risen
+ *  stem pieced out with a shaft of one weight, an arc drawn with the pen turned with its circle): every clearance
+ *  and every circle is measured on those. It is then drawn once more, `fine`, with the strokes mended (round four:
+ *  a risen stem one stroke, the arcs written with the fixed pen, an initial hah open). The mended strokes lie inside
+ *  the strokes the layout was found with, so the layout does not move with the pen. */
+export const STROKES = { fine: false };
+/** What `f` draws, with the mended strokes. */
+export function fine<T>(f: () => T): T {
+  const was = STROKES.fine;
+  STROKES.fine = true;
+  try {
+    return f();
+  } finally {
+    STROKES.fine = was;
+  }
+}
 export const NIB = th.style.nib,
   TEXTS: [string, string][] = [
     ['names', 'محمد علي'],
@@ -73,6 +89,51 @@ export const DOTS_STAY = !process.env.WIDE_DOTSGO, // a dot written above the li
   CUT_IN = 5,
   /** A dot sits over the kept part of its letter if it stands within this of that part's extent along the line. */
   DOT_OVER = 0.8;
+/** A line whose last letter is written bowl first, turned round so that its bowl comes last (owner, round two, on a
+ *  final jim as the cradle: "the final character seems wrong"). The engine writes a final or isolated jim, hah or
+ *  khah from the line down round its bowl and up into its head (the bowl returns to meet the join); taken over where
+ *  the stroke first leaves the line, the letter lost its head, and a stub and a bowl were left. Such a letter (its
+ *  stroke starts at the line, goes down, and after its lowest point rises at least HEAD_OVER above the line) is
+ *  made a stroke of its own, written from its head: roof, the slope back, and the bowl last, which `takeOver` then
+ *  takes over where the slope crosses the line. Where the letter is joined, the join is drawn on along the line to
+ *  that crossing, so the letter still hangs from its word: the bowl it was joined by is the one that is redrawn. */
+const HEAD_OVER = 3;
+export function bowlLast(b: Built): Built {
+  const last = b.placed.filter(isLetter).pop();
+  let si = -1;
+  b.strokes.forEach((s, i) => {
+    if (last && s.wi === last.wi && s.own?.includes(last.li)) si = i;
+  });
+  if (!last || si < 0) return b;
+  const st = b.strokes[si],
+    own = st.own!,
+    n = st.s.length;
+  let first = n - 1;
+  while (first > 0 && own[first - 1] === last.li) first--;
+  let low = first;
+  for (let i = first; i < n; i++) if (st.s[i].y < st.s[low].y) low = i;
+  let top = low;
+  for (let i = low; i < n; i++) if (st.s[i].y > st.s[top].y) top = i;
+  if (Math.abs(st.s[first].y - last.oy) > 1.5 || st.s[low].y > last.oy - 1 || st.s[top].y < last.oy + HEAD_OVER)
+    return b;
+  const mine = st.s.slice(first).reverse(),
+    letter: Stroke = { ...st, s: mine, own: mine.map(() => last.li), raw: undefined },
+    strokes = b.strokes.slice();
+  if (first === 0) strokes[si] = letter;
+  else {
+    // the join, drawn on along the line to where the letter's slope comes down across it
+    let cross = 0;
+    for (let i = 0; i < mine.length && mine[i].y > st.s[low].y; i++) if (mine[i].y >= last.oy) cross = i;
+    const J = st.s[first],
+      X = mine[cross],
+      steps = Math.max(1, Math.ceil(Math.hypot(X.x - J.x, X.y - J.y) / 0.3)),
+      on: Sample[] = Array.from({ length: steps }, (_, i) => ({ x: J.x + ((X.x - J.x) * (i + 1)) / steps, y: J.y + ((X.y - J.y) * (i + 1)) / steps, w: J.w })), // prettier-ignore
+      s = [...st.s.slice(0, first + 1), ...on];
+    strokes[si] = { ...st, s, own: s.map((_, i) => own[Math.min(i, first - 1)]), raw: undefined };
+    strokes.push(letter);
+  }
+  return { ...b, strokes };
+}
 /** Where the bowl of a written line's last letter is taken over: the stroke (its index) and the head. */
 export function takeOver(b: Built, cutIn = CUT_IN): { si: number; head: Head } {
   const last = b.placed.filter(isLetter).pop()!;
@@ -140,7 +201,7 @@ export const LAND_MIN = 8, // (and never less than this)
   TURN_BY = 0.6, // the pen has turned to the rim's direction by this share of the way down to it
   STEP = 0.14;
 /** A point of the bowl, and how far the pen has turned to the rim's by then (0 to 1). */
-export type Swept = { x: number; y: number; w: number; on: number };
+export type Swept = { x: number; y: number; w: number; on: number; /** Still on the way down to the rim. */ down?: boolean }; // prettier-ignore
 export function sweep(
   C: [number, number],
   u: [number, number],
@@ -179,6 +240,7 @@ export function sweep(
       y: a * C[1] + b * L * u[1] + c * A[1] + d * L * t0[1],
       w: wC + (full - wC) * (neck ? e : t),
       on: ease,
+      down: k < N,
     });
   }
   for (let phi = phi0 - STEP / rho; phi > phiEnd; phi -= STEP / rho) {
@@ -191,7 +253,18 @@ export function sweep(
 }
 /** The bowl's samples, mirrored back to run from its letter (`swept` is a sweep's, which runs to the left), with the
  *  pen's turn at each. */
-export function bowlPen(head: Head, swept: readonly Swept[]): Sample[] {
+export const FIXED_PEN = !process.env.WIDE_TURNED, // WIDE_TURNED=1: every arc drawn with the pen turned with the rim, as rounds one to three drew them
+  EVEN_OVER = 0.15;
+/** The pen's weight on a circle of radius rho (to the pen's middle), with no threshold (owner, round three: arcs just
+ *  over 9 nibs still look heavy): v / (1 + v^4)^(1/4), v the radius over LIGHT_R, never under LIGHT_MIN. It is the
+ *  radius over 9 nibs on a small circle and the full pen on a large one, as before, and passes from the one to the
+ *  other without a corner: 0.84 at 9 nibs, 0.93 at 12, 0.97 at 15. It is never more than the weight the layout was
+ *  found with (the radius over 9 nibs, at most 1). */
+export const lighter = (rho: number) => {
+  const v = rho / LIGHT_R;
+  return Math.max(LIGHT_MIN, v / (1 + v ** 4) ** 0.25);
+};
+export function bowlPen(head: Head, swept: readonly Swept[], turned = !FIXED_PEN || !STROKES.fine): Sample[] {
   // The pen. On the rim it is the line's own pen (whatever pen drew the letter's head: a lam's stem has a flatter
   // one), turned with the rim, so the floor has one weight. On the way down to the rim, the angle between the pen
   // and the way it is going passes evenly from what it is where the bowl is taken over to what it is on the rim,
@@ -207,12 +280,69 @@ export function bowlPen(head: Head, swept: readonly Swept[]): Sample[] {
     d0 = wrap(Math.atan2(head.u[1], head.u[0]) - head.ang * deg),
     d1 = d0 >= 0 ? Math.PI - th.style.ang * deg : -th.style.ang * deg;
   let before = 0;
+  if (turned)
+    return pts.map((q, i) => {
+      // (each turn of the nib is taken the short way from the one before, so the pen never flips between samples)
+      let rot = going(i) - (d0 + (d1 - d0) * q.on) - head.ang * deg;
+      rot -= Math.PI * Math.round((rot - before) / Math.PI);
+      before = rot;
+      return { x: q.x, y: q.y, w: q.w, rot };
+    });
+  // The fixed pen (owner, round three: the arcs "are drawn with a pen that does not thin and swell like a real
+  // stroke"). The nib is not turned with the rim: it is held at the line's own angle all the way round, as it is for
+  // every other stroke, so the arc thins and swells of itself (its hairline where the rim runs along the nib, near
+  // 3:40 and 9:40 on the clock; its full weight a quarter turn from there). A stroke begun with another pen (a
+  // stem's, flatter) comes to the line's pen as it turns: by the share of its way round to the rim's direction that
+  // the stroke has gone, so the weight passes evenly from the stem's to the arc's, with no swelling and no waist at
+  // the shoulder. The arc is never drawn heavier than the turned pen drew it: where the fixed nib would lie more
+  // squarely across the stroke, it is lightened to that, so the arc stays inside the stroke the layout was found
+  // with.
+  const a0 = head.ang * deg,
+    a1 = a0 + wrap(th.style.ang * deg - a0),
+    heading: number[] = [];
+  pts.forEach((_, i) => {
+    const g = going(i);
+    heading.push(i ? g - 2 * Math.PI * Math.round((g - heading[i - 1]) / (2 * Math.PI)) : g);
+  });
+  const landed = Math.max(
+      0,
+      pts.findIndex(q => !q.down),
+    ),
+    round = heading[landed] - heading[0],
+    // (the lighter pen of a smaller circle, with no threshold: see `lighter`)
+    rho = Math.hypot(pts[landed].x, pts[landed].y),
+    light = LIGHT ? lighter(rho) / Math.min(1, Math.max(LIGHT_MIN, rho / LIGHT_R)) : 1,
+    w0 = pts[0].w,
+    wL = pts[landed].w * light;
+  let by = 0;
+  const pens = pts.map((q, i) => {
+      by =
+        i >= landed ? 1 : Math.abs(round) < 1e-3 ? q.on : Math.max(by, Math.min(1, (heading[i] - heading[0]) / round));
+      return a0 + (a1 - a0) * by;
+    }),
+    // (how squarely the nib lies across the stroke: the fixed pen's, and the turned pen's)
+    across = pts.map((_, i) => Math.max(1e-6, Math.abs(Math.sin(pens[i] - heading[i])))),
+    was = pts.map(q => Math.abs(Math.sin(d0 + (d1 - d0) * q.on))),
+    turns = Math.abs(a1 - a0) > 1e-3,
+    t0 = w0 * across[0],
+    tL = wL * Math.min(across[landed], was[landed]);
   return pts.map((q, i) => {
-    // (each turn of the nib is taken the short way from the one before, so the pen never flips between samples)
-    let rot = going(i) - (d0 + (d1 - d0) * q.on) - head.ang * deg;
-    rot -= Math.PI * Math.round((rot - before) / Math.PI);
-    before = rot;
-    return { x: q.x, y: q.y, w: q.w, rot };
+    // (never heavier than the turned pen drew it: where the fixed nib lies more squarely across the stroke, lighter)
+    const held = Math.min(1, was[i] / across[i]);
+    let w = q.w * light * held;
+    if (i < landed) {
+      // On the way to the rim the pen's weight passes from the letter's to the arc's evenly over the whole way, not
+      // within the neck: a stem that becomes an arc on a small circle, drawn with a lighter pen, has no step in it.
+      // Where the pen turns as well (a stem's), it is the stroke's thickness that passes evenly, from the stem's to
+      // the arc's. There the stroke may be a little heavier than the turned pen drew it: by EVEN_OVER of the pen at
+      // the most, under a tenth of a pen unit to a side.
+      const share = i / landed;
+      w = Math.min(
+        turns ? (t0 + (tL - t0) * share) / across[i] : (w0 + (wL - w0) * share) * held,
+        (q.w + EVEN_OVER) * held,
+      );
+    }
+    return { x: q.x, y: q.y, w, rot: pens[i] - a0 };
   });
 }
 
@@ -284,7 +414,7 @@ function lineOf(text: string, cradle = false): Line {
   const key = (cradle ? '*' : '') + text;
   let l = lines.get(key);
   if (l) return l;
-  const b = mendDots(th.buildStrokes(text, {}));
+  const b = cradle ? bowlLast(mendDots(th.buildStrokes(text, {}))) : mendDots(th.buildStrokes(text, {}));
   if (!cradle) {
     const ink = inkOf(b),
       xs = ink.flat().map(p => p[0]);
@@ -688,9 +818,69 @@ export function findStems(b: Built, text: string): Stem[] {
   });
   return out.sort((p, q) => q.x - p.x);
 }
+/** A risen stem is one stroke (rule S2 of tests/helpers/char-stems.ts, carried here; owner on round two: "the long
+ *  alif looks broken as if it's two or three separate strokes"). The stem is not cut and pieced out with a rod of one
+ *  weight: the stretch of its skeleton between the split and its foot is drawn out whole. The foot is the end of the
+ *  upright run below the split, no lower than FOOT above the line where the stroke runs on into a join or a bowl,
+ *  FREE_FOOT where it ends at the line (an alif). */
+export const FOOT = 3,
+  FREE_FOOT = 1.2,
+  ONE_STROKE = !process.env.WIDE_RODS; // WIDE_RODS=1: the stems as rounds one to three drew them (head, rod, foot); and so they are while a layout is being found (STROKES)
+const smooth = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+/** The foot of a stem: the index of the last sample of the stretch that is drawn out (cut + 1: there is none, the
+ *  stem has one weight down to its join, and it is lengthened by a straight shaft as before). */
+export function stemFoot(s: readonly Sample[], cut: number, base: number): number {
+  if (!ONE_STROKE || !STROKES.fine) return cut + 1;
+  const n = s.length,
+    run = (floor: number) => {
+      let i = cut;
+      while (i + 1 < n && s[i + 1].y < s[i].y && Math.abs(s[i + 1].x - s[i].x) <= 0.25 * (s[i].y - s[i + 1].y) + 0.02 && s[i + 1].y >= floor) i++; // prettier-ignore
+      return i;
+    },
+    end = run(-Infinity),
+    free = Math.hypot(s[n - 1].x - s[end].x, s[n - 1].y - s[end].y) < 0.8 && s[n - 1].y < base + 1;
+  return Math.max(cut + 1, run(base + (free ? FREE_FOOT : FOOT)));
+}
+/** The stretch between the split (`cut`) and the foot (`f`) of a stem drawn `e` taller, without its two ends, from
+ *  the top down: a point that stood at the share u of the stretch (from the foot) stands at u still, moved up along
+ *  the stem's direction by e (3u^2 - 2u^3), so the stroke leaves its foot and reaches its split with the direction it
+ *  had; and it keeps the pen's weight it had at u, so the taper of the written stem is the taper of the risen one,
+ *  spread over its whole length. With no stretch (f = cut + 1) the two ends are joined by a straight shaft. */
+export function drawnOut(
+  s: readonly Sample[],
+  cut: number,
+  f: number,
+  e: number,
+  lean: number,
+  step: number,
+): Sample[] {
+  const A = s[cut],
+    F = s[f],
+    out: Sample[] = [];
+  if (f === cut + 1) {
+    const a = { x: A.x + lean * e, y: A.y + e, w: A.w },
+      n = Math.ceil(e / step);
+    for (let i = 1; i < n; i++) out.push({ x: a.x + ((F.x - a.x) * i) / n, y: a.y + ((F.y - a.y) * i) / n, w: a.w + ((F.w - a.w) * i) / n }); // prettier-ignore
+    return out;
+  }
+  const H = A.y - F.y,
+    n = Math.max(2, Math.ceil((H + e) / Math.min(step, 0.4)));
+  let j = cut;
+  for (let i = n - 1; i >= 1; i--) {
+    const u = i / n,
+      y0 = F.y + u * H;
+    while (j < f && s[j + 1].y >= y0) j++;
+    const a = s[j],
+      c = s[Math.min(f, j + 1)],
+      v = a.y > c.y ? Math.min(1, Math.max(0, (a.y - y0) / (a.y - c.y))) : 0,
+      k = e * smooth(u);
+    out.push({ x: a.x + (c.x - a.x) * v + lean * k, y: y0 + k, w: a.w + (c.w - a.w) * v });
+  }
+  return out;
+}
 /** A line's strokes with some stems redrawn taller: `extra[k]` is added to the height of stem k. Everything on the
- *  head side of the split moves up along the stem's own direction, whole; the shaft between is drawn straight, with
- *  samples along it. */
+ *  head side of the split moves up along the stem's own direction, whole; the stretch between the split and the foot
+ *  is drawn out (`drawnOut`): one stroke, with samples along it. */
 export function raise(b: Built, stems: readonly Stem[], extra: readonly number[]): Stroke[] {
   const out = b.strokes.slice();
   stems.forEach((m, k) => {
@@ -698,12 +888,8 @@ export function raise(b: Built, stems: readonly Stem[], extra: readonly number[]
     if (!(e > 0)) return;
     const st = b.strokes[m.si],
       up = (q: Sample): Sample => ({ ...q, x: q.x + m.lean * e, y: q.y + e }),
-      a = up(st.s[m.cut]),
-      z = st.s[m.cut + 1],
-      n = Math.ceil(e / 0.8),
-      shaft: Sample[] = [];
-    for (let i = 1; i < n; i++) shaft.push({ x: a.x + ((z.x - a.x) * i) / n, y: a.y + ((z.y - a.y) * i) / n, w: a.w + ((z.w - a.w) * i) / n }); // prettier-ignore
-    out[m.si] = { ...st, s: [...st.s.slice(0, m.cut + 1).map(up), ...shaft, ...st.s.slice(m.cut + 1)], own: undefined };
+      f = stemFoot(st.s, m.cut, m.base);
+    out[m.si] = { ...st, s: [...st.s.slice(0, m.cut + 1).map(up), ...drawnOut(st.s, m.cut, f, e, m.lean, 0.8), ...st.s.slice(f)], own: undefined }; // prettier-ignore
     for (const r of m.riders) out[r] = { ...b.strokes[r], s: b.strokes[r].s.map(up), own: undefined };
   });
   return out;
@@ -895,19 +1081,20 @@ export function meridians(
       bd = bends[k],
       st = b.strokes[m.si],
       up = (q: Sample): Sample => ({ ...q, x: q.x + m.lean * e, y: q.y + e }),
-      a = up(st.s[m.cut]),
       z = st.s[m.cut + 1],
-      n = Math.ceil(e / SHAFT_STEP),
-      top: Sample[] = st.s.slice(0, m.cut + 1).map(up);
-    for (let i = 1; i < n; i++) top.push({ x: a.x + ((z.x - a.x) * i) / n, y: a.y + ((z.y - a.y) * i) / n, w: a.w + ((z.w - a.w) * i) / n }); // prettier-ignore
+      // (one stroke: the stretch down to the foot is drawn out, `drawnOut`; what rises is what stands above z)
+      f = e > 0 ? stemFoot(st.s, m.cut, m.base) : m.cut + 1,
+      top: Sample[] = [...st.s.slice(0, m.cut + 1).map(up), ...(e > 0 ? drawnOut(st.s, m.cut, f, e, m.lean, SHAFT_STEP) : [])]; // prettier-ignore
+    let above = top.length;
+    while (above > m.cut + 1 && top[above - 1].y <= z.y) above--;
     const riders = m.riders.map(r => b.strokes[r].s.map(up));
     if (!bd) {
       if (e > 0) {
-        out[m.si] = { ...st, s: [...top, ...st.s.slice(m.cut + 1)], own: undefined };
+        out[m.si] = { ...st, s: [...top, ...st.s.slice(f)], own: undefined };
         m.riders.forEach((r, i) => (out[r] = { ...b.strokes[r], s: riders[i], own: undefined }));
       }
       rise[k] = [
-        { ang: st.ang, s: top },
+        { ang: st.ang, s: top.slice(0, above) },
         ...m.riders.map((r, i) => ({ ...b.strokes[r], s: riders[i], own: undefined })),
       ];
       return;
@@ -951,9 +1138,9 @@ export function meridians(
       rise[k].push(stroke);
       if (bd.head === 'mirror') from = hi;
     }
-    out[m.si] = { ...st, s: [...bent.slice(from), ...st.s.slice(m.cut + 1)], own: undefined };
+    out[m.si] = { ...st, s: [...bent.slice(from), ...st.s.slice(f)], own: undefined };
     m.riders.forEach((r, i) => (out[r] = rode[i]));
-    rise[k].push({ ang: st.ang, s: bent.slice(from) }, ...rode);
+    rise[k].push({ ang: st.ang, s: bent.slice(from, above) }, ...rode);
   });
   return { strokes: out, heads, rise };
 }

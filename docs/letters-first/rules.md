@@ -1,13 +1,14 @@
 # The letters-first roundel: the rule set as it stands (round three)
 
 Source: `tests/helpers/char-roundel.ts` (`arrange`, `ground`, `tiersCompose`, `levels`, `curve`, `nestedBowls`),
-with the strokes of `tests/helpers/char-first.ts` (`sweep`, `bowlPen`, `takeOver`, `mendDots`, `findStems`, `raise`,
-`meridians`, `cradleCompose`).
+with the strokes of `tests/helpers/char-first.ts` (`sweep`, `bowlPen`, `takeOver`, `bowlLast`, `mendDots`,
+`findStems`, `raise`, `drawnOut`, `meridians`, `cradleCompose`; `fine` draws with the mended strokes of 28a to 28e).
 Lengths are in nibs (1 nib = 1.6 pen units) unless a number is an angle. No rule names a text or a word; the only
 words known are the two ligature names (الله, whose stems rise together or not at all and bend as one body, and
 محمد, which is stacked by the engine).
 
-Round three's changes are marked (r3). Two things rank above every other rule (owner, on round two's drawings):
+Round three's changes are marked (r3); round four's (r4) are strokes only, in D: no rule of A to C, E or F was
+changed. Two things rank above every other rule (owner, on round two's drawings):
 **a letter must stay readable** (its dots with it, in their written place), and **the calm of plain lines is not
 traded for devices**.
 
@@ -144,9 +145,9 @@ follow the meridians of the rim's circle (F).
 
 23. **The cradle** (returning bowl): from where its letter last leaves the line of writing, the pen comes down in
     one curve to its circle, landing 1.4 times as far along it as it started above it (5 nibs at least), and runs
-    along it to the right, pen turned with the rim, one weight; it ends as high on the right as it landed on the
-    left (at most 80 degrees from the bottom), or, with nothing in it, just past the line it holds; the last 5.6
-    nibs thin to a tip that lifts 0.9 nib off its circle. Its dots: by A6.
+    along it to the right (its pen: 28a); it ends as high on the right as it landed on the left (at most 80 degrees
+    from the bottom), or, with nothing in it, just past the line it holds; the last 5.6 nibs thin to a tip that
+    lifts 0.9 nib off its circle. Its dots: by A6.
 24. **The canopy from a stem or an entry**: the cradle's stroke turned half round. From a stem's top (risen until
     its split stands 2.5 to 4 nibs inside the rim's circle) or from an entry (the first stroke taken over where it
     has 0.9 of the pen's weight) the stroke climbs to the rim's circle, runs over the top and ends 25 degrees left
@@ -154,9 +155,11 @@ follow the meridians of the rim's circle (F).
     stroke that thins to a tip can have (9.3 nibs). A stem carries the canopy only if its top stands at least 5
     degrees right of the top of the circle: the arc must cross the top. Left of that the stem only rises.
 25. **Arcs scaled to the circle** (r3; round two's rule 25, dots that ride an arc, is withdrawn: an entry is led
-    only into a letter with no dot above it, 2). A stroke that follows a circle whose radius (to the pen's middle)
-    is under 9 nibs is drawn with a lighter pen: its weight is the pen's times that radius over 9 nibs, never less
-    than 0.55. So an inner arc, on a smaller circle, is lighter than the arc outside it.
+    only into a letter with no dot above it, 2). A stroke that follows a circle is drawn with a lighter pen the
+    smaller its circle: so an inner arc is lighter than the arc outside it. (r4) With no threshold: the pen's
+    weight is v / (1 + v^4)^(1/4), v the circle's radius (to the pen's middle) over 9 nibs, never less than 0.55:
+    0.72 at 7 nibs, 0.84 at 9, 0.93 at 12, 0.97 at 15, the full pen on a large circle. (The layout is found with
+    round three's weight, the radius over 9 nibs and at most the full pen, which is never lighter: 28e.)
 26. **The canopy from a roof**: the letter is kept whole. A stroke of its own, begun on the roof a little before
     its highest point, carries the roof's line on to the left, up to the rim's circle and along it, ending 75
     degrees left of the top (9:30), or at 0.85, 0.7 or 0.55 of that: the longest that is CLEAR of its own word.
@@ -171,6 +174,46 @@ follow the meridians of the rim's circle (F).
     rim's circle the way it is already going and follows it on up the left side for 55 degrees, shortened until it
     is CLEAR of the writing, never nearer the level diameter than 10 degrees. Only where it is taken over within 5
     nibs of the rim's circle. Nothing sits in it.
+
+Round four (r4): the strokes the owner named on round two's drawings, which no arrangement could mend.
+
+- **28a. The pen of an arc is the fixed pen.** The nib is not turned with the rim: every arc (cradle, canopy, the
+  nested arcs, a tail running forth) is written with the line's own pen, held at its 69 degrees all the way round,
+  as every other stroke is. So an arc thins and swells of itself: full where the rim runs level (a little past
+  12 and 6 o'clock), a hairline where the rim runs along the nib (near 3:40 and 9:40). A cradle comes down from its
+  letter thin, swells along the bottom and thins up the right side; a roof drawn out to 9:30 ends in a hairline.
+  Where the fixed nib would lie more squarely across the stroke than the turned pen did (0.93 of the nib), the
+  stroke is lightened to that. On its way from its letter to its circle the pen's weight passes evenly from the
+  letter's to the arc's over the whole way, not within the first 2 nibs.
+- **28b. A risen stem is one stroke.** A stem is not cut and pieced out with a shaft of one weight. The stretch of
+  its skeleton between its split and its foot is drawn out whole: a point at the share u of that stretch stays at
+  u and is moved up by e(3u² − 2u³), keeping the pen's weight it had, so the taper of the written stem is the
+  taper of the risen one, spread over its length. The foot is the end of the upright run, no lower than 1.9 nibs
+  above the line where the stroke runs on into a join or a bowl, 0.75 nib where it ends at the line (an alif). A
+  stem of one weight down to its join (a lam) has no such stretch and is lengthened by a straight shaft, as before.
+  The same on a meridian (F). Measured: no turn over 6 degrees from one sample to the next, no step in the weight
+  over 0.06.
+- **28c. A stem turns into its arc as one stroke.** Where a stem carries a canopy or is bowed over (24, 27, 33),
+  the nib comes from the stem's pen (38 degrees) to the line's (69) as the stroke turns: by the share of its way
+  round to the rim's direction that the stroke has gone; and the stroke's thickness passes evenly from the stem's
+  to the arc's over the whole climb. No swelling and no waist at the shoulder (measured: the thickness changes by
+  less than 0.03 nib from one sample to the next through the turn, and stays between its two ends).
+- **28d. A letter written bowl first is taken over from its head.** The engine writes a final or isolated ج ح خ
+  from the line down round its bowl and up into its head. As a cradle it was taken over where its stroke first
+  leaves the line, and lost its head: a stub and a bowl. Such a letter (its stroke starts at the line, goes down,
+  and after its lowest point rises 1.9 nibs or more above the line) is turned round and written from its head:
+  the roof and the slope back are kept, and the bowl is taken over where the slope comes down across the line. A
+  joined one keeps its join, drawn on along the line to that crossing. This is the one change of round four that
+  moves a layout: the line of such a cradle is wider by the letter's head.
+- **28e. An initial ح ج خ is open.** The engine's long-headed initial hah is a closed leaf (the roof, down the left
+  side, back along the line, up to close) and reads as a loop. The side that closes it is not drawn: from where
+  the stroke, past the roof's top, heads more down than along, to where it heads back to the right.
+- **28f. The layout does not move with the pen.** Every clearance and every circle is measured with the strokes
+  as round three drew them (the shaft of one weight, the pen turned with the rim, the closed hah); the arrangement
+  found is then drawn once more with the strokes of 28a to 28c and 28e. Those lie inside the strokes it was found
+  with, but for the even passage of 28a and 28c on the way to a lighter arc, where the stroke may be up to 0.15 of
+  the pen heavier (under 0.1 pen unit to a side). `WIDE_TURNED=1`, `WIDE_RODS=1`, `WIDE_CLOSED=1` draw each as it
+  was.
 
 ## E. Clearances (measured on a raster, 5 cells to a pen unit)
 
@@ -249,9 +292,13 @@ none was re-derived. New or changed in round three, on the 43 texts that could b
   forth, because the tail is taken over more than 5 nibs from the rim.
 - **Single words with no arc** are honest and small: a word of three or four letters with no stem and no bowl
   stands in the middle of its circle with nothing drawn out.
-- **Stroke faults the owner named** are in the letters and the arcs as drawn, not in these rules, and were not
-  mended: a stem that turns into the canopy shows a seam where the arc's pen takes over; the lam after a waw; a
-  final jim as a cradle; the final mim.
+- **Stroke faults the owner named** (r4): the stem pieced out of a head, a rod and a foot, the seam where a stem
+  turns into the canopy, the final jim as a cradle and the closed initial hah are mended (28a to 28e). Not
+  mended, because they are the layout's and not the pen's: a lam whose bowl is the sub-cradle and that stands at
+  the left of its circle (the lam after the waw of وآل) has no room to swing its bowl to the left before it
+  returns, so it still reads as a stem with a tail to the right; its weight is now the pen's (the stem, a thin
+  descent, the swell along the bottom). A final mim's tail drawn out is now thin where it leaves the head and
+  swells into its arc; the small spur where the engine's mim head meets its tail is the letter's own and is left.
 - The lower lines' stems are straight (F curves only the first line's).
 
 ## Grading by the owner

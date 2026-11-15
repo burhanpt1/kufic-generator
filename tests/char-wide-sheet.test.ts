@@ -20,9 +20,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { toPNG } from '../scripts/raster.mjs';
 import { thuluth } from '../src/script/thuluth';
-import { MARGIN, NIB, cradleCompose, svgOf, th } from './helpers/char-first';
+import type { Sample } from '../src/script/thuluth/types';
+import { EVEN_OVER, MARGIN, NIB, bowlLast, bowlPen, cradleCompose, findStems, fine, lighter, meridians, raise, stemFoot, svgOf, sweep, takeOver, th } from './helpers/char-first'; // prettier-ignore
 import type { Canopied } from './helpers/char-roundel';
-import { arrange, carriers, cradleWide, labelled, modesWide, nested, plain } from './helpers/char-roundel';
+import { arrange, canopyArc, carriers, cradleWide, labelled, modesWide, nested, openHeads, plain } from './helpers/char-roundel'; // prettier-ignore
 import { ALL_TEXTS, FRESH, FRESH2, TUNED, UNSEEN } from './helpers/char-texts';
 
 // ---- the six set aside (before any rule was changed) ----
@@ -219,4 +220,219 @@ describe('the rules on the wider set of texts', () => {
     },
     3_600_000,
   );
+});
+
+// ---- the strokes (round four: the owner's notes on round two's drawings that no arrangement can mend) ----
+// An arrangement is found with the strokes as they were and then drawn with the mended ones (char-first.ts STROKES,
+// `fine`), so no layout moves with the pen: these are the mended strokes.
+const DEGREE = Math.PI / 180;
+/** How thick the pen draws at each sample of a stroke (nibs): the nib's width across the way the stroke is going. */
+function thickness(ang: number, s: readonly Sample[]): number[] {
+  return s.map((q, i) => {
+    const a = s[Math.max(0, i - 1)],
+      b = s[Math.min(s.length - 1, i + 1)];
+    return q.w * Math.abs(Math.sin(ang * DEGREE + (q.rot ?? 0) - Math.atan2(b.y - a.y, b.x - a.x)));
+  });
+}
+/** The sharpest turn from one sample to the next (radians) and the largest step in a list of numbers. */
+const turnOf = (s: readonly Sample[]) => {
+  let most = 0;
+  for (let i = 1; i + 1 < s.length; i++) {
+    const d =
+      Math.atan2(s[i + 1].y - s[i].y, s[i + 1].x - s[i].x) - Math.atan2(s[i].y - s[i - 1].y, s[i].x - s[i - 1].x);
+    most = Math.max(most, Math.abs(d - 2 * Math.PI * Math.round(d / (2 * Math.PI))));
+  }
+  return most;
+};
+const stepOf = (v: readonly number[]) => Math.max(...v.slice(1).map((x, i) => Math.abs(x - v[i])));
+
+describe('the strokes', () => {
+  it('draws a risen stem as one stroke: no corner, no step in its weight, its head whole on top', () => {
+    let spread = 0;
+    for (const text of ['الحق', 'لا إله إلا الله', 'ما شاء الله', 'فاطمة', 'وآل']) {
+      const b = th.buildStrokes(text, {}),
+        stems = findStems(b, text);
+      expect(stems.length).toBeGreaterThan(0);
+      for (const [k, m] of stems.entries())
+        for (const [times, rho] of [
+          [0.5, 0],
+          [2, 0],
+          [2, 40],
+        ] as const) {
+          const e = times * m.top,
+            was = b.strokes[m.si].s,
+            f = fine(() => stemFoot(was, m.cut, m.base)),
+            extra = stems.map((_, j) => (j === k ? e : 0)),
+            // (straight, and on its meridian in a circle of radius rho, its line 14 to the right of the axis)
+            now = fine(() => rho ? meridians(b, stems, extra, stems.map((_, j) => (j === k ? { ox: 14, oy: -12, rho, k: 1 } : null))).strokes[m.si].s : raise(b, stems, extra)[m.si].s), // prettier-ignore
+            foot = now.length - (was.length - f),
+            shaft = now.slice(m.cut, foot + 1);
+          // it stands e taller; its head is moved whole (straight) and what is under its foot is as written
+          expect(Math.max(...now.map(q => q.y)) - Math.max(...was.map(q => q.y))).toBeGreaterThan(e * 0.9);
+          expect(now.slice(foot)).toEqual(was.slice(f));
+          if (!rho)
+            was.slice(0, m.cut + 1).forEach((q, i) => {
+              expect(now[i].x).toBeCloseTo(q.x + m.lean * e, 9);
+              expect(now[i].y).toBeCloseTo(q.y + e, 9);
+              expect(now[i].w).toBe(q.w);
+            });
+          // between them: always downward, no corner (under 6 degrees from one sample to the next), samples close,
+          // the weight changing evenly, and no heavier or lighter than the written stem is between split and foot
+          for (let i = 1; i < shaft.length; i++) expect(shaft[i].y).toBeLessThan(shaft[i - 1].y);
+          expect(turnOf(shaft)).toBeLessThan(0.1);
+          expect(Math.max(...shaft.slice(1).map((q, i) => Math.hypot(q.x - shaft[i].x, q.y - shaft[i].y)))).toBeLessThan(0.85); // prettier-ignore
+          expect(stepOf(shaft.map(q => q.w))).toBeLessThan(0.06);
+          const ws = was.slice(m.cut, f + 1).map(q => q.w);
+          for (const q of shaft) expect(q.w).toBeGreaterThanOrEqual(Math.min(...ws) - 1e-9);
+          for (const q of shaft) expect(q.w).toBeLessThanOrEqual(Math.max(...ws) + 1e-9);
+          // (an alif tapers to its foot: its taper is spread over the whole risen stem, not left at the foot under
+          // a rod of one weight, which is how the layout's stroke has it)
+          if (was[m.cut].w - was[f].w > 0.2) {
+            const half = shaft[shaft.length >> 1],
+              rod = raise(b, stems, extra)[m.si].s;
+            spread = Math.max(spread, was[m.cut].w - half.w);
+            expect(half.w).toBeLessThan(was[m.cut].w - 0.2 * (was[m.cut].w - was[f].w));
+            if (!rho) expect(rod[m.cut + (rod.length - was.length) / 2].w).toBeGreaterThan(0.97);
+          }
+        }
+    }
+    expect(spread).toBeGreaterThan(0.08);
+  });
+  it('turns a stem into its arc as one stroke: no corner, no step, no swelling and no waist at the shoulder', () => {
+    for (const [text, rho] of [
+      ['الحق', 26],
+      ['فاطمة', 16],
+      ['اللهم', 12],
+    ] as const) {
+      const b = th.buildStrokes(text, {}),
+        stems = findStems(b, text),
+        m = stems[0],
+        st = b.strokes[m.si],
+        e = 0.6 * m.top,
+        risen = fine(() => raise(b, stems, stems.map((_, j) => (j ? 0 : e)))[m.si].s), // prettier-ignore
+        C = risen[m.cut],
+        // the stem stands 0.4 of the radius to the right of the axis, its split 4 inside the arc's circle
+        dx = 0.4 * rho - C.x,
+        dy = Math.sqrt((rho - 4) ** 2 - (0.4 * rho) ** 2) - C.y,
+        n = Math.hypot(m.lean, 1),
+        arc = canopyArc([C.x + dx, C.y + dy], [m.lean / n, 1 / n], C.w, st.ang, rho)!,
+        one = [...arc.fine, ...risen.slice(m.cut).map(q => ({ ...q, x: q.x + dx, y: q.y + dy }))],
+        t = thickness(st.ang, one),
+        join = arc.fine.length,
+        // (the way up to the rim: from where the arc leaves its circle to the stem's split)
+        up =
+          arc.fine.length -
+          arc.fine
+            .slice()
+            .reverse()
+            .findIndex(q => Math.hypot(q.x, q.y) > rho - 0.01),
+        onRim = t[up - 1];
+      expect(arc.fine.length).toBeGreaterThan(40);
+      // one stroke through the turn: its direction and its weight both pass without a break, from the stem's foot
+      // side of the split to well onto the rim
+      expect(turnOf(one.slice(up - 20, join + 20))).toBeLessThan(0.1);
+      expect(stepOf(t.slice(up - 20, join + 20))).toBeLessThan(0.03);
+      expect(Math.abs(t[join - 1] - t[join])).toBeLessThan(0.03);
+      // and on the way it is never heavier or lighter than its two ends (by more than a twentieth of the nib)
+      for (const v of t.slice(up, join)) {
+        expect(v).toBeGreaterThan(Math.min(onRim, t[join]) - 0.05);
+        expect(v).toBeLessThan(Math.max(onRim, t[join]) + 0.05);
+      }
+      // the layout's stroke (the pen turned with the rim) holds it: the same path, nowhere lighter but by EVEN_OVER
+      expect(arc.s.map(q => [q.x, q.y])).toEqual(arc.fine.map(q => [q.x, q.y]));
+      const was = thickness(st.ang, arc.s);
+      thickness(st.ang, arc.fine).forEach((v, i) => expect(v).toBeLessThanOrEqual(was[i] + EVEN_OVER + 1e-9));
+    }
+  });
+  it('draws the great arcs with the fixed pen: they thin and swell, and are never heavier than the layout drew them', () => {
+    // a bowl taken over at the left of a circle of 30, heading down, run to far up the right side
+    const head = {
+        pre: [],
+        ang: th.style.ang,
+        C: [0, 0] as [number, number],
+        u: [-0.2, -0.98] as [number, number],
+        dots: 0,
+      },
+      sw = sweep([20, -8], [0.2, -0.98], 1, 30, () => -1.4)!,
+      pen = bowlPen(head, sw.s, false),
+      turned = bowlPen(head, sw.s),
+      t = thickness(th.style.ang, pen),
+      was = thickness(th.style.ang, turned),
+      // (the clock: degrees clockwise from the top)
+      clock = pen.map(q => (Math.atan2(q.x, q.y) / DEGREE + 360) % 360),
+      at = (deg: number) => t[clock.findIndex(c => Math.abs(c - deg) < 0.5)];
+    // the nib is not turned at all: the line's pen from end to end
+    for (const q of pen) expect(q.rot).toBeCloseTo(0, 9);
+    for (const q of turned.slice(-200, -100)) expect(Math.abs(q.rot!)).toBeGreaterThan(0.3);
+    t.forEach((v, i) => expect(v).toBeLessThanOrEqual(was[i] + 1e-9));
+    // heavy along the bottom, the hairline towards 3:40 (110 degrees), evenly between
+    expect(at(180)).toBeGreaterThan(0.9);
+    expect(at(200)).toBeGreaterThan(0.9);
+    expect(at(150)).toBeLessThan(0.7);
+    expect(at(125)).toBeLessThan(0.3);
+    expect(at(150)).toBeGreaterThan(at(125));
+    expect(stepOf(t)).toBeLessThan(0.03);
+    // the turned pen gave one weight all the way
+    expect(Math.max(...was.slice(-400, -100)) - Math.min(...was.slice(-400, -100))).toBeLessThan(0.01);
+  });
+  it('lightens an arc with its circle, with no threshold', () => {
+    const at = (nibs: number) => lighter(nibs * NIB);
+    for (let r = 2; r < 40; r += 0.25) {
+      expect(at(r + 0.25)).toBeGreaterThanOrEqual(at(r));
+      expect(at(r + 0.25) - at(r)).toBeLessThan(0.03);
+      // never heavier than the layout's pen (the radius over 9 nibs, at most the full pen), never under 0.55
+      expect(at(r)).toBeLessThanOrEqual(Math.min(1, Math.max(0.55, r / 9)) + 1e-9);
+      expect(at(r)).toBeGreaterThanOrEqual(0.55);
+    }
+    expect(at(9)).toBeCloseTo(0.84, 2);
+    expect(at(12)).toBeCloseTo(0.93, 2);
+    expect(at(20)).toBeGreaterThan(0.98);
+  });
+  it('keeps the head of a final jim whose bowl becomes the cradle', () => {
+    // as written, the letter's stroke starts at the line and goes down into its bowl: taken over there, the head is lost
+    const lost = takeOver(th.buildStrokes('الفرج', {}), 0).head.pre;
+    expect(Math.max(...lost.map(q => q.y))).toBeLessThan(1);
+    // turned round, it is written from its head: the roof and the slope back are kept, and the bowl is taken over
+    // where the slope comes down across the line, heading down and to the left
+    const b = th.buildStrokes('الفرج', {}),
+      turned = bowlLast(b),
+      { si, head } = takeOver(turned, 0);
+    expect(turned.strokes.length).toBe(b.strokes.length);
+    expect(Math.max(...head.pre.map(q => q.y))).toBeGreaterThan(4.5);
+    expect(Math.abs(head.C[1])).toBeLessThan(0.5);
+    expect(head.u[1]).toBeLessThan(-0.7);
+    expect(head.C[0]).toBeLessThan(Math.min(...lost.map(q => q.x)) - 4);
+    expect(turned.strokes[si].s.slice().reverse()).toEqual(b.strokes[si].s);
+    // joined (والفتح): the letter is a stroke of its own, and the join is drawn on along the line to that crossing
+    const j = th.buildStrokes('والفتح', {}),
+      jt = bowlLast(j),
+      t2 = takeOver(jt, 0),
+      join = jt.strokes.find((st, i) => st.s.length !== j.strokes[i]?.s.length && i < j.strokes.length)!,
+      end = join.s[join.s.length - 1];
+    expect(jt.strokes.length).toBe(j.strokes.length + 1);
+    expect(t2.si).toBe(j.strokes.length);
+    expect(Math.max(...t2.head.pre.map(q => q.y))).toBeGreaterThan(4.5);
+    expect(Math.hypot(end.x - t2.head.C[0], end.y - t2.head.C[1])).toBeLessThan(0.5);
+    // a letter written head first is left alone (a nun, a qaf, a lam, a ya, an ayn)
+    for (const w of ['من', 'الحق', 'قل', 'علي', 'مع']) {
+      const v = th.buildStrokes(w, {});
+      expect(bowlLast(v)).toBe(v);
+    }
+  });
+  it('opens the head of an initial hah', () => {
+    // the closed leaf of the engine's initial hah: the side that closes it is the stretch not drawn
+    for (const w of ['حكيم', 'حسبنا', 'خير', 'جاء']) {
+      const b = th.buildStrokes(w, {}),
+        gaps = openHeads(b);
+      expect(gaps.size).toBe(1);
+      const [[si, [from, to]]] = [...gaps],
+        s = b.strokes[si].s;
+      // from the roof's left end down to the line, where the stroke turns back
+      expect(s[from].y - s[to].y).toBeGreaterThan(1.5);
+      expect(s[from].x).toBeLessThan(s[0].x - 5);
+      expect(Math.abs(s[from].x - s[to].x)).toBeLessThan(1.5);
+    }
+    // not a medial or a final one, and no other letter
+    for (const w of ['محمد', 'الفرج', 'عليم', 'صل']) expect(openHeads(th.buildStrokes(w, {})).size).toBe(0);
+  });
 });

@@ -6,9 +6,9 @@
 import type { Built } from '../../src/script/thuluth/engine';
 import { cleanOutline } from '../../src/script/thuluth/outline';
 import type { Poly, Sample } from '../../src/script/thuluth/types';
-import { forms } from '../../src/script/thuluth';
+import { forms, isLetter } from '../../src/script/thuluth';
 import type { Bend, Cols, Cradle, CradleLaid, Head, Profile, Pt, Stem } from './char-first';
-import { BOWL, CAP, CLEAR, EASE, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, TIP_LEN, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, hull, mendDots, meridians, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
+import { BOWL, CAP, CLEAR, EASE, FIXED_PEN, FLOOR, LINE_SPACE, MARGIN, NIB, SPAN_MAX, STEP, STROKES, TIP_LEN, bowlLast, bowlPen, colsOf, cradleCompose, cradleOf, discOf, findStems, fine, hull, mendDots, meridians, nearPairs, need, profile, raise, room, sweep, takeOver, th } from './char-first'; // prettier-ignore
 
 // ---- the numbers of the nested arcs ----
 export const AIR = +(process.env.NESTED_AIR ?? 1.2) * NIB, // between a stroke on one circle and the stroke on the next circle in
@@ -159,14 +159,20 @@ export function canopyArc(
   // (on a small circle the least run is the least length a stroke that thins to a tip can have)
   const sw = sweep([C[0], -C[1]], [back[0], -back[1]], wC, rho, phi0 => -Math.max(tip, Math.max(runMin, (TIP_LEN * 1.65) / rho) - phi0), neck); // prettier-ignore
   if (!sw) return null;
-  const pen = bowlPen({ pre: [], ang, C: [0, 0], u: [-back[0], -back[1]], dots: 0 }, sw.s);
-  return { s: pen.map((q): Sample => ({ x: -q.x, y: -q.y, w: q.w, rot: q.rot })).reverse(), phi0: sw.phi0, phiEnd: sw.phiEnd }; // prettier-ignore
+  // (`s`: the stroke with the pen turned with the rim, which the layout is found with; `fine`: the same path
+  // written with the fixed pen, never heavier, which is what is drawn in the end: char-first.ts STROKES)
+  const head: Head = { pre: [], ang, C: [0, 0], u: [-back[0], -back[1]], dots: 0 },
+    flip = (pen: Sample[]) => pen.map((q): Sample => ({ x: -q.x, y: -q.y, w: q.w, rot: q.rot })).reverse(),
+    s = flip(bowlPen(head, sw.s, true));
+  return { s, fine: FIXED_PEN ? flip(bowlPen(head, sw.s, false)) : s, phi0: sw.phi0, phiEnd: sw.phiEnd };
 }
 /** A stroke of a line whose beginning is redrawn: the samples before `from` give way to `s` (the line's own frame). */
 interface Swap {
   si: number;
   from: number;
   s: Sample[];
+  /** The same written with the fixed pen: what is drawn in the end (STROKES). */
+  fine?: Sample[];
 }
 /** The canopy as drawn: the part checked as a piece of its own, what it is, and the rim it follows (degrees clockwise
  *  from the top: where it lands, where it ends). */
@@ -204,6 +210,9 @@ interface Line {
   entry: { si: number; cut: number; back: Pt } | null;
   /** Where the first letter's roof ends (its highest point, written leftwards), and the pen's heading there. */
   roofed: { si: number; cut: number; u: Pt } | null;
+  /** Strokes with a stretch that is not drawn in the end (`openHeads`): the samples strictly between the two. The
+   *  layout is found with the letter as written (STROKES). */
+  gaps?: Map<number, [number, number]>;
 }
 /** The ink of a line, word by word, with its stems drawn `extra` taller; `body`: without the heads of its stems. And
  *  the samples of the cradle stroke up to where the bowl is taken over. */
@@ -238,7 +247,10 @@ function inked(
     // (the canopy: the stroke's beginning redrawn; `stub`: without it, the canopy being checked as a piece of its own)
     const swap = swaps.find(q => q.si === si);
     if (swap && !body)
-      return void words[l.strokeWord[si]].push(...th.strokePolys({ ...st, s: [...(stub ? [] : swap.s), ...st.s.slice(swap.from, z + 1)], own: undefined })); // prettier-ignore
+      return void words[l.strokeWord[si]].push(...th.strokePolys({ ...st, s: [...(stub ? [] : ((STROKES.fine && swap.fine) || swap.s)), ...st.s.slice(swap.from, z + 1)], own: undefined })); // prettier-ignore
+    const gap = STROKES.fine ? l.gaps?.get(si) : undefined;
+    if (gap && a <= gap[0] && z >= gap[1] && st.s.length === l.b.strokes[si].s.length)
+      return void words[l.strokeWord[si]].push(...th.strokePolys({ ...st, s: st.s.slice(a, gap[0] + 1), own: undefined }), ...th.strokePolys({ ...st, s: st.s.slice(gap[1], z + 1), own: undefined })); // prettier-ignore
     words[l.strokeWord[si]].push(...th.strokePolys(a === 0 && z === st.s.length - 1 ? st : { ...st, s: st.s.slice(a, z + 1), own: undefined })); // prettier-ignore
   });
   l.b.dots.slice(0, l.b.dots.length - (l.take?.head.dots ?? 0)).forEach(([x, y], k) => {
@@ -261,12 +273,46 @@ function ridden(l: Line, C: Pt, back: Pt): Map<number, Pt> {
   }
   return out;
 }
+/** An initial hah, jim or khah is open (owner, round two, on عليم حكيم: "I'm not a fan of the connected heh
+ *  character"). The engine's long-headed initial hah is written as a closed leaf: the roof to the left, down the
+ *  left side, back along the line to under where it began, and up to close: it reads as a loop (a sad, a heh), not
+ *  as a hah, whose roof and returning stroke meet at the right and stand open to the left. The side that closes it
+ *  is not drawn: the stretch from where the stroke, past the roof's top, heads more down than along, to where it
+ *  heads back to the right. The letter is otherwise the engine's, and nothing is measured differently (the line's
+ *  hulls and columns are the written letter's). WIDE_CLOSED=1 draws it as written. */
+const OPEN_HEADS = !process.env.WIDE_CLOSED,
+  HAH = 'حجخ',
+  SIDE_MIN = 1.5; // the closing side is at least this tall, or the head is left as it is
+export function openHeads(b: Built): Map<number, [number, number]> {
+  const out = new Map<number, [number, number]>();
+  for (const p of b.placed.filter(isLetter)) {
+    if (!HAH.includes(p.c) || p.form !== 'ini') continue;
+    const si = b.strokes.findIndex(st => st.wi === p.wi && !st.nib && st.own?.[0] === p.li);
+    if (si < 0) continue;
+    const st = b.strokes[si],
+      q = st.s;
+    let end = 0;
+    while (end + 1 < q.length && st.own![end + 1] === p.li) end++;
+    // the roof is written to the left from the stroke's start, as far as it rises; then the side, then the way back
+    let top = 0;
+    while (top + 1 <= end && q[top + 1].x < q[top].x && q[top + 1].y >= q[top].y - 0.005) top++;
+    let down = top;
+    while (down + 1 <= end && !(q[down + 1].y < q[down].y && q[down].y - q[down + 1].y > Math.abs(q[down + 1].x - q[down].x))) down++; // prettier-ignore
+    let back = down;
+    while (back + 1 <= end && !(q[back + 1].x > q[back].x && q[back + 1].x - q[back].x > Math.abs(q[back + 1].y - q[back].y))) back++; // prettier-ignore
+    // (closed: the stroke comes back to where it began)
+    if (back >= end || q[down].y - q[back].y < SIDE_MIN || Math.hypot(q[end].x - q[0].x, q[end].y - q[0].y) > 1.5)
+      continue;
+    out.set(si, [down, back]);
+  }
+  return out;
+}
 const lineCache = new Map<string, Line>();
 function lineOf(text: string, cradle = false): Line {
   const key = (cradle ? '*' : '') + text,
     had = lineCache.get(key);
   if (had) return had;
-  const b = mendDots(th.buildStrokes(text, {})),
+  const b = cradle ? bowlLast(mendDots(th.buildStrokes(text, {}))) : mendDots(th.buildStrokes(text, {})),
     stems = findStems(b, text),
     nw = text.trim().split(/\s+/).length,
     ext = Array.from({ length: nw }, () => [Infinity, -Infinity]);
@@ -329,6 +375,7 @@ function lineOf(text: string, cradle = false): Line {
     // an entry comes from above or from the right: the pen must start the stroke downwards or to the right
     if (hy / n < -0.3 || (hx / n > 0.3 && hy <= 0)) l.entry = { si: first, cut, back: [-hx / n, -hy / n] };
   }
+  if (OPEN_HEADS) l.gaps = openHeads(b);
   lineCache.set(key, l);
   return l;
 }
@@ -343,6 +390,8 @@ interface Placed {
    *  out: a stroke of its own). */
   dots?: ReadonlyMap<number, Pt>;
   more?: Poly[];
+  /** `more` as it is drawn in the end (STROKES). */
+  moreFine?: () => Poly[];
   /** Curved stems: how each stem is bent (null: straight). */
   bends?: (Bend | null)[];
 }
@@ -350,7 +399,7 @@ const inkAt = (p: Placed, stub = false): Poly[] => [
   ...inked(p.l, p.extra, false, p.swaps, stub, p.dots, p.bends).words.flatMap((w, k) =>
     w.map(q => q.map(([x, y]) => [x + p.off[k], y + p.dy] as Pt)),
   ),
-  ...(stub ? [] : (p.more ?? [])),
+  ...(stub ? [] : STROKES.fine && p.moreFine ? p.moreFine() : (p.more ?? [])),
 ];
 /** How much taller stem s of a placed line can be drawn before what rises of it comes within CLEAR of ink above it
  *  (the canopy): the stems give way. */
@@ -405,7 +454,7 @@ function stemCanopy(p: Placed, k: number, rho: number, tip = TIP, runMin = RUN_M
     if (nearDots(p, th.strokePolys({ ang: st.ang, s: arc.s }))) continue;
     return {
       extra: e,
-      swap: { si: m.si, from: m.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })) } as Swap,
+      swap: { si: m.si, from: m.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })), fine: arc.fine.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })) } as Swap, // prettier-ignore
       loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }),
       from: arc.phi0 * DEG,
       at: Math.atan2(x + m.lean * e, y + e) * DEG,
@@ -428,7 +477,7 @@ function entryCanopy(l: Line, rho: number, hang: number, drop: number, tip = TIP
   return {
     dx,
     dy,
-    swap: { si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - dy })) } as Swap,
+    swap: { si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - dx, y: v.y - dy })), fine: arc.fine.map(v => ({ ...v, x: v.x - dx, y: v.y - dy })) } as Swap, // prettier-ignore
     dots: ridden(l, [q.x, q.y], en.back),
     loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }),
     from: arc.phi0 * DEG,
@@ -448,6 +497,7 @@ function roofArc(l: Line, T: Pt, rho: number, tip: number) {
     s = arc.s.slice().reverse();
   return {
     ink: th.strokePolys({ ang: st.ang, s: [...lead, ...s] }),
+    fine: () => th.strokePolys({ ang: st.ang, s: [...lead, ...arc.fine.slice().reverse()] }),
     loose: th.strokePolys({ ang: st.ang, s: s.slice(STUB) }),
     from: arc.phi0 * DEG,
     to: arc.phiEnd * DEG,
@@ -616,10 +666,11 @@ function stemCanopyBent(p: Placed, k: number, rho: number, tip = TIP, runMin = R
       // (the pen is already turned with the stem: the arc's pen starts from that)
       arc = canopyArc([q.x + dx, q.y + p.dy], [(q.x - z.x) / n, (q.y - z.y) / n], q.w, st.ang + phi * DEG, rho, tip, runMin, NECK_BENT); // prettier-ignore
     if (!arc || lo > (CAP - 1) * m.top + 1e-6) continue;
-    const led = arc.s.map(v => ({ ...v, rot: (v.rot ?? 0) + phi }));
+    const led = arc.s.map(v => ({ ...v, rot: (v.rot ?? 0) + phi })),
+      ledFine = arc.fine.map(v => ({ ...v, rot: (v.rot ?? 0) + phi }));
     return {
       extra: lo,
-      swap: { si: m.si, from: m.cut, s: led.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })) } as Swap,
+      swap: { si: m.si, from: m.cut, s: led.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })), fine: ledFine.map(v => ({ ...v, x: v.x - dx, y: v.y - p.dy })) } as Swap, // prettier-ignore
       loose: th.strokePolys({ ang: st.ang, s: led.slice(0, -STUB) }),
       from: arc.phi0 * DEG,
       to: arc.phiEnd * DEG,
@@ -719,6 +770,8 @@ interface Bowl {
   loose: Poly[];
   phi0: number;
   phiEnd: number;
+  /** The whole stroke as it is drawn in the end: written with the fixed pen (STROKES). */
+  fine: () => Poly[];
 }
 /** A dot stays with its letter (A6): a dot written above the line, over a bowl that is redrawn, stays where it was
  *  written; if the new stroke would pass within DOT_CLEAR of it, it is lifted straight up until it is clear. (The
@@ -763,7 +816,8 @@ function bowlOf(
       neck || undefined,
     );
   if (!bowl) return null;
-  const pen = bowlPen(head, bowl.s),
+  const pen = bowlPen(head, bowl.s, true),
+    at = { ...p, extra: p.extra.slice() },
     s = [...pre.map(q => ({ ...q, x: q.x + dx, y: q.y + p.dy })), ...pen],
     // (its dots above the line stay with it, lifted clear of the new stroke if they must be)
     rd = rho - FLOOR / 2 - 1.25 * NIB + 0 * liftDots(p, head, pen, dx),
@@ -777,6 +831,7 @@ function bowlOf(
     loose: [...th.strokePolys({ ang: head.ang, s: pen.slice(Math.ceil((2 * NIB) / STEP)) }), ...dots],
     phi0: bowl.phi0,
     phiEnd: bowl.phiEnd,
+    fine: () => [...th.strokePolys({ ang: head.ang, s: [...preOf(at).map(q => ({ ...q, x: q.x + dx, y: q.y + p.dy })), ...bowlPen(head, bowl.s, !FIXED_PEN)] }), ...dots], // prettier-ignore
   };
 }
 
@@ -796,7 +851,8 @@ function forthOf(p: Placed, R: number, run = FORTH_RUN): Bowl | null {
       `forth: drop ${(rho - Math.hypot(head.C[0] + dx, head.C[1] + p.dy)).toFixed(1)}, at ${(Math.atan2(head.C[0] + dx, -(head.C[1] + p.dy)) * DEG).toFixed(0)} degrees, u ${head.u.map(v => v.toFixed(2)).join(' ')}, sweep ${sw ? 'drawn' : 'none'}`,
     );
   // (the helper's pen mirrors a bowl back to the right: a tail running forth is given to it mirrored)
-  const pen = bowlPen(head, sw.s.map(q => ({ ...q, x: -q.x }))), // prettier-ignore
+  const pen = bowlPen(head, sw.s.map(q => ({ ...q, x: -q.x })), true), // prettier-ignore
+    at = { ...p, extra: p.extra.slice() },
     s = [...pre.map(q => ({ ...q, x: q.x + dx, y: q.y + p.dy })), ...pen],
     rd = rho - FLOOR / 2 - 1.25 * NIB,
     dots = Array.from({ length: head.dots }, (_, i) => {
@@ -808,6 +864,7 @@ function forthOf(p: Placed, R: number, run = FORTH_RUN): Bowl | null {
     loose: [...th.strokePolys({ ang: head.ang, s: pen.slice(Math.ceil((2 * NIB) / STEP)) }), ...dots],
     phi0: -sw.phi0,
     phiEnd: -sw.phiEnd,
+    fine: () => [...th.strokePolys({ ang: head.ang, s: [...preOf(at).map(q => ({ ...q, x: q.x + dx, y: q.y + p.dy })), ...bowlPen(head, sw.s.map(q => ({ ...q, x: -q.x })), !FIXED_PEN)] }), ...dots], // prettier-ignore
   };
 }
 
@@ -824,7 +881,11 @@ export interface Laid {
   note: string;
   /** The ground line's stems, how many of them reach the rim or the canopy, and its words read out of order. */
   ground?: [stems: number, reached: number, breaches: number, hollow: number];
+  /** The same arrangement drawn with the mended strokes (char-first.ts STROKES; call it within `fine`). */
+  redraw?: () => Poly[];
 }
+/** An arrangement as it is drawn in the end: where it stands, with the mended strokes. */
+const finished = <T extends Laid>(l: T | null): T | null => (l?.redraw ? { ...l, polys: fine(l.redraw) } : l);
 const within = (pts: readonly Pt[], dx: number, dy: number, r: number) =>
   pts.every(([x, y]) => (x + dx) ** 2 + (y + dy) ** 2 <= r * r);
 /** How low a line can sit with all its ink inside a circle of radius r (Infinity: it is too wide). */
@@ -992,7 +1053,7 @@ export function ground(
       if (mode === 'entry') {
         const arc = canopyArc(C, g.entry!.back, q.w, st.ang, rho);
         if (!arc) return no('18');
-        pg.swaps = [{ si: at.si, from: at.cut, s: arc.s.map(v => ({ ...v, x: v.x - off[0], y: v.y - hg })) }];
+        pg.swaps = [{ si: at.si, from: at.cut, s: arc.s.map(v => ({ ...v, x: v.x - off[0], y: v.y - hg })), fine: arc.fine.map(v => ({ ...v, x: v.x - off[0], y: v.y - hg })) }]; // prettier-ignore
         pg.dots = ridden(g, [q.x, q.y], g.entry!.back);
         roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${words[0]}, where it stands`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
       } else {
@@ -1002,6 +1063,7 @@ export function ground(
           const arc = roofArc(g, C, rho, ROOF_TIP * share);
           if (!arc || arc.loose.some(v => v.some(([x, y]) => own.some(w => Math.abs(w[0] - x) < CLEAR + 0.3 && Math.hypot(w[0] - x, w[1] - y) < CLEAR + 0.3)))) continue; // prettier-ignore
           pg.more = arc.ink;
+          pg.moreFine = arc.fine;
           roof = { loose: arc.loose, what: `the roof of the first letter of ${words[0]} drawn out to the left, where it stands`, from: arc.from, to: arc.to }; // prettier-ignore
           break;
         }
@@ -1035,7 +1097,14 @@ export function ground(
             for (const share of ROOF_TIPS) {
               const c = roofCanopy(u, rho, shift, drop, ROOF_TIP * share);
               if (!c || !within(u.whole[0], c.dx, c.dy, Rt)) continue;
-              const q: Placed = { l: u, off: [c.dx], dy: c.dy, extra: u.stems.map(() => 0), more: c.ink };
+              const q: Placed = {
+                l: u,
+                off: [c.dx],
+                dy: c.dy,
+                extra: u.stems.map(() => 0),
+                more: c.ink,
+                moreFine: c.fine,
+              };
               if (!c.ink.every(v => v.every(([x, y]) => Math.hypot(x, y) <= Rt + 0.02))) continue;
               if (nearPairs([inkAt(q, true), c.loose], R, CLEAR).length) continue;
               roofAt.set(R, [q, { loose: c.loose, what: `the roof of the first letter of ${words[0]} drawn out to the left, its top ${drop} inside the rim's circle`, from: c.from, to: c.to }]); // prettier-ignore
@@ -1225,6 +1294,7 @@ export function ground(
     return {
       R,
       polys: drawn.flatMap(k => cleanOutline(k)),
+      redraw: () => [inkAt(pg), ...pas.map(p => inkAt(p)), ...(hung ? [inkAt(hung)] : []), ...(lid ? [lid] : []), ...ups.map(p => inkAt(p)), ...(bowl ? [bowl.fine()] : []), ...(bowl2 ? [bowl2.fine()] : [])].flatMap(k => cleanOutline(k)), // prettier-ignore
       lines: [...ui.map(k => `(${words[k]})`), g.text, ...aft.map(l => l.text)],
       ground: [g.stems.length, reached, breaches, hollow],
       cradle: cr,
@@ -1348,6 +1418,9 @@ type Leveled = CradleLaid & {
   said?: string[];
   /** The cradle's bowl, apart from its line. */
   bowlInk?: Poly[];
+  /** The lines, the stacked words and the bowl as they are drawn in the end (STROKES). */
+  fine?: () => { pieces: Poly[][]; floats: Poly[][] };
+  bowlFine?: () => Poly[];
 };
 const offOf = (l: Leveled, li: number, as: Line = lineOf(l.lines[li])) => l.offs?.[li] ?? centred(as);
 
@@ -1632,7 +1705,8 @@ function tiersCompose1(text: string, o: { cradle?: boolean; roof?: number; floor
         k = cr ? c.tiers.findIndex(t => t.b - 1 === ci) : -1,
         placed: Placed[] = c.tiers.map((t, i) => ({ l: t.l, off: t.off, dy: hs[i], extra: t.l.stems.map(() => 0) })),
         inks = placed.map(q => inkAt(q)),
-        floats = c.tiers.flatMap((t, i) => t.ups.map(u => inkAt({ ...u.q, dy: u.q.dy + hs[i] })));
+        stacked: Placed[] = c.tiers.flatMap((t, i) => t.ups.map(u => ({ ...u.q, dy: u.q.dy + hs[i] }))),
+        floats = stacked.map(q => inkAt(q));
       if (Math.max(...[...inks, ...floats].flat(2).map(([x, y]) => Math.hypot(x, y))) > Rt + 0.02) {
         no('tiers: ink leaves the margin');
         continue;
@@ -1675,6 +1749,11 @@ function tiersCompose1(text: string, o: { cradle?: boolean; roof?: number; floor
         offs: c.tiers.map(t => t.off),
         lastWord: c.tiers.map(t => t.b - 1),
         bowlInk: bowl?.ink,
+        fine: () => ({
+          pieces: placed.map((q, i) => cleanOutline(i === k && bowl ? [...inkAt(q), ...bowl.fine()] : inkAt(q))),
+          floats: stacked.map(q => cleanOutline(inkAt(q))),
+        }),
+        bowlFine: bowl?.fine,
       };
     }
   return null;
@@ -1740,8 +1819,14 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     stem0 = !roofed0 && k >= 0 && (!entry || lead),
     floats = l.floats ?? [],
     rest = [...l.pieces.slice(1), ...floats],
+    // (the same pieces as they are drawn in the end, each made when it is asked for: STROKES)
+    fineOf = (() => {
+      let f: { pieces: Poly[][]; floats: Poly[][] } | null = null;
+      return () => (f ??= l.fine ? l.fine() : { pieces: l.pieces, floats });
+    })(),
+    restFine: (() => Poly[])[] = [...l.pieces.slice(1).map((_, i) => () => fineOf().pieces[i + 1]), ...floats.map((_, i) => () => fineOf().floats[i])], // prettier-ignore
     // (each lower line as it stands, and the bowl drawn with it: its stems rise at the end, T6)
-    lower = new Map<number, { q: Placed; more: Poly[] }>(),
+    lower = new Map<number, { q: Placed; more: Poly[]; moreFine: () => Poly[] }>(),
     arcs: Arc[] = [],
     nestIn = nestB.length && l.cradle ? nestB.length - 1 : 0, // how many circles in the cradle itself is
     line0 = { tip: TIP, subs: [] as { k: number; r: number; tip: number; run: number }[], note: '' },
@@ -1782,6 +1867,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
             const had = lower.get(li),
               q: Placed = had?.q ?? { l: lineOf(l.lines[li], li === ci2), off: offOf(l, li), dy: l.hs[li], extra: [] },
               more = had?.more ?? (li === ci2 ? (l.bowlInk ?? null) : []),
+              moreFine = had?.moreFine ?? (li === ci2 ? (l.bowlFine ?? (() => l.bowlInk ?? [])) : () => []),
               stems = q.l.stems;
             if (!more || !stems.length) continue;
             const others = [inkAt(p), ...rest.filter((_, i) => i !== li - 1), ...roofs],
@@ -1802,6 +1888,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
             }
             if (!q.extra.some(v => v > 0)) continue;
             rest[li - 1] = cleanOutline([...inkAt(q), ...more]);
+            restFine[li - 1] = () => cleanOutline([...inkAt(q), ...moreFine()]);
             risen += q.extra.filter(v => v > 0).length;
           }
           if (risen) line0.note += `; ${risen} stems of the lower lines risen`;
@@ -1810,6 +1897,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
       return {
         R,
         polys: [...cleanOutline(inkAt(p)), ...rest.flat()],
+        redraw: () => [...cleanOutline(inkAt(p)), ...restFine.flatMap(f => f())],
         lines: l.said ?? l.lines,
         cradle: l.cradle,
         arc: l.arc,
@@ -1826,7 +1914,8 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     stem = stem0;
   for (const m of nestB) {
     rest[m.li - 1] = cleanOutline([...inkAt(m.q), ...m.b.ink]);
-    lower.set(m.li, { q: m.q, more: m.b.ink });
+    restFine[m.li - 1] = () => cleanOutline([...inkAt(m.q), ...m.b.fine()]);
+    lower.set(m.li, { q: m.q, more: m.b.ink, moreFine: m.b.fine });
     const w = l.lines[m.li].split(' ').pop() ?? '';
     arcs.push({ name: 'cradle', what: `the final ${finalOf(w)} of ${w}${nestB.length > 1 ? `, nested on circle ${Math.round(m.inset / STEPIN) + 1} of ${nestB.length}` : ''}`, r: rho - m.inset, from: m.b.phi0 * DEG, to: m.b.phiEnd * DEG }); // prettier-ignore
   }
@@ -1849,7 +1938,9 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     }
     if (!bowl2) return null;
     rest[li - 1] = cleanOutline([...inkAt(q), ...bowl2.ink]);
-    lower.set(li, { q, more: bowl2.ink });
+    const drawn2 = bowl2.fine;
+    restFine[li - 1] = () => cleanOutline([...inkAt(q), ...drawn2()]);
+    lower.set(li, { q, more: bowl2.ink, moreFine: drawn2 });
     arcs.push({ name: 'sub-cradle', what: `the final ${sub.c} of ${words[sub.wi]}`, r: rho - STEPIN, from: bowl2.phi0 * DEG, to: bowl2.phiEnd * DEG }); // prettier-ignore
   }
   // ---- a tail running forth from the last line (any text, W3), shortened until it is CLEAR of the writing ----
@@ -1877,7 +1968,8 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
         continue;
       }
       rest[li - 1] = cleanOutline([...inkAt(q), ...b.ink]);
-      lower.set(li, { q, more: b.ink });
+      restFine[li - 1] = () => cleanOutline([...inkAt(q), ...b.fine()]);
+      lower.set(li, { q, more: b.ink, moreFine: b.fine });
       arcs.push({ name: 'cradle', what: `the final ${finalOf(words[words.length - 1])} of ${words[words.length - 1]}, its tail running forth`, r: rho, from: b.phi0 * DEG, to: b.phiEnd * DEG }); // prettier-ignore
       break;
     }
@@ -1887,7 +1979,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
     if (pass) {
       roofed = false;
       stem = true;
-      p.more = undefined;
+      p.more = p.moreFine = undefined;
     }
     for (let tip = roofed ? ROOF_TIP : TIP; tip > (roofed ? 0.5 : -0.6); tip -= 0.1) {
       let roof: Roof;
@@ -1897,6 +1989,7 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
           arc = roofArc(line, [q.x + p.off[0], q.y + p.dy], rho, tip);
         if (!arc) continue;
         p.more = arc.ink;
+        p.moreFine = arc.fine;
         roof = { loose: arc.loose, what: `the roof of the first letter of ${word} drawn out to the left`, from: arc.from, to: arc.to }; // prettier-ignore
       } else if (stem) {
         const c = stemCanopy(p, k, rho, tip);
@@ -1917,14 +2010,14 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
           q = st.s[en.cut],
           arc = canopyArc([q.x + p.off[0], q.y + p.dy], en.back, q.w, st.ang, rho, tip);
         if (!arc) continue;
-        p.swaps = [{ si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })) }];
+        p.swaps = [{ si: en.si, from: en.cut, s: arc.s.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })), fine: arc.fine.map(v => ({ ...v, x: v.x - p.off[0], y: v.y - p.dy })) }]; // prettier-ignore
         p.dots = ridden(line, [q.x, q.y], en.back);
         if (p.dots.size && !inkAt(p).every(v => v.every(([x, y]) => Math.hypot(x, y) <= R - MARGIN))) continue;
         roof = { loose: th.strokePolys({ ang: st.ang, s: arc.s.slice(0, -STUB) }), what: `an entry into the first letter of ${word}`, from: arc.phi0 * DEG, to: arc.phiEnd * DEG }; // prettier-ignore
       }
       if (nearPairs([inkAt(p, true), ...rest, roof.loose], R, CLEAR).some(pr => pr.includes(rest.length + 1))) {
         no('canopy: not clear of the writing');
-        p.more = undefined;
+        p.more = p.moreFine = undefined;
         continue;
       }
       arcs.unshift({ name: 'canopy', what: roof.what, r: rho, from: roof.from, to: roof.to });
@@ -1967,14 +2060,14 @@ export function levels(text: string, nest: Nest = {}, wide?: { cradle: boolean }
   p.extra = line.stems.map(() => 0);
   p.swaps = undefined;
   p.dots = undefined;
-  p.more = undefined;
+  p.more = p.moreFine = undefined;
   return wide && !nest.canopy ? bare(null, []) : null;
 }
 
 // ---- which arcs a text gets ----
 export const short = (t: string) => t.split(' ').length <= 6;
 /** The arrangement as it is now: the canopy and the cradle. */
-export const plain = (t: string, mode = modeOf(t.split(' ')[0])) => (short(t) ? ground(t, mode) : levels(t));
+export const plain = (t: string, mode = modeOf(t.split(' ')[0])) => finished(short(t) ? ground(t, mode) : levels(t));
 /** With the nested arcs: both inner arcs if the circle grows no more than GROW_MAX; else the one that costs less;
  *  else none. `said`: what was dropped and why. */
 export function nested(t: string, base: Canopied, said: string[], mode = modeOf(t.split(' ')[0])): Canopied {
@@ -1985,10 +2078,10 @@ export function nested(t: string, base: Canopied, said: string[], mode = modeOf(
       return !!l && l.R <= base.R * GROW_MAX;
     },
     both = make({ canopy: true, cradle: true });
-  if (fits(both, 'sub-canopy and sub-cradle together')) return both;
+  if (fits(both, 'sub-canopy and sub-cradle together')) return finished(both)!;
   const one = [make({ canopy: true }), make({ cradle: true })],
     ok = one.filter((l, i) => fits(l, i ? 'sub-cradle alone' : 'sub-canopy alone'));
-  return ok.sort((p, q) => p.R - q.R)[0] ?? base;
+  return finished(ok.sort((p, q) => p.R - q.R)[0] ?? base)!;
 }
 
 /** A sheet of discs with a caption under each. */
@@ -2150,10 +2243,10 @@ export function arrange(t: string, said: string[]): Canopied | null {
       return !!l && l.R <= base.R * GROW_MAX;
     },
     both = make({ canopy: true, cradle: true });
-  if (fits(both, 'sub-canopy and sub-cradle together')) return both;
+  if (fits(both, 'sub-canopy and sub-cradle together')) return finished(both)!;
   const one = [make({ canopy: true }), make({ cradle: true })],
     ok = one.filter((l, i) => fits(l, i ? 'sub-cradle alone' : 'sub-canopy alone'));
-  return ok.sort((p, q) => p.R - q.R)[0] ?? base;
+  return finished(ok.sort((p, q) => p.R - q.R)[0] ?? base)!;
 }
 /** The letters the rules name for a text, without drawing it: the canopy's (the first tried), the cradle's and the
  *  sub-cradle's. */
