@@ -1,0 +1,187 @@
+{
+  "round": "letters-2",
+  "date": "2026-11-15",
+  "by": "owner",
+  "grades": [
+    {
+      "id": "alim",
+      "grade": "fair",
+      "note": "Fine but boring. Also I'm not a fan of the connected heh character"
+    },
+    {
+      "id": "ard",
+      "grade": "poor",
+      "note": ""
+    },
+    {
+      "id": "arsh",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "asr",
+      "grade": "fair",
+      "note": "The ين is hard to read as the dots combine and the y gets lost, also it's quite boring"
+    },
+    {
+      "id": "basmala",
+      "grade": "good",
+      "note": "The dot on the nun is my only critique, otherwise I like it a lot"
+    },
+    {
+      "id": "falaq",
+      "grade": "fair",
+      "note": "Same again on the nun getting lost in the bowl"
+    },
+    {
+      "id": "fatiha1",
+      "grade": "fair",
+      "note": "The top right and left are too boring"
+    },
+    {
+      "id": "fatima",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "hamd",
+      "grade": "poor",
+      "note": ""
+    },
+    {
+      "id": "haqq",
+      "grade": "fair",
+      "note": "The long alif looks broken as if it's two or three separate strokes, can you make it one continuous stroke? The qaf is a bit funny"
+    },
+    {
+      "id": "hasbuna",
+      "grade": "good",
+      "note": ""
+    },
+    {
+      "id": "hawla",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "hayy",
+      "grade": "good",
+      "note": "Visually stunning but hard to read what it actually says"
+    },
+    {
+      "id": "husayn",
+      "grade": "fair",
+      "note": "Illegible as Hussain"
+    },
+    {
+      "id": "ikhlas",
+      "grade": "good",
+      "note": ""
+    },
+    {
+      "id": "inna",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "kursi1",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "mashallah",
+      "grade": "fair",
+      "note": "The bottom is too much free space. If you had started there and curved it along the bottom, filling it to the top, it could have worked quite well"
+    },
+    {
+      "id": "names",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "nasr",
+      "grade": "poor",
+      "note": "Illegible but pretty"
+    },
+    {
+      "id": "nasr2",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "nur",
+      "grade": "poor",
+      "note": ""
+    },
+    {
+      "id": "nurnur",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "nursamawat",
+      "grade": "good",
+      "note": ""
+    },
+    {
+      "id": "rabbi",
+      "grade": "poor",
+      "note": ""
+    },
+    {
+      "id": "rizq",
+      "grade": "good",
+      "note": ""
+    },
+    {
+      "id": "sabr",
+      "grade": "fair",
+      "note": "The final character seems wrong, otherwise very good"
+    },
+    {
+      "id": "salam",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "salawat",
+      "grade": "fair",
+      "note": "I don't like the lam after the w"
+    },
+    {
+      "id": "shahada",
+      "grade": "poor",
+      "note": "Technically right by I think these characters don't let themselves well to our current approach"
+    },
+    {
+      "id": "subhan",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "tawakkul",
+      "grade": "fair",
+      "note": "Lovely but the t was illegible"
+    },
+    {
+      "id": "tawfiq",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "tawhid",
+      "grade": "fair",
+      "note": ""
+    },
+    {
+      "id": "thabit",
+      "grade": "poor",
+      "note": "The dots are in the wrong place and three dots should be placed as a pyramid"
+    },
+    {
+      "id": "zaynab",
+      "grade": "fair",
+      "note": ""
+    }
+  ]
+}
