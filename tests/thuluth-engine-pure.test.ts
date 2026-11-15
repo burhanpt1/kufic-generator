@@ -7,6 +7,10 @@ import { CHOSEN } from '../src/script/thuluth/alts';
 import { thuluth, thuluthScript, DEFAULT_THULUTH, ROUNDEL_PEN, TILE_PEN } from '../src/script/thuluth';
 import type { Built, LineOptions, Thuluth } from '../src/script/thuluth/engine';
 import type { ThuluthStyle } from '../src/script/thuluth/types';
+import type { RoundelSpec } from '../src/script/thuluth/roundel';
+import { buildRoundel } from '../src/script/thuluth/roundel';
+import { alignment, linePairs } from '../src/script/thuluth/roundel/checks';
+import { headOf } from '../src/script/thuluth/roundel/compose';
 import { parkMiller } from '../src/script/thuluth/rng';
 import type { LayoutOptions, LetterStyle, VectorStrip } from '../src/script/types';
 import { FRESH, TUNED, UNSEEN } from './helpers/char-texts';
@@ -95,8 +99,9 @@ describe('a thuluth engine writes a line the same whatever it wrote before', () 
       const inOrder = written(thuluth(style), CASES),
         mixed = written(thuluth(style), shuffled(CASES, 20261115)),
         // (and a line written twice by one engine, the second time from what it kept)
-        twice = thuluth(style),
-        again = (written(twice, CASES), written(twice, shuffled(CASES, 7)));
+        twice = thuluth(style);
+      written(twice, CASES);
+      const again = written(twice, shuffled(CASES, 7));
       expect(differing(inOrder, alone), 'in order, against alone').toEqual({ lines: [], worst: 0 });
       expect(differing(mixed, alone), 'shuffled, against alone').toEqual({ lines: [], worst: 0 });
       expect(differing(again, alone), 'written again, against alone').toEqual({ lines: [], worst: 0 });
@@ -126,5 +131,35 @@ describe('a thuluth engine writes a line the same whatever it wrote before', () 
       expect(first).toEqual(alone);
       expect(second).toEqual(alone);
     }
+  });
+
+  // A roundel writes its groups one connected piece at a time, which the ink spacing never touches; only the
+  // companion text is set as a line.
+  it('and a roundel with a companion text', () => {
+    const spec: RoundelSpec = { text: 'محمد علي', compose: { elongate: true, cross: true, kern: true, tries: 1, iters: 200, seed: 5 }, frame: false, companion: 'نور على نور' }, // prettier-ignore
+      roundel = (th: Thuluth) => {
+        const b = buildRoundel(th, spec)!;
+        return JSON.stringify([b.r.st, b.r.lv, b.r.E, b.f.companion, b.f.marks]);
+      };
+    const alone = roundel(thuluth(SPACED)),
+      after = thuluth(SPACED);
+    expect(JSON.parse(alone)[3], 'the companion is drawn').toBeTruthy();
+    // (the companion's pieces first met at other places along other lines)
+    for (const [l, o] of CASES.slice(0, 60)) after.buildStrokes(l, o);
+    expect(roundel(after)).toBe(alone);
+    expect(roundel(after)).toBe(alone);
+  });
+
+  // Where a group's reading starts is kept for each shape (compose.ts headOf), and a shape is redrawn in place when
+  // its group is scaled: the checks of a finished roundel must read the shape as it is now, the same for the roundel
+  // the composer made as for a copy of it (one that came back from a worker, say).
+  it('and the checks of a roundel with a scaled group are those of its copy', () => {
+    const th = thuluth({ ...ROUNDEL_PEN, alts: CHOSEN }),
+      b = buildRoundel(th, { text: 'صل على محمد وآل محمد', compose: { elongate: true, cross: true, kern: true, tries: 1, iters: 200, seed: 5 }, frame: false, tweaks: [{ at: 'محمد', scale: 0.6 }] })!, // prettier-ignore
+      copy = structuredClone(b.r);
+    expect(b.r.groups.some(g => g.sc === 0.6)).toBe(true);
+    expect(b.r.shapes.map(headOf)).toEqual(copy.shapes.map(headOf));
+    expect(alignment(b.r, th.style.nib)).toEqual(alignment(copy, th.style.nib));
+    expect(linePairs(b.r, th.style.nib)).toEqual(linePairs(copy, th.style.nib));
   });
 });
