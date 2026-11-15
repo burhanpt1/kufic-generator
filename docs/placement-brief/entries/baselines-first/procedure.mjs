@@ -163,19 +163,24 @@ function stack(lines, shifts) {
 function circle(pts) {
   let cx = 0,
     cy = 0;
-  for (const [x, y] of pts) ((cx += x), (cy += y));
+  for (const [x, y] of pts) {
+    cx += x;
+    cy += y;
+  }
   cx /= pts.length;
   cy /= pts.length;
-  let r = 0;
   for (let k = 1; k <= 150; k++) {
     let far = 0,
       fx = cx,
       fy = cy;
     for (const [x, y] of pts) {
       const d = (x - cx) ** 2 + (y - cy) ** 2;
-      if (d > far) ((far = d), (fx = x), (fy = y));
+      if (d > far) {
+        far = d;
+        fx = x;
+        fy = y;
+      }
     }
-    r = Math.sqrt(far);
     cx += (fx - cx) / (k + 1);
     cy += (fy - cy) / (k + 1);
   }
@@ -245,8 +250,10 @@ function layout(text) {
             pick[w]++;
             const L2 = build(),
               a2 = arrange(L2);
-            if (a2.cost < cur.cost - 1e-9) ((lines = L2), (cur = a2));
-            else {
+            if (a2.cost < cur.cost - 1e-9) {
+              lines = L2;
+              cur = a2;
+            } else {
               pick[w]--;
               break;
             }
