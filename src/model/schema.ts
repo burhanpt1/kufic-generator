@@ -112,6 +112,23 @@ export interface TextBorder {
   ground?: Ground;
   /** Plaited tall stems (needs ascenders of 9 or more). */
   plait?: boolean;
+  /** The side the text starts on (default: the bottom). A verse read once starts where the eye does; with a top
+   *  edge that is the top, and the reading goes on clockwise from there. */
+  start?: BorderSide;
+  /** A mark between one repeat of the text and the next, where they meet along a side. */
+  repeatMark?: 'diamond' | 'star';
+  /** Openings in the band (a door, a window): the text breaks round each, at a word. `at` is a point on or near
+   *  the outline, in the outline's own coordinates (a poly's points as given; otherwise the unit outline); `width`
+   *  is in cells. */
+  openings?: BandOpening[];
+  /** At a concave corner (the inside corner of an L, the valley of a star) the two bands turn away from each other:
+   *  'meet' runs the text up to the corner; 'clear' (the default) keeps it back as at a convex corner. */
+  insideCorners?: 'clear' | 'meet';
+}
+export type BorderSide = 'bottom' | 'left' | 'top' | 'right';
+export interface BandOpening {
+  at: [number, number];
+  width: number;
 }
 export interface OrnamentBorder {
   type: 'ornamentBorder';
@@ -157,7 +174,15 @@ export type FillerNode =
   | { type: 'rings' }
   | { type: 'vine' }
   | { type: 'solid' }
-  | { type: 'region'; node: RegionNode }
+  | {
+      type: 'region';
+      node: RegionNode;
+      /** What lies under and round the nested region, over the whole space: a star field with a medallion in its
+       *  middle. Words of a pattern written in text are left out where the region covers them. */
+      ground?: GroundFiller;
+      /** The share of the space the nested region takes (0–1; default: all it can). */
+      share?: number;
+    }
   /** A thuluth roundel or cartouche: the text arranged to fill an oval, its marks solved, on a gilded field. */
   | {
       type: 'roundel';
@@ -312,6 +337,9 @@ export interface RegionNode {
   features?: FeatureSet;
   style?: StyleOverride;
 }
+
+/** The fills that can lie under a nested region. */
+export type GroundFiller = Extract<FillerNode, { type: 'pattern' | 'iznik' | 'vine' | 'solid' | 'rings' }>;
 
 export type SpandrelNode = FillerNode | { type: 'stars' };
 export interface FrameNode {
@@ -554,6 +582,13 @@ const border = z.discriminatedUnion('type', [
     seam: z.number().min(0).max(60).optional(),
     ground: ground.optional(),
     plait: z.boolean().optional(),
+    start: z.enum(['bottom', 'left', 'top', 'right']).optional(),
+    repeatMark: z.enum(['diamond', 'star']).optional(),
+    openings: z
+      .array(z.object({ at: z.tuple([z.number().finite(), z.number().finite()]), width: z.number().min(1).max(400) }))
+      .max(24)
+      .optional(),
+    insideCorners: z.enum(['clear', 'meet']).optional(),
   }),
   z.object({
     type: z.literal('ornamentBorder'),
@@ -629,7 +664,20 @@ export const FillerSchema: z.ZodType<FillerNode> = z.lazy(() =>
     z.object({ type: z.literal('rings') }),
     z.object({ type: z.literal('vine') }),
     z.object({ type: z.literal('solid') }),
-    z.object({ type: z.literal('region'), node: RegionSchema }),
+    z.object({
+      type: z.literal('region'),
+      node: RegionSchema,
+      ground: z
+        .discriminatedUnion('type', [
+          z.object({ type: z.literal('pattern'), pattern, text: z.string().optional() }),
+          z.object({ type: z.literal('iznik'), iznik }),
+          z.object({ type: z.literal('rings') }),
+          z.object({ type: z.literal('vine') }),
+          z.object({ type: z.literal('solid') }),
+        ])
+        .optional(),
+      share: z.number().min(0.1).max(1).optional(),
+    }),
     z.object({
       type: z.literal('roundel'),
       text: slotName,
@@ -686,7 +734,11 @@ export const CompositionSchema = z
     };
     const filler = (f: FillerNode, path: (string | number)[]) => {
       if ('text' in f && f.text !== undefined) check(f.text, [...path, 'text']);
-      if (f.type === 'region') region(f.node, [...path, 'node']);
+      if (f.type === 'region') {
+        region(f.node, [...path, 'node']);
+        if (f.ground && 'text' in f.ground && f.ground.text !== undefined)
+          check(f.ground.text, [...path, 'ground', 'text']);
+      }
     };
     region(c.root.child as RegionNode, ['root', 'child']);
     if (c.root.spandrels && c.root.spandrels.type !== 'stars')

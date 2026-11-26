@@ -23,7 +23,7 @@ export const widthFn = (segs: Segs) => {
     pg = [0];
   segs.forEach((s, i) => {
     pw.push(pw[i] + s.minW);
-    pg.push(pg[i] + (i < n - 1 ? (s.endsWord ? segs.wg! : 1) : 0));
+    pg.push(pg[i] + (i < n - 1 ? (s.endsWord ? segs.wg! : 1) + (s.gap ?? 0) : 0));
   });
   return (i: number, j: number) => pw[j] - pw[i] + pg[j - 1] - pg[i];
 };

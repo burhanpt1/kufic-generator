@@ -128,21 +128,28 @@ What is already done is listed at the end only as milestones; the commit history
 - [~] **20 of the 35 Kufic lab-compare cases differ from the lab by more than 12%.** They were reviewed and accepted
   (`tests/golden-lab/reviewed.json`). Revisit the worst: star-6-pen, la-ilaha-poly5, square-4, fatimid-circle.
 - [~] **Sheets of several compositions, written with one pen** (from the "Houses of rest" showpiece, a flat's plan
-  with a composition in every room, 26 November). Done: the sheet layer (`src/render/sheet.ts`: parts set by box or
-  by size per cell, the field's lines under them left out; "Light upon light" is built on it) and the shared pen
-  (`src/compose/pen.ts`, `solvePen`: one letter scale for the text borders of several compositions, scored on how
-  evenly each ring's sides are stretched; `runSlack` in the border's metadata). Still to do:
-  - [ ] **A sheet as a schema node** (several child regions in one composition), so the Studio can make one.
-  - [ ] **Text along a segment as a placed item.** `Writer` in `src/showpiece/radial.ts` does it for the rays; the
-        showpiece faked a wall's inscription with a thin rectangle and a `lines` fill.
-  - [ ] **A pattern ground under another fill** (a star field with a medallion in the middle). `roundel` has
-        `ground`; a nested `region` fill has not.
-  - [ ] **Verse anchoring:** start a border's text at a chosen corner, with a mark between repeats.
-  - [ ] **Openings in a text band** (doors, windows): `seam` allows one gap; a list of gaps the text breaks round.
-  - [ ] **Concave corners squash a border's letters;** chamfer them or leave the corner blank, as for a finial.
+  with a composition in every room, 26 November). Done:
+  - the sheet layer (`src/render/sheet.ts`): parts set by box or by size per cell, the field's lines under them left
+    out; "Light upon light" is built on it;
+  - the shared pen (`src/compose/pen.ts`, `solvePen`): one letter scale for the text borders of several compositions,
+    scored on how evenly each ring's sides are stretched (`runSlack` in the border's metadata);
+  - text along a segment (`src/compose/inscription.ts`; `SheetLayout.write`);
+  - a ground under a nested region, and the share of the space it takes (`ground` and `share` on the `region` fill);
+  - on a text border: the side its text starts on (`start`), a mark between repeats (`repeatMark`), openings the
+    text breaks round (`openings`), and text up to inside corners (`insideCorners: 'meet'`).
+
+  Still to do:
+  - [ ] **A sheet as a schema node** (several child regions in one composition), so the Studio can make one. None
+        of the new border options is in the Studio either.
+  - [?] **Make `insideCorners: 'meet'` the default.** It is right geometrically, but it writes text into the narrow
+    runs of the lamp and mosque silhouettes that now stay plain, which changes "Light upon light".
+  - [ ] **An opening is a gap in the text only.** The band's ground and separators still run across it; its corners
+        are in the border's metadata (`openings`) for whoever draws the door.
+  - [ ] **Start a repeat at each corner where it can** (the bedroom at one pen holds one verse a side by chance).
   - [ ] **A fixed `scale` that doesn't fit drops the border.** Say by how much it misses and what would fit
         (`solvePen`'s `limit` already knows).
   - [ ] **The seal monogram doesn't fill its medallion** for short phrases, and its lines differ in weight.
+
 - [ ] **Region clipping for spandrels still uses the TypeScript Clipper2.** Only ring and band offsets are native
       (`dd46d6b`). It runs once per composition, so it is low priority.
 

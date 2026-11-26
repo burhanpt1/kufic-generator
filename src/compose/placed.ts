@@ -149,6 +149,8 @@ export interface BorderMeta {
     /** Share of each group's run left to stretching, in reading order (0 for a run left blank): how evenly the
      *  ring's sides are written. */
     runSlack: number[];
+    /** The band's openings, each as the four corners of the gap (outer edge, then inner), in cells. */
+    openings?: Pt[][];
     strips: number[];
   }[];
 }

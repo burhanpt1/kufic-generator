@@ -2,7 +2,10 @@
 // plan with a composition in every room). Each part is drawn in its own coordinates and set into the sheet either
 // fitted to a box (nest) or at a stated size per cell (set), so parts set at one size share one pen. What a part
 // covers is recorded, so the lines of a field underneath it can be left out.
+import { inscriptions } from '../compose/inscription';
+import type { Inscription } from '../compose/inscription';
 import type { Placed, PlacedItem } from '../compose/placed';
+import type { Style } from '../model/schema';
 import { inside } from '../geometry/poly';
 import type { Pt } from '../geometry/types';
 import { renderPlaced } from './composition';
@@ -117,6 +120,25 @@ export class SheetLayout {
     else throw new Error('a part needs a slot, or a unit and a centre');
     this.parts.push(s.svg);
     return s;
+  }
+
+  /** Inscriptions written straight onto the sheet: their segments (and depths) are in the sheet's units, at `unit`
+   *  sheet units per cell, so they share the pen of parts set at that unit. Added to the parts; returns the
+   *  warnings for any that didn't fit. */
+  write(list: Inscription[], style: Style, o: { id: string; unit: number }): string[] {
+    const k = 1 / o.unit,
+      cells = (p: Pt): Pt => [p[0] * k, p[1] * k],
+      pl = inscriptions(
+        list.map(i => ({ ...i, from: cells(i.from), to: cells(i.to), ...(i.depth ? { depth: i.depth * k } : {}) })),
+        style,
+      ),
+      [ox, oy] = pl.canvas.origin;
+    this.parts.push(
+      `<g transform="translate(${f(-ox * o.unit)} ${f(-oy * o.unit)}) scale(${+(o.unit / U).toFixed(5)})">` +
+        svgBody(renderPlaced(pl, { idPrefix: o.id })) +
+        '</g>',
+    );
+    return pl.meta.warnings;
   }
 
   /** A placed composition without the lines of its field that lie under the sheet's parts (a pattern written in

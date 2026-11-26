@@ -8,6 +8,7 @@ import type { FillerNode, RegionNode, Style } from '../model/schema';
 import type { Ctx, RegionResult } from './resolve';
 import { resolveRegion, styleId } from './resolve';
 import { patternTextItems, WORD_LINE } from './patternText';
+import { placeMap } from './textBorder';
 import { translateItem } from './transform';
 
 /** Centre and clear radius of a region (exact for circles). */
@@ -46,6 +47,30 @@ export function fitInside(U: Pt[], P: Pt[], centres: Pt[]): { c: Pt; s: number }
 }
 
 const farthest = (P: Pt[], c: Pt) => Math.max(...P.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])));
+
+/** Cut the ground laid at items[from, to) away under the regions placed after it: areas get the regions' outlines
+ *  as holes, and a line of words that would run under one is left out whole. */
+function underRegion(ctx: Ctx, from: number, to: number) {
+  const over = ctx.items.slice(to).filter(it => it.type === 'outline'),
+    // the nested region's own outline comes first; those of regions nested deeper follow it and lie inside it
+    outer = over.length ? [over[0].outer] : [];
+  if (!outer.length) return;
+  const hit = (p: Pt) => outer.some(P => inside(P, p[0], p[1]));
+  const kept: typeof ctx.items = [];
+  for (let i = from; i < to; i++) {
+    const it = ctx.items[i];
+    if (it.type === 'strip') {
+      const at = placeMap(it.place),
+        y = it.strip.Hb / 2;
+      if ([0, 0.25, 0.5, 0.75, 1].some(k => hit(at(it.strip.W * k, y)))) continue;
+      kept.push(it);
+    } else if ('area' in it) kept.push({ ...it, area: [...it.area, ...outer] });
+    else if (it.type === 'rule') {
+      if (!it.path.some(hit)) kept.push(it);
+    } else kept.push(it);
+  }
+  ctx.items.splice(from, to - from, ...kept);
+}
 
 export type FillerImpl = (
   f: FillerNode,
@@ -163,12 +188,16 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
         if (b && b.s * 0.96 > fit.s) fit = { c: b.c, s: b.s * 0.96 };
       }
       const place = (at: { c: Pt; s: number }) => {
-        const size = typeof f.node.size === 'number' ? Math.min(f.node.size, at.s) : at.s,
+        const size = (typeof f.node.size === 'number' ? Math.min(f.node.size, at.s) : at.s) * (f.share ?? 1),
           before = ctx.items.length;
         ctx.fill = null;
         resolveRegion(f.node, style, ctx, size);
         for (let i = before; i < ctx.items.length; i++) ctx.items[i] = translateItem(ctx.items[i], at.c);
       };
+      // the ground first, so the nested region lies over it
+      const groundAt = ctx.items.length;
+      if (f.ground) resolveFiller(f.ground, res, style, ctx, region);
+      const groundEnd = ctx.items.length;
       const snap = {
         items: ctx.items.length,
         borders: ctx.borders.length,
@@ -185,6 +214,7 @@ export function resolveFiller(f: FillerNode, res: RegionResult, style: Style, ct
         ctx.ring = snap.ring;
         place(circle);
       }
+      if (f.ground) underRegion(ctx, groundAt, groundEnd);
       const innerFill = ctx.fill as { type: string } | null;
       ctx.fill = { type: 'region', ok: true, note: innerFill ? `inner fill: ${innerFill.type}` : undefined };
       return;

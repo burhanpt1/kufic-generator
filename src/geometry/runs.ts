@@ -2,7 +2,7 @@
 import { dist } from './poly';
 import type { Frame, Pt, Ring, Run } from './types';
 
-function makeRun(pts: Pt[], start: Run['start'], end: Run['end']): Run {
+export function makeRun(pts: Pt[], start: Run['start'], end: Run['end']): Run {
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + dist(pts[i - 1], pts[i]));
   return { pts, cum, len: cum[cum.length - 1], start, end };

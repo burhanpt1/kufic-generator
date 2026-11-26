@@ -24,7 +24,8 @@ import { scriptFor } from '../script/registry';
 import type { LayoutOptions, Prepared, ScriptEngine } from '../script/types';
 import { resolveFiller } from './fillers';
 import type { Area, BorderMeta, Placed, PlacedItem } from './placed';
-import { bandGeom, fitRing, fitsAtFullSize, layRing, placeMap } from './textBorder';
+import { borderBand, fitRing, fitsAtFullSize, layRing, placeMap, repeatGaps } from './textBorder';
+import { freeFrame } from '../geometry/outlines';
 
 export interface ResolveOptions {
   /** One engine for every region, whatever their styles ask for (tests, tools). */
@@ -81,6 +82,14 @@ function ringArea(shape: ShapeGeometry, size: number, inset: number) {
   return shape.ring(size, inset)?.area ?? 0;
 }
 
+/** A point in an outline's own coordinates (a poly's points as given; otherwise the unit outline), in cells. */
+const toCells = (shape: ShapeGeometry, size: number): ((p: Pt) => Pt) => {
+  const o = shape.outline;
+  if (o.kind !== 'poly') return p => [p[0] * size, p[1] * size];
+  const f = freeFrame(o.points.map(([x, y]) => [x, y] as Pt));
+  return p => [((p[0] - f.cx) / f.r) * size, ((p[1] - f.cy) / f.r) * size];
+};
+
 /** Smallest outline size at which the first text border holds its text once at full letter size. */
 function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Style): number | null {
   const slot = ctx.comp.texts[border.text],
@@ -89,8 +98,7 @@ function autoSize(shape: ShapeGeometry, border: TextBorder, ctx: Ctx, style: Sty
   const prepared = ctx.script.prepareLines(lines, style.letter)[0],
     sep = (border.separator ?? DEFAULT_SEPARATOR).width;
   const fits = (L: number) => {
-    const bg0 = bandGeom(shape, L, sep),
-      bg = bg0 && border.seam ? { ...bg0, seam: border.seam } : bg0;
+    const bg = borderBand(shape, L, sep, border, toCells(shape, L));
     return (
       !!bg &&
       fitsAtFullSize(bg, ctx.script, prepared, slot.wordGap, bandRoom(prepared, style)) &&
@@ -124,6 +132,8 @@ export function bandRoom(p: Prepared, style: Style): number {
     top = Math.max(p.Hb, stem + reach);
   return Math.max(top + 1, stem / 0.83);
 }
+/** Cells added to the gap between two repeats of a border's text when a mark goes there. */
+const REPEAT_GAP = 3;
 /** Clear margin on each side of a separator, in cells of the band beside it. */
 export const SEP_MARGIN = 0.5;
 
@@ -258,8 +268,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         // a band too short for its text may grow its letters instead of stretching them, but must leave at least
         // GROW_KEEP of the outline's area inside it
         sGrow = typeof b.scale === 'number' ? sMax : Math.max(sMax, growScale(shape, size, dBand, room, sT * 3));
-      const bg0 = sMax > 0 ? bandGeom(shape, size, dBand) : null,
-        bg = bg0 && b.seam ? { ...bg0, seam: b.seam } : bg0;
+      const bg = sMax > 0 ? borderBand(shape, size, dBand, b, toCells(shape, size)) : null;
       const fit = bg
         ? fitRing(bg, ctx.script, p, {
             sTarget: sT,
@@ -269,6 +278,7 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
             sMax: sGrow,
             sHi: sMax,
             room,
+            ...(b.repeatMark && ctx.script.capabilities.grid ? { repeatGap: REPEAT_GAP } : {}),
           })
         : null;
       if (!bg || !fit) {
@@ -326,6 +336,16 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         plait: !!b.plait && ctx.script.capabilities.plait !== false,
       });
       for (const l of laid) ctx.items.push({ type: 'strip', style: sid, strip: l.strip, place: l.place, ring: ringNo });
+      // a mark where one repeat ends and the next begins along a side, when there is room for it
+      if (b.repeatMark)
+        for (const l of laid)
+          for (const g of repeatGaps(l.strip)) {
+            if (g.w < 1.5) continue;
+            const at = placeMap(l.place)(g.x, fit.room / 2),
+              r = Math.min(g.w * 0.42, fit.room * 0.17) * fit.s;
+            if (b.repeatMark === 'star') ctx.items.push({ type: 'star', style: sid, centre: at, r: r * 1.25 });
+            else ctx.items.push({ type: 'diamond', style: sid, p: at, r });
+          }
       // a star closes the seam, between the end of the text and its start
       if (bg.seam && bg.seam >= 2 && laid.length === 1 && bg.kind !== 'runs') {
         const W = laid[0].strip.W,
@@ -342,9 +362,21 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         mode: fit.mode,
         Hb: p.Hb,
         slack: fit.caps.reduce((a, c) => a + c, 0) / Math.max(1, natural) - 1,
+        ...(bg.gaps?.length
+          ? {
+              openings: bg.gaps.map(({ a, b: e }) => {
+                const d = room * fit.s,
+                  in_ = (f: typeof a): Pt => [f.p[0] + f.n[0] * d, f.p[1] + f.n[1] * d];
+                return [a.p, e.p, in_(e), in_(a)];
+              }),
+            }
+          : {}),
         runSlack: fit.groups.map((g, gi) => {
           const cap = fit.caps[(fit.caps.length - gi) % fit.caps.length],
-            w = g.reduce((x, sg, i) => x + sg.minW + (i < g.length - 1 ? (sg.endsWord ? slot.wordGap : 1) : 0), 0);
+            w = g.reduce(
+              (x, sg, i) => x + sg.minW + (i < g.length - 1 ? (sg.endsWord ? slot.wordGap : 1) + (sg.gap ?? 0) : 0),
+              0,
+            );
           return g.length && cap > 0 ? Math.max(0, (cap - w) / cap) : 0;
         }),
         strips: laid.map(l => l.strip.W),

@@ -135,6 +135,16 @@ function mihrab(): Pt[] {
 }
 export const PRESETS: Record<PresetName, () => Pt[]> = { teardrop, heart, mihrab };
 
+/** The centre and radius a free outline is normalised by: a point p of the outline as given sits at
+ *  ((p − centre) / r) × size in a region of that size. */
+export function freeFrame(P: Pt[]): { cx: number; cy: number; r: number } {
+  P = dedupe(P);
+  const b = bounds(P),
+    cx = (b.x0 + b.x1) / 2,
+    cy = (b.y0 + b.y1) / 2;
+  return { cx, cy, r: Math.max(...P.map(([x, y]) => Math.hypot(x - cx, y - cy))) || 1 };
+}
+
 /** Centre on the bounding box, scale to max radius 1, orient counter-clockwise, start at the bottom-most corner. */
 export function normaliseFree(P: Pt[]): Ring {
   P = dedupe(P);

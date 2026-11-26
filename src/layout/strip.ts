@@ -18,7 +18,7 @@ export function strip(
   wrap?: boolean,
   close = 0,
 ): Strip | null {
-  const gapAfter = (i: number) => (segs[i].endsWord ? wg : 1);
+  const gapAfter = (i: number) => (segs[i].endsWord ? wg : 1) + (segs[i].gap ?? 0);
   let nat = 0;
   segs.forEach((s, i) => {
     nat += s.minW + (i < segs.length - 1 ? gapAfter(i) : 0);

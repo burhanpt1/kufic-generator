@@ -89,6 +89,8 @@ export interface Seg extends Word {
   endsWord: boolean;
   minW: number;
   rep?: number;
+  /** Cells left after this segment beyond the usual gap (room for a mark between repeats). */
+  gap?: number;
 }
 /** A list of segments carrying the word gap used to measure it. */
 export type Segs = Seg[] & { wg?: number };

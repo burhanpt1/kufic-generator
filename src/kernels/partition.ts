@@ -39,7 +39,8 @@ export function partitionBounds(segs: Segs, caps: readonly number[]): Int32Array
     n = segs.length,
     G = caps.length;
   // without a word gap the TypeScript's arithmetic goes through NaN; leave those to it
-  if (!k || n > k.maxn() || G > k.maxg() || segs.wg == null) return undefined;
+  // segments with gaps of their own are measured by the TypeScript too
+  if (!k || n > k.maxn() || G > k.maxg() || segs.wg == null || segs.some(x => x.gap)) return undefined;
   const inp = new Float64Array(k.memory.buffer, k.inbuf(), 2 * n + G);
   for (let i = 0; i < n; i++) {
     inp[i] = segs[i].minW;
