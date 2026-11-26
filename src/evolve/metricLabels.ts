@@ -8,4 +8,5 @@ export const METRIC_LABELS: Record<string, string> = {
   order: 'Read in order', clear: 'Letters do not touch', taste: 'The owner’s taste (fitted)', texture: 'Even texture', calm: 'No heavy knots',
   unity: 'One body', span: 'Spans the field', light: 'Light, not heavy', quiet: 'Quiet (no near-touches)',
   spaced: 'Words hold together', ownMarks: 'Marks by their letters', single: 'No ink drawn twice',
+  ordered: 'Bodies in reading order',
 }; // prettier-ignore

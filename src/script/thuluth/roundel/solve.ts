@@ -94,7 +94,8 @@ const markLevel = (m: MarkName): number =>
 export interface SolveOptions {
   discScale?: number;
   markScale?: number;
-  /** How far (in pen units) a vowel may sit from its letter. */
+  /** How far (in pen units) a vowel may sit from its letter (unset: as far as the even-texture term carries it; about
+   *  4 keeps vowels from drifting into the gaps, where they read as another word's or as ornament). */
   markReach?: number;
   /** Ornaments in the gaps, and how many (0–1); plume or trefoil. */
   ornaments?: boolean;
@@ -135,6 +136,10 @@ export interface SolveOptions {
    *  leaves on ink, vowel or dots, is seated the same way where it stands (dots a little further from their letter
    *  than the search lets them), and a fatha is not centred in its run onto ink. */
   markLift?: boolean;
+  /** Ornaments only in pockets among the letters (true): ink within reach on three sides, or to both left and right.
+   *  false: in the largest gaps anywhere in the field, as the lab placed them (out by the rim they read as stray
+   *  dots). */
+  pockets?: boolean;
   /** Ink that is not the roundel's letters but blocks marks (a companion text). */
   extraInk?: { strokes: Stroke[]; dots: Dot[] } | null;
 }
@@ -683,7 +688,9 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
     T = Math.max(0.02, T * Math.pow(0.02 / 6, 1 / iters));
   }
   lift?.last();
-  // ornaments in the largest gaps that remain, as many as the density asks for
+  // ornaments in the largest gaps that remain, as many as the density asks for. A gap is a pocket among the letters,
+  // with ink within reach on three sides, or to both left and right (between two words on a line): the open field by
+  // the rim is not a gap, and an ornament set there reads as a stray dot
   const fillers: { m: Ornament; x: number; y: number; w: number; h: number; sz: number }[] = [];
   if (o.ornaments) {
     const density = o.density ?? o.markDensity ?? 0.5,
@@ -703,9 +710,33 @@ export function solveMarks(th: Thuluth, r: Roundel, o: SolveOptions = {}): Solve
       // in a shaped field an ornament keeps its whole size inside the outline (its pointed or narrow parts)
       if (D.field) room[c] = Math.min(room[c], FT.room(CX[c], CY[c]));
     }
+    const reachP = 6 * nib,
+      enclosed = (gx: number, gy: number) => {
+        let hits = 0,
+          across = 0;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ])
+          for (let s = 0.5; s <= reachP; s += 0.5) {
+            const ix = Math.round(X(gx + dx * s)),
+              iy = Math.round(Y(gy + dy * s));
+            if (ix < 0 || iy < 0 || ix >= Wd || iy >= Hd) break;
+            if (ink[iy * Wd + ix]) {
+              hits++;
+              if (dy === 0) across++;
+              break;
+            }
+          }
+        return hits >= 3 || across === 2;
+      },
+      pocket = new Uint8Array(nC);
+    for (let c = 0; c < nC; c++) pocket[c] = o.pockets === false || enclosed(CX[c], CY[c]) ? 1 : 0;
     for (let n2 = 0; n2 < maxN; n2++) {
       let at = -1;
-      for (let c = 0; c < nC; c++) if (at < 0 || room[c] > room[at]) at = c;
+      for (let c = 0; c < nC; c++) if (pocket[c] && (at < 0 || room[c] > room[at])) at = c;
       if (at < 0 || room[at] < thresh) break;
       // only the trefoil or plume: the tirnak looked like a stray fatha; ornaments stay about a vowel's size
       const m: Ornament = o.ornStyle === 'trefoil' ? 'tirfil' : 'plume',

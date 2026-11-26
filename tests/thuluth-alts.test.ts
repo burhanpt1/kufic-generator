@@ -2,7 +2,7 @@
 // of them a letter the pen can draw, the name محمد a ligature only where it is the name, and the recommended set no
 // harder to read than today's letters by the rasm confusion matrix.
 import { describe, expect, it } from 'vitest';
-import type { Form, SkelPt, ThuluthAlts, ThuluthStyle } from '../src/script/thuluth';
+import type { Form, GlyphDef, SkelPt, ThuluthAlts, ThuluthStyle } from '../src/script/thuluth';
 import { FAM, LAM_ALIF, ROUNDEL_PEN, TILE_PEN, isLetter, muhammadAt, nibPolys, parseVowels, sampleStroke, thuluth } from '../src/script/thuluth'; // prettier-ignore
 import { ALT_FIXES, CHOSEN, RECOMMENDED } from '../src/script/thuluth/alts';
 import { confusionMatrix } from '../src/script/thuluth/checker';
@@ -21,7 +21,7 @@ const TEXTS = [
 ];
 const ALTS: ThuluthAlts[] = [
   { stems: 'a' }, { stems: 'b' }, { stems: 'c' }, { muhammad: 'a' }, { muhammad: 'b' }, { muhammad: 'c' }, { fixes: true },
-  ...ALT_FIXES.map(f => ({ fixes: [f] })), RECOMMENDED, { stems: 'c', muhammad: 'b', fixes: true }, CHOSEN,
+  ...ALT_FIXES.map(f => ({ fixes: [f] })), RECOMMENDED, { stems: 'c', muhammad: 'b', fixes: true }, CHOSEN, { redrawn: true }, { ...CHOSEN, redrawn: true },
 ]; // prettier-ignore
 
 describe('alternatives are off unless asked for', () => {
@@ -143,6 +143,8 @@ describe('the recommended and the chosen alternatives read no worse than today',
   for (const [sn, set] of [
     ['recommended', RECOMMENDED],
     ['chosen', CHOSEN],
+    ['redrawn', { redrawn: true }],
+    ['chosen and redrawn', { ...CHOSEN, redrawn: true }],
   ] as const)
     // prettier-ignore
     for (const [pn, pen] of [
@@ -279,5 +281,36 @@ describe('the chosen set in a roundel: the name محمد and the kashida', () =>
     expect(now.buildStrokes('الرحيم', { kashida: 4 }).placed.filter(p => 'kash' in p).length).toBe(3);
     // other joins stretch as before
     expect(variants(th, 'بسم الله الرحمن الرحيم', 'بسم').some(v => v.elong)).toBe(true);
+  });
+});
+
+describe('the redrawn set (alts.redrawn), for the dense roundels', () => {
+  const cur = thuluth(ROUNDEL_PEN),
+    red = thuluth({ ...ROUNDEL_PEN, alts: { redrawn: true } }),
+    top = (g: GlyphDef) => Math.max(...g.s.flatMap(s => s.pts.map(p => p[1])));
+  it('is off unless asked for, and the lab’s letters stay the lab’s', () => {
+    expect(red.table).not.toEqual(cur.table);
+    expect(thuluth({ ...ROUNDEL_PEN, labLetters: true, alts: { redrawn: true } }).table).toEqual(thuluth({ ...ROUNDEL_PEN, labLetters: true }).table); // prettier-ignore
+  });
+  it('draws the hah heads and the final heh lower, and the medial seen on the line', () => {
+    expect(top(red.glyphFor('ح', 'med')!)).toBeLessThan(0.8 * top(cur.glyphFor('ح', 'med')!));
+    expect(top(red.glyphFor('ه', 'fin')!)).toBeLessThan(0.87 * top(cur.glyphFor('ه', 'fin')!));
+    expect(Math.min(...red.glyphFor('س', 'med')!.s.flatMap(s => s.pts.map(p => p[1])))).toBeGreaterThan(-0.5);
+  });
+  it('writes the name of God with a small round heh beside two straight lams (the bowled design read as اللم)', () => {
+    const letters = red.buildStrokes('الله', {}).placed.filter(isLetter),
+      at = (i: number) => top(letters[i].g),
+      alif = at(0),
+      lams = [at(1), at(2)],
+      heh = at(3);
+    for (const h of lams) expect(h).toBeLessThan(alif - 1);
+    expect(heh).toBeLessThan(0.6 * lams[1]);
+    expect(heh).toBeGreaterThan(0.35 * lams[1]);
+    // the drafted stems put their head on these lams too
+    const c = thuluth({ ...ROUNDEL_PEN, alts: { ...CHOSEN, redrawn: true } })
+      .buildStrokes('الله', {})
+      .placed.filter(isLetter);
+    expect(top(c[1].g)).toBeGreaterThan(6);
+    expect(top(c[3].g)).toBeLessThan(0.6 * top(c[2].g));
   });
 });

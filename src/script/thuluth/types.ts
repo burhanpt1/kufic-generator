@@ -78,6 +78,10 @@ export interface ThuluthAlts {
   /** Corrected drawings from the audit: all of them (true, and when unset: the owner turned them on, 14 November
    *  2026), none (false), or those named. */
   fixes?: boolean | readonly AltFix[];
+  /** The letters redrawn at the roundel pen on 31 October 2026 (fixes.ts REDRAWN_FIXES): the heads of initial and
+   *  medial hah drawn smaller, the mims as small loops on the line, the seen's three pointed teeth, the medial heh a
+   *  quarter larger, the final heh lower, and the name of God as two straight lams with a small round heh. */
+  redrawn?: boolean;
 }
 /** The audit's corrections, by letter and form (alts.ts ALT_FIXES). */
 export type AltFix = 'kaf-med' | 'kaf-iso' | 'dal-fin' | 'qaf-end' | 'fa-qaf-room';

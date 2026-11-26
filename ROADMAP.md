@@ -55,6 +55,17 @@ What is already done is listed at the end only as milestones; the commit history
      roundel, at smaller writing; vowels come later, once the letters are settled.
    - **Not yet:** nothing here is in `src/`; a text of fifteen words has no arrangement; rules are tuned on four
      texts and must be tried on the wider set in `tests/helpers/char-texts.ts`.
+   - **Set aside (26 November):** the overnight work of 31 October on the old basis (branch
+     `claude/affectionate-johnson-6q6a6d`, PR 78): a reading-order term in the composer's energy and the judge, ruled
+     lines by default for three words or more with the line count chosen by roundness, stacked joins at a cost rather
+     than rewarded, kerned pieces stopping short of touching, vowels held within four pens of their letter. Its own
+     round (`tests/ratings/rounds/2026-11-01`, old engine against new) went 7 new to 8 old after 15 votes, with 16
+     of 28 pairs disliked on both sides. Kept from it, as they stand apart from the composer: the reading order of
+     the letters' bodies as a reported check (`reading`, `roundel/bodies.ts`; the Studio metric `ordered`), filler
+     ornaments only in pockets among the letters (`pockets`), the letter redraws as a draft (`alts.redrawn`, below),
+     and the scripts `round3.mjs` and `contact-sheet.mjs`. The finding behind the term holds for any composer: read
+     letter by letter, the dense roundels lost their order to stacked joins dropping a word's last letters into the
+     next line, and to the next word sliding in to the right of them.
 3. **[!] Round 3 (15 November): 18 of 31 pairs "both poor"; no option decided.** The spacing options and the
    drafted letters were rated as on/off pairs (`tests/ratings/rounds/2026-11-15`, voted on
    https://claude.ai/artifact/3xqoZGMAQc4BVbtqKwsAPe). Decided pairs split 7 on, 6 off; the critic called 7 of 13.
@@ -129,6 +140,15 @@ What is already done is listed at the end only as milestones; the commit history
   - With the recommended set, initial mim/heh and final alif/lam come closer in the confusion matrix (0.51 to 0.37,
     0.60 to 0.37), still above 0.3; three medial pairs leave the under-0.3 list.
   - The audit's weakest forms not yet redrawn: final ain, medial ain, final hah, final waw's neck, final lam-alif.
+  - `redrawn`: the letters redrawn at the roundel pen for the dense roundels (31 October, ported 26 November;
+    `REDRAWN_FIXES` in `fixes.ts`): the heads of initial and medial hah drawn smaller (0.8 wide, 0.72 high; at the
+    master's size every word with a hah turned on it), the initial mim smaller and the medial mim a loop on the line
+    (the master's fit hung below it and closed into a blob), the seen's three pointed teeth a dot high (the learned
+    ripple made بسم a wavy stroke), the medial heh a quarter larger, the final heh a sixth lower, and the name of God as two straight lams with a small round heh (the bowled design read as
+    اللم). Off by default: with it on, 28 of the branch's tuned tests move (the names cartouche touches, the line
+    spacing, the identity pins), so it waits for the owner's eye (`LETTERS=redrawn` sheets) before any of it is
+    adopted. In the confusion matrix it moves the dense loop heads apart (medial fa/mim 0.28 to 0.29, medial
+    mim/heh 0.25 to 0.29 at the roundel pen; initial fa/heh above 0.3).
 
 ## Thuluth composition and roundels
 
@@ -138,8 +158,11 @@ What is already done is listed at the end only as milestones; the commit history
       convention is one pen throughout (lab HANDOVER §11; `companion` in `roundel/compose.ts`).
 - [!] **Free composition scatters the words.** Without lanes, a path or ruling, a dense roundel nearly always ends
   as small words strewn across a large field (fill under 0.05, against 0.08–0.14 for lanes and ruled). In round 1,
-  every free dense roundel but one was disliked. Find out why the composer does not pull the words together, or
-  stop offering free composition for dense texts.
+  every free dense roundel but one was disliked. **Why (31 October):** nothing in the energy pulls consecutive words
+  together. The only cohesion is the fill term, which is flat for every word not on the hull of the enclosing disc,
+  and the overlap term (on masks grown by a margin) pushes neighbours apart, so random word moves drift outward and
+  the disc follows them; a reading-order rule is satisfied by a scatter too. A cohesion term (the gap from each
+  word's last body to the next word's head, beyond a word space, squared) would mend it, if the old basis is kept.
 - [!] **Great bowls need an oval:** in a circle the bowl and the circle fight (lab HANDOVER §11). Either guard against
   it or design for it.
 - [~] **A ta marbuta lifted onto another word's stroke by stacking can still get past the critic.** `orderFault`
@@ -205,7 +228,8 @@ What is already done is listed at the end only as milestones; the commit history
       order of voting. Use every winner, weighted 1/n (`tests/refit.test.ts`).
 - [ ] **The single and mirrored fits look overfitted** (large weights on features with a tiny spread;
       `roundel/fits.data.ts`). Shrink them towards the dense fit until each has about 100 real votes.
-- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment) are
+- [r] **The reported checks** (word space, stray marks and dots, doubled ink, clashes, crossings, alignment, and the
+  reading order of the letters' bodies, `reading`) are
   candidates in the round 2 refit, not promoted before it (`src/evolve/critic.ts:130`, `844ad32`). The with/without
   comparison the refit prints differs by one row at most, so it cannot decide a promotion; it needs more votes or a
   paired test.

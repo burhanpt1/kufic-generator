@@ -121,7 +121,7 @@ function setup({ text, recipe, pen, pair }: RoundelRequest) {
     wordGap: recipe.wordGap,
     innerGap: recipe.innerGap,
   };
-  const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap }; // prettier-ignore
+  const frame = { markReach: recipe.markReach, ornaments: recipe.ornaments, density: recipe.density, ornStyle: recipe.ornStyle, fathaRule: recipe.fathaRule, longFatha: recipe.longFatha, allSigns: recipe.allSigns, clearance: recipe.clearance, markDensity: recipe.markDensity, fathaGap: recipe.fathaGap, pockets: recipe.pockets }; // prettier-ignore
   const spec: RoundelSpec = {
     text,
     compose,

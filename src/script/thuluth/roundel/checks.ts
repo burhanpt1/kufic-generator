@@ -14,6 +14,7 @@ import { BELOW, STEM_LETTERS } from '../shape';
 import type { Poly, Stroke } from '../types';
 import type { Roundel } from './compose';
 import { headOf, twoLevels } from './compose';
+import { roundelReadingFault } from './bodies';
 import type { Finished } from './finish';
 
 interface Pt {
@@ -74,6 +75,9 @@ export interface RoundelChecks {
   strayDots: number;
   /** Length of ink (pen units) run along the same course by two different letters. */
   doubled: number;
+  /** The reading order judged from the letters' bodies (bodies.ts readingFault): 0 when every later word lies left of
+   *  or below the earlier ones, body by body. */
+  reading: number;
   /** Dots and marks left lying on ink once the marks are placed (Finished.marksUnplaced): the measure the score's
    *  "marks without room" was meant to be, which with the solver on is always 0. A candidate for the score. */
   marksUnplaced: number;
@@ -371,7 +375,7 @@ export function roundelChecks(th: Thuluth, r: Roundel, f: Finished): RoundelChec
       if (Math.abs(ax * bx + ay * by) > 0.9) doubled += seg;
     }
   const { wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn } = wordGaps(th, r);
-  return { wordSpace, strayMarks, strayDots, doubled, marksUnplaced: f.marksUnplaced, wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn, ...alignment(r, nib) }; // prettier-ignore
+  return { wordSpace, strayMarks, strayDots, doubled, reading: roundelReadingFault(r, nib), marksUnplaced: f.marksUnplaced, wordPairs, wordClear, wordClearNibs, wordInner, wordsRunOn, ...alignment(r, nib) }; // prettier-ignore
 }
 
 export interface MarkReading {
@@ -454,6 +458,8 @@ export function crossings(r: Roundel): Crossings {
   const cell = 3,
     grid = new Map<string, number[]>();
   segs.forEach((s, i) => {
+    // a redrawn stroke that failed leaves no finite segment to cross
+    if (![s.ax, s.ay, s.bx, s.by].every(Number.isFinite)) return;
     for (let x = Math.floor(Math.min(s.ax, s.bx) / cell); x <= Math.floor(Math.max(s.ax, s.bx) / cell); x++)
       for (let y = Math.floor(Math.min(s.ay, s.by) / cell); y <= Math.floor(Math.max(s.ay, s.by) / cell); y++) {
         const k = x + ',' + y;

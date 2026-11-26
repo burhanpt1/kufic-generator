@@ -61,6 +61,19 @@ texts) (ids `pa…` to `pd…`). Its votes are kept as `votes.held.json` and `di
 read: the owner holds the refit until the legibility work lands (an outside judge could read none of the dense texts),
 and then they are renamed back.
 
+The 1 November round (`rounds/2026-11-01`, ids `r3o…` and `r3n…`; on the main rating page, which calls it round 3
+there): the old engine against the new, 28 pairs. Each pair is the same text, family (lanes or ruled) and seed, drawn
+by main at `cdf47a1` (`variant: 'off'`, ids `r3o…`) and by the branch of the overnight legibility work of 31 October
+(`variant: 'on'`, ids `r3n…`; the reading-order energy term, ruled lines by default, stacking at a cost): the basmala,
+the salawat, الحمد لله رب العالمين, the shahada and the opening of Ayat al-Kursi, with the basmala and salawat
+vocalised too. `scripts/round3.mjs` built it from the two sweeps (`SWEEP_N=2 SWEEP_FAMILIES=lanes,ruled`, the same
+`SWEEP_TEXTS` order on both sides); its `items.json` is the published file, with each item's `url` and the fits in
+force. Its votes (`votes.held.json`, `dislikes.held.json`, read back from the page's `votes` and `dislikes` by the `r3`
+ids) are held like round 2's. After 15 votes on 1 November the vote went 7 for the new engine, 8 for the old, no tie, and 16 of
+the 28 pairs were disliked on both sides: the new engine was no better by the owner's eye, and that composition work
+was set aside for the letters-first basis (ROADMAP, Next up). What was kept of it is the reading-order check, the
+ornament pockets, and the letter redraws as a draft to judge (`alts.redrawn`).
+
 The page's source is `page/index.html` (published with each round's `items.json` and `img/`). A new round: run `npm run sweep` with `SWEEP_PREFIX` set (ids must not repeat across rounds), build the page's
 `items.json` from the manifests with the fits in force, and publish the page with the new images.
 

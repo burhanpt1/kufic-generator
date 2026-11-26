@@ -78,6 +78,7 @@ export const CASES: Record<string, { text?: string; set: RoundelRecipe; with?: R
   markDensity: { text: 'مُحَمَّد عَلِيّ', set: { markDensity: 0.1 } },
   // without الله, whose marks its ligature draws
   fathaGap: { text: 'نُورُ السَّمَاوَاتِ وَالْأَرْضِ', set: { fathaGap: true }, with: { iters: 1500 } },
+  pockets: { set: { pockets: false }, with: { ornaments: true, density: 1 } },
   companion: { set: { companion: 'نور' } },
   companionScale: { set: { companionScale: 0.8 }, with: { companion: 'نور' } },
   kernTouch: { text: 'رسول', set: { kernTouch: 20 }, with: { kern: true, nest: true } },

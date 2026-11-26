@@ -5,6 +5,7 @@
 //   LETTERS=muhammad    muhammad-sheet.png (and -line): the name and the words that share its letters
 //   LETTERS=audit       audit-sheet.png, audit-words-sheet.png (and both again with the recommended set)
 //   LETTERS=fixes       audit-fixes-sheet.png: the audit's corrections, before and after
+//   LETTERS=redrawn     redrawn-sheet.png: the letters redrawn for the dense roundels (alts.redrawn), beside today's
 //   LETTERS=roundels    roundels-before-after.png: two roundels, current and recommended
 //   LETTERS=confusion   confusion.txt: the rasm confusion matrix with LETTERS_ALTS (JSON) against today's
 //   LETTERS=probe       LETTERS_SPEC, a JSON file of rows { label, alts, pen, words, window, skel }, for looking at
@@ -16,7 +17,7 @@ import { thuluthStyleOf } from '../src/script/registry';
 import type { Form, ThuluthStyle } from '../src/script/thuluth';
 import type { Thuluth } from '../src/script/thuluth';
 import { TILE_PEN, buildRoundel, roundelArt, thuluth } from '../src/script/thuluth';
-import { RECOMMENDED } from '../src/script/thuluth/alts';
+import { CHOSEN, RECOMMENDED } from '../src/script/thuluth/alts';
 import { confusionMatrix } from '../src/script/thuluth/checker';
 import { toPNG } from '../scripts/raster.mjs';
 import type { Cell } from './helpers/letters-sheet';
@@ -169,6 +170,29 @@ describe('letter sheets', () => {
     });
     const svg = sheet([row(cur, 'current'), row(fix, 'fixes')], { cell: [420, 440], title: 'Audit corrections (alts.fixes): before and after', cols: cols.flatMap(([c]) => [c, '']) }); // prettier-ignore
     write('audit-fixes-sheet.png', svg, 4400);
+  });
+
+  it.runIf(on('redrawn'))("redrawn-sheet: the letters redrawn for the dense roundels, beside today's", () => {
+    const cols: [string, string[]][] = [
+        ['hah: the head smaller', ['الحمد', 'الرحمن']],
+        ['mim: loops on the line', ['محمد', 'بسم']],
+        ['seen: three pointed teeth', ['رسول', 'شمس']],
+        ['heh: medial larger, final lower', ['اللهم', 'فاطمة']],
+        ['the name of God', ['الله', 'لا إله إلا الله']],
+      ],
+      rows: [string, ThuluthStyle['alts']][] = [
+        ['current', undefined],
+        ['redrawn', { redrawn: true }],
+        ['chosen stems and\nname, with redrawn', { ...CHOSEN, redrawn: true }],
+      ];
+    for (const pen of ['roundel', 'line'] as const) {
+      const row = (th: Thuluth, label: string) => ({
+        label,
+        cells: cols.flatMap(([, ws], k) => ws.map(w => inkCell(th, w, { group: `g${k}`, label: w }))),
+      });
+      const svg = sheet(rows.map(([label, alts]) => row(engine(pen, alts), label)), { cell: [420, 440], title: `The redrawn letters (alts.redrawn), ${pen} pen: today's, the redrawn set, and the redrawn set under the chosen drafts`, cols: cols.flatMap(([c]) => [c, '']) }); // prettier-ignore
+      write(pen === 'roundel' ? 'redrawn-sheet.png' : 'redrawn-sheet-line.png', svg, 4400);
+    }
   });
 
   it.runIf(on('roundels'))(

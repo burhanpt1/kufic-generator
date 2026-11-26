@@ -13,6 +13,7 @@ import { AUTO_PATHS } from './paths';
 import type { Finished } from './finish';
 import { finishRoundel } from './finish';
 
+export * from './bodies';
 export * from './bowl';
 export * from './checks';
 export * from './compose';

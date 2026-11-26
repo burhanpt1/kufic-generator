@@ -41,6 +41,8 @@ export const WEDDING_RECIPE: RoundelRecipe = {
   bowl: { clear: 5.6, autoOval: true, dotAt: 0.42 },
   markReach: 2.2,
   ornaments: true,
+  // the lab's placement of the ornaments, anywhere in the field, as the piece was judged
+  pockets: false,
   density: 0.6,
   // the marks as delivered, before the rules from the Arabic sources (a short fatha; the small ح and س only)
   fathaRule: false,

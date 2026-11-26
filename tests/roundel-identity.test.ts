@@ -45,7 +45,7 @@ const COMPOSED: [string, string, RoundelOptions, string][] = [
 ]; // prettier-ignore
 const FINISHED: [string, string, RoundelOptions, Partial<RoundelSpec>, string][] = [
   ['in a fitted frame', BASMALA, PEN, { frame: {} }, 'c86f334e3c61f326'],
-  ['with ornaments and clearance', BASMALA, { ...PEN, lanes: {} }, { frame: { ornaments: true, density: 0.6, markReach: 2.2, clearance: 0.3, markDensity: 0.8, fathaGap: true } }, '4a99590f65fd539d'],
+  ['with ornaments and clearance', BASMALA, { ...PEN, lanes: {} }, { frame: { ornaments: true, density: 0.6, markReach: 2.2, clearance: 0.3, markDensity: 0.8, fathaGap: true } }, 'c712562224aabb4c'],
   ['in the composed disc, with a companion', SALAWAT, { ...PEN, ruled: true }, { frame: false, companion: 'سنة' }, '548d747235898cd7'],
 ]; // prettier-ignore
 

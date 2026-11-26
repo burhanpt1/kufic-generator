@@ -137,6 +137,9 @@ registerCritic('roundel', p => {
       spaced: clamp(1 - m.wordSpace / 4),
       ownMarks: clamp(1 - (m.strayMarks + m.strayDots) / 4),
       single: clamp(1 - m.doubled / 6),
+      // the letters' bodies in reading order (roundel/bodies.ts; a composer that keeps the rule still breaks it in
+      // a fixed layout)
+      ordered: clamp(1 - (m.reading ?? 0) / 8),
     }),
   };
 });

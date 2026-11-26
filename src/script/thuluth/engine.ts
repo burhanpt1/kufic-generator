@@ -2,7 +2,7 @@
 // style: `thuluth(style)` returns an engine bound to that style, with its own glyph cache and no other state.
 import { GREAT, HEH_FIN, LETTERS, TOOTH_FIN_LONG } from './letters.data';
 import { allahForms, altForms, ledForms, nameForms } from './alts';
-import { HAMZA, LETTER_FIXES } from './fixes';
+import { HAMZA, LETTER_FIXES, REDRAWN_HEH_FIN } from './fixes';
 import { dotPolys, nibPolys, polyPath, sampleSpans, sampleStroke } from './pen';
 import type { AllahSpan } from './shape';
 import type { Shaped } from './shape';
@@ -142,7 +142,7 @@ export function thuluth(style: ThuluthStyle = DEFAULT_THULUTH) {
         t[fam] = { ...t[fam], ...fs };
     // the hamza on the line, which the lab's table has no letter for (so no lab reference holds one)
     t.hamza = { iso: HAMZA };
-    t.ha = { ...t.ha, fin: HEH_FIN[st.heh] || HEH_FIN.round };
+    t.ha = { ...t.ha, fin: (!st.labLetters && st.alts?.redrawn && REDRAWN_HEH_FIN[st.heh]) || HEH_FIN[st.heh] || HEH_FIN.round }; // prettier-ignore
     const gr = st.great;
     if (gr?.nun) t.nun = { ...t.nun, fin: clone(GREAT.nunFin) };
     if (gr?.hah) t.hah = { ...t.hah, ini: clone(GREAT.hahIni) };

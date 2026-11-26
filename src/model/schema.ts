@@ -287,6 +287,8 @@ export interface RoundelRecipe {
   clearance?: number;
   markDensity?: number;
   fathaGap?: boolean;
+  /** Ornaments only in pockets among the letters (true); false: in the largest gaps anywhere, as the lab placed them. */
+  pockets?: boolean;
   /** A short companion text set smaller among the words (a date, a second name), and its scale (0.42). It is written
    *  here, not in a text slot: it belongs to this one roundel. */
   companion?: string;
@@ -515,6 +517,7 @@ const roundelRecipe = z
     clearance: z.number().min(0).max(3),
     markDensity: z.number().min(0).max(1),
     fathaGap: z.boolean(),
+    pockets: z.boolean(),
     // the composer's finer options. Each bound keeps the composer's work within a small multiple of its defaults:
     // none is a loop bound except levels (a set of variants per level) and margin (a square of pixels per ink pixel)
     companion: z.string().max(60),

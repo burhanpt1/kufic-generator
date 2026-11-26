@@ -1,6 +1,6 @@
 // Drafted alternative letterforms (ThuluthStyle.alts), for the owner to judge beside the current ones. Nothing here is
 // drawn unless a style asks for it: the letter table and the ligatures are as before when `alts` is unset.
-import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI } from './fixes';
+import { ALLAH_HEH, ALLAH_LAM, ALLAH_LAM_INI, ALLAH_REDRAWN, REDRAWN_FIXES } from './fixes';
 import type { Family, Form, GlyphDef, SkelPt, StrokeDef, ThuluthAlts } from './types';
 
 type LetterForm = GlyphDef & { src?: string };
@@ -210,11 +210,12 @@ export function allahForms(
   alts: ThuluthAlts | undefined,
   nib = 1.6,
 ): { ini: LetterForm; lam: LetterForm; heh: LetterForm } {
-  const alt = alts?.stems;
-  if (!alt) return { ini: ALLAH_LAM_INI, lam: ALLAH_LAM, heh: ALLAH_HEH };
+  const alt = alts?.stems,
+    base = alts?.redrawn ? ALLAH_REDRAWN : { ini: ALLAH_LAM_INI, lam: ALLAH_LAM, heh: ALLAH_HEH };
+  if (!alt) return base;
   const c = alt === 'c',
     re = (f: LetterForm, rank: Rank): LetterForm => ({ ...f, s: [reHead({ alt, nib, rank }, f.s[0], 3, 0, 7.85)] });
-  return { ini: re(ALLAH_LAM_INI, c ? 1 : 0), lam: re(ALLAH_LAM, c ? 2 : 0), heh: ALLAH_HEH };
+  return { ini: re(base.ini, c ? 1 : 0), lam: re(base.lam, c ? 2 : 0), heh: base.heh };
 }
 
 // ---- Part 2: محمد ----
@@ -359,6 +360,8 @@ export function altForms(alts: ThuluthAlts, base: Forms, nib = 1.6, body = 1.45)
   const fixed = { ...base };
   for (const [fam, fs] of Object.entries(out) as [Family, Partial<Record<Form, LetterForm>>][])
     fixed[fam] = { ...base[fam], ...fs };
+  // the redrawn set next, so a drafted stem or the name's letters are laid over it
+  if (alts.redrawn) add(REDRAWN_FIXES);
   if (alts.stems) add(stemForms(alts.stems, fixed, nib, body));
   if (alts.muhammad) add(muhammadForms(alts.muhammad));
   return out;
