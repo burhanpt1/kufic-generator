@@ -14,8 +14,7 @@ await loadSealWasm();
 
 describe('Houses of rest', () => {
   it('cuts its An-Nur phrases from the verified text, and every text shapes', () => {
-    expect(rasm(AN_NUR[60]).includes(FLAT.hall)).toBe(true);
-    expect(rasm(AN_NUR[60]).includes(FLAT.kitchen)).toBe(true);
+    expect(rasm(AN_NUR[60]).includes(FLAT.grace)).toBe(true);
     for (const t of Object.values(FLAT))
       expect((kufi.shape(t, DEFAULT_STYLE.letter) as Shaped).unsupported).toEqual([]);
   });
@@ -51,7 +50,7 @@ describe('Houses of rest', () => {
     expect(s.pen.scale).toBeGreaterThan(0.4);
     expect(s.svg).toContain('aria-label="Houses of rest: a flat plan in square Kufic"');
     if (process.env.FLAT) {
-      console.log('pen', s.pen);
+      writeFileSync('docs/showpiece/pen.txt', JSON.stringify(s.pen));
       mkdirSync('docs/showpiece', { recursive: true });
       writeFileSync('docs/showpiece/houses-of-rest.svg', s.svg);
     }

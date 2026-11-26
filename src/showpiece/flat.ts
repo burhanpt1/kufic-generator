@@ -1,17 +1,15 @@
-// "Houses of rest": an A1 sheet on a flat's plan. The flat's own plan is the composition, the way the lamp is in
-// "Light upon light": every room is a region inscribed with the words that belong to it, the walls are the solid
-// ground between them, and the whole stands in a frame of An-Nur 24:36, the verse that follows the Light Verse
-// (houses God allowed to be raised, where His name is remembered). An-Nur runs through the flat: the hall carries the
-// greeting on entering a house (24:61), the kitchen the same verse's houses of family and friends. Ayat al-Kursi runs
-// round the outer walls, Al-Kahf 18:39 along the inner ones. At the heart of the living room is المائدة, the table
-// (the area's name, Maida, probably from Arabic māʾida), with Al-Ma'ida 5:114 round it and rayed across the room. The
-// bathroom is tiled and carries no text.
+// "Houses of rest": an A1 sheet on a flat's plan, at night. An-Nur 24:36, the verse after the Light Verse, says where
+// the light of "Light upon light" is: in houses God allowed to be raised, where His name is remembered. So the flat's
+// own plan is the composition, and it is lit from within: every room is dark, written in gold, and glows from its
+// middle, most of all the living room, whose table (المائدة: the area's name, Maida, probably from Arabic māʾida) is
+// the lamp of the house, with Al-Ma'ida 5:114 round it. Each room has its verse round it, a field of stars written in
+// one word, and a seal at its middle; the hall is a runner with سلام, the greeting An-Nur 24:61 asks for on entering.
+// Ayat al-Kursi runs round the outer walls, Al-Kahf 18:39 along the inner ones. The bathroom is tiled and carries no
+// text. Round the house is the sky of its night, and round that the verse.
 //
 // The sheet is drawn in the plan's own units (the agent's drawing, in pixels, y down): every room is set at PX plan
 // units per cell, so one pen (solvePen) writes every room's border at one letter height.
 import { placeMap, resolve } from '../compose';
-import { inscribe } from '../compose/inscription';
-import type { Inscription } from '../compose/inscription';
 import { solvePen } from '../compose/pen';
 import type { Placed } from '../compose/placed';
 import { inside } from '../geometry/poly';
@@ -52,11 +50,12 @@ const nurPhrase = (verse: number, from: string, to: string) => {
 export const FLAT = {
   /** An-Nur 24:36, whole. */
   frame: rasm(AN_NUR[35]),
-  /** An-Nur 24:61: when you enter houses, greet one another with a greeting from God, blessed and good. */
-  hall: nurPhrase(61, 'فإذا دخلتم', 'طيبة'),
-  /** An-Nur 24:61: to eat from your houses, your fathers', mothers', brothers', sisters', uncles' and aunts', a
-   *  house whose keys you hold, or a friend's; no blame whether you eat together or apart. */
-  kitchen: nurPhrase(61, 'أن تأكلوا من بيوتكم', 'أشتاتا'),
+  /** An-Nur 24:61: no blame on you whether you eat together or apart. Round the kitchen. */
+  grace: nurPhrase(61, 'ليس عليكم جناح أن تأكلوا', 'أشتاتا'),
+  /** Said before eating: the kitchen's seal. */
+  bismillah: 'بسم ٱلله',
+  /** Peace: the greeting An-Nur 24:61 asks for on entering a house. The hall's seal. */
+  salam: 'سلام',
   /** An-Nahl 16:80: God has made your homes a place of rest for you. */
   reception: 'وٱلله جعل لكم من بيوتكم سكنا',
   /** An-Naba 78:9–11: We made your sleep a rest, the night a covering, the day for livelihood. */
@@ -92,9 +91,18 @@ export const FLAT = {
 };
 
 /** Oxblood (the agent's plan), gilt, ivory. */
-export const FLAT_PAL = { wall: '#5B0E14', gold: '#B08431', ivory: '#F3EBDA', room: '#FBF7EE', mark: '#7A1F24' };
-const ROOM: Palette = { ink: FLAT_PAL.wall, ink2: '#9C7428', paper: FLAT_PAL.room, mark: FLAT_PAL.mark };
-const ON_WALL: Palette = { ink: '#F3E3B0', ink2: FLAT_PAL.gold, paper: FLAT_PAL.wall, mark: '#F3E3B0' };
+/** The house at night: oxblood walls, rooms dark and lit from within in gold, lamplight in the doorways, under a
+ *  navy sky. */
+export const FLAT_PAL = {
+  wall: '#5B0E14',
+  gold: '#E3BC5C',
+  night: '#0A1330',
+  room: '#1C080D',
+  door: '#3E2613',
+  mark: '#F6E7B8',
+};
+const ROOM: Palette = { ink: FLAT_PAL.gold, ink2: '#A87F38', paper: FLAT_PAL.room, mark: FLAT_PAL.mark };
+const ON_WALL: Palette = { ink: '#F3E3B0', ink2: '#B08431', paper: FLAT_PAL.wall, mark: '#F3E3B0' };
 
 const slot = (text: string, repeat: 'fill' | 'once' = 'fill'): TextSlot => ({ text, repeat, wordGap: 2 });
 export const flatStyle = (p: Palette = ROOM): Style => {
@@ -197,7 +205,14 @@ const DOORS: Door[] = [
       { room: 'reception', at: [540, 1205] },
     ],
   },
-  { wall: { x: 436, y: 1220, w: 23, h: 76 }, width: 76, opens: [{ room: 'reception', at: [455, 1258] }] },
+  {
+    wall: { x: 436, y: 1220, w: 23, h: 76 },
+    width: 76,
+    opens: [
+      { room: 'kitchen', at: [440, 1258] },
+      { room: 'reception', at: [455, 1258] },
+    ],
+  },
   // the front door, through the written outer wall
   {
     wall: { x: 628, y: 1022, w: 50, h: 100 },
@@ -301,26 +316,27 @@ const medallion = (ground: FillerNode, outline: 'star' | 'circle', share: number
 /** The rooms, borders on auto (solvePen sets them). */
 export function rooms(): Record<RoomId, Composition> {
   return {
+    // the hall: a runner, as a hall has: a field of stars drawn in gold, and سلام at its middle
     hall: room(
       ROOMS.hall,
-      {},
+      { m: FLAT.salam },
       [
         { type: 'ornamentBorder', ornament: 'braid', width: 3 },
         { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
       ],
-      // left empty: the greeting is written down its length in two tall columns (hallGreeting)
-      undefined,
+      medallion({ type: 'pattern', pattern: { tiling: 'hex', angle: 60, scale: 7 } }, 'star', 0.86),
       61,
     ),
+    // the kitchen as the other rooms are: its verse round it, a field in جميعا (together), and the words said
+    // before eating at its middle
     kitchen: room(
       ROOMS.kitchen,
-      { once: FLAT.kitchen },
+      { t: FLAT.grace, c: FLAT.together, m: FLAT.bismillah },
       [
-        { type: 'ornamentBorder', ornament: 'braid', width: 3 },
+        { ...roomBorder('kitchen', 't', { insideCorners: 'meet' }), separator: { kind: 'braid', width: 3 } },
         { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
       ],
-      // the passage written across the room in lines, like a grace on the kitchen wall
-      { type: 'lines', text: 'once', lineGap: 2 },
+      medallion({ type: 'pattern', pattern: { tiling: 'square', angle: 60, scale: 10 }, text: 'c' }, 'circle', 0.8),
       24,
     ),
     bedroom: room(
@@ -459,7 +475,7 @@ export function tableRosette(tb: Placed): void {
     R = Math.min(...P.map(q => Math.hypot(q[0] - c[0], q[1] - c[1]))) * Math.cos(Math.PI / 8) * 0.95,
     st = tb.styles[0],
     sOx = tb.styles.push({ ...st, colouring: 'solid' }) - 1,
-    sGold = tb.styles.push({ ...st, palette: { ...st.palette, ink: FLAT_PAL.gold }, colouring: 'solid' }) - 1,
+    sGold = tb.styles.push({ ...st, palette: { ...st.palette, ink: FLAT_PAL.mark }, colouring: 'solid' }) - 1,
     ro = rosette(new Writer(kufi, st), FLAT.table, c, R, ROSETTE_SPOKES, sOx, 93);
   ro.items.forEach((it, i) => {
     if (i % 2 && it.type === 'strip') it.style = sGold;
@@ -510,7 +526,7 @@ export function flatFrame(): Composition {
     version: 1,
     seed: 36,
     canvas: { shape: 'portrait', margin: 2 },
-    style: flatStyle({ ink: FLAT_PAL.wall, ink2: '#CDB585', paper: FLAT_PAL.ivory, mark: FLAT_PAL.mark }),
+    style: flatStyle({ ink: '#D9AE48', ink2: '#6F96CF', paper: FLAT_PAL.night, mark: FLAT_PAL.mark }),
     texts: { verse: slot(FLAT.frame) },
     root: {
       type: 'frame',
@@ -883,51 +899,33 @@ export interface FlatSheet {
   h: number;
 }
 
+/** How brightly each room is lit (0–1): the reception, where the table is, most; the bathroom and cupboard least. */
+const GLOW: Record<RoomId, number> = {
+  reception: 0.5,
+  bedroom: 0.3,
+  study: 0.3,
+  hall: 0.26,
+  kitchen: 0.3,
+  bath: 0.12,
+  cupboard: 0.08,
+};
+/** The table's own light. */
+const TABLE_GLOW = 0.62;
+/** A room's ground, lit from its middle: lamplight falling off towards the walls. */
+function lit(id: string, P: Pt[], k: number, at: Pt = centreOf(P)): string {
+  const b = bbox(P),
+    r = Math.hypot(b.w, b.h) * 0.52;
+  return (
+    `<radialGradient id="fl-lit-${id}" cx="${f(at[0])}" cy="${f(at[1])}" r="${f(r)}" gradientUnits="userSpaceOnUse">` +
+    `<stop offset="0" stop-color="#F2C566" stop-opacity="${k}"/><stop offset=".45" stop-color="#C98A32" stop-opacity="${f(k * 0.45)}"/>` +
+    `<stop offset="1" stop-color="#C98A32" stop-opacity="0"/></radialGradient>` +
+    `<path d="${pathD(P)}" fill="${FLAT_PAL.room}"/><path d="${pathD(P)}" fill="url(#fl-lit-${id})"/>`
+  );
+}
+
 /** Where the openings of a placed composition's borders landed on the sheet. */
 const openingsOn = (pl: Placed, s: Setting): Pt[][] =>
   pl.meta.borders.flatMap(b => b.rings.flatMap(r => r.openings ?? [])).map(q => drawnPts(pl, q).map(s.map));
-
-/** The hall's greeting as two columns running its length (bottom to top, so they read top to bottom, the first on
- *  the left, as the lines of a page turned on its side): the largest letters at which both halves fit, split where
- *  the two are drawn out most alike. In sheet units. */
-function hallGreeting(inner: Box): Inscription[] | null {
-  const words = FLAT.hall.split(' '),
-    pad = 10,
-    len = (inner.h - 2 * pad) / PX,
-    wide = (inner.w - 2 * pad) / PX,
-    style = flatStyle(),
-    cx = inner.x + inner.w / 2,
-    y0 = inner.y + inner.h - pad,
-    y1 = inner.y + pad;
-  for (let scale = 2; scale >= 0.6; scale -= 0.025) {
-    let best: { k: number; depth: number; cost: number } | null = null;
-    for (let k = 2; k <= words.length - 2; k++) {
-      const halves = [words.slice(0, k), words.slice(k)].map(w =>
-        inscribe({ text: w.join(' '), from: [0, len], to: [0, 0], scale, repeat: 'once' }, style, 0),
-      );
-      if (!halves[0] || !halves[1]) continue;
-      const depth = halves[0].depth,
-        cost = Math.max(halves[0].slack, halves[1].slack);
-      // two columns and the space between them, within the hall's width
-      if (2.3 * depth > wide) continue;
-      if (!best || cost < best.cost) best = { k, depth, cost };
-    }
-    if (!best) continue;
-    const off = (best.depth * 1.3 * PX) / 2;
-    return [words.slice(0, best.k), words.slice(best.k)].map((w, i) => {
-      const x = cx + (i ? off : -off);
-      return {
-        text: w.join(' '),
-        from: [x, y0] as Pt,
-        to: [x, y1] as Pt,
-        scale,
-        repeat: 'once' as const,
-        ring: 61 + i,
-      };
-    });
-  }
-  return null;
-}
 
 export function flatSheet(): FlatSheet {
   const warnings: string[] = [];
@@ -949,33 +947,27 @@ export function flatSheet(): FlatSheet {
     fit = solvePen(ids.map(id => given[id]));
   if (!fit) throw new Error('no pen fits every room');
   const placed = {} as Record<RoomId, { pl: Placed; s: Setting }>;
-  const partOf = {} as Record<RoomId, number>;
+  const partOf = {} as Record<RoomId, number>,
+    litOf = {} as Record<RoomId, number>;
   ids.forEach((id, i) => {
+    litOf[id] = sh.parts.length;
+    sh.parts.push(lit(id, ROOMS[id], GLOW[id]));
     partOf[id] = sh.parts.length;
-    placed[id] = place(fit.compositions[i], id, FLAT_PAL.room);
+    placed[id] = place(fit.compositions[i], id);
   });
 
   // doors: through the walls, and across the bands where the borders open for them
   for (const dr of DOORS)
     sh.parts.push(
-      `<rect x="${dr.wall.x}" y="${dr.wall.y}" width="${dr.wall.w}" height="${dr.wall.h}" fill="${FLAT_PAL.room}"/>`,
+      `<rect x="${dr.wall.x}" y="${dr.wall.y}" width="${dr.wall.w}" height="${dr.wall.h}" fill="${FLAT_PAL.door}"/>`,
     );
   for (const q of [...openingsOn(wl.pl, wl.s), ...ids.flatMap(id => openingsOn(placed[id].pl, placed[id].s))])
-    sh.parts.push(`<path d="${pathD(q)}" fill="${FLAT_PAL.room}"/>`);
+    sh.parts.push(`<path d="${pathD(q)}" fill="${FLAT_PAL.door}"/>`);
   {
     const fd = DOORS[DOORS.length - 1].wall;
     sh.parts.push(
       `<path d="M${fd.x + fd.w - 4} ${fd.y}v${fd.h}" stroke="${FLAT_PAL.gold}" stroke-width="6" stroke-linecap="round"/>`,
     );
-  }
-
-  // the hall: its greeting down its length in two columns, as large as the hall allows
-  {
-    const { pl, s } = placed.hall,
-      ib = bbox(drawnPts(pl, outlineOf(pl).inner!).map(s.map)),
-      got = hallGreeting(ib);
-    if (!got) warnings.push("hall: the greeting doesn't fit");
-    else warnings.push(...sh.write(got, { ...flatStyle(), colouring: 'solid' }, { id: 'hg', unit: PX }));
   }
 
   // interior walls: Al-Kahf 18:39 along each, sized to the wall's thickness
@@ -1027,14 +1019,21 @@ export function flatSheet(): FlatSheet {
           }),
         };
       // drawn again in the room's place in the order of parts
-      sh.place(shown, { id: 'reception', unit: PX, centre: centreOf(ROOMS.reception), ground: FLAT_PAL.room });
+      sh.place(shown, { id: 'reception', unit: PX, centre: centreOf(ROOMS.reception) });
       sh.parts[partOf.reception] = sh.parts.pop()!;
       sh.covers.pop();
     }
     const tb = resolve(tableRoundel());
     warnings.push(...tb.meta.warnings.map(w => `table: ${w}`));
     tableRosette(tb);
-    sh.place(tb, { id: 'tb', ground: FLAT_PAL.room, slot: { x: tc[0] - dia / 2, y: tc[1] - dia / 2, w: dia, h: dia } });
+    // the room's light comes from the table, and the table is the brightest thing in the house
+    sh.parts[litOf.reception] = lit('reception', ROOMS.reception, GLOW.reception, tc);
+    const disc = Array.from({ length: 72 }, (_, i): Pt => {
+      const a = (i / 72) * 2 * Math.PI;
+      return [tc[0] + (dia / 2) * Math.cos(a), tc[1] + (dia / 2) * Math.sin(a)];
+    });
+    sh.parts.push(lit('table', disc, TABLE_GLOW));
+    sh.place(tb, { id: 'tb', slot: { x: tc[0] - dia / 2, y: tc[1] - dia / 2, w: dia, h: dia } });
   }
 
   // the landing: وادي المائدة on a plate beside the front door
@@ -1108,7 +1107,7 @@ export function flatSheet(): FlatSheet {
 
   const view = aSeries(frSvg.box);
   const svg =
-    sheetOpen(view, 'A1', FLAT_PAL.ivory, 'Houses of rest: a flat plan in square Kufic') +
+    sheetOpen(view, 'A1', FLAT_PAL.night, 'Houses of rest: a flat plan in square Kufic') +
     frSvg.svg +
     sky.svg +
     sh.parts.join('') +
