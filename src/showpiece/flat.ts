@@ -91,21 +91,69 @@ export const FLAT = {
 };
 
 /** Oxblood (the agent's plan), gilt, ivory. */
-/** The house at night: oxblood walls, rooms dark and lit from within in gold, lamplight in the doorways, under a
- *  navy sky. */
-export const FLAT_PAL = {
+/** A colour scheme: the walls, the rooms and what is written in them, the frame, and how brightly rooms glow. */
+export interface FlatTheme {
+  wall: string;
+  /** Accents: thresholds, the rosette's second colour. */
+  gold: string;
+  /** The sheet beyond the frame. */
+  paper: string;
+  room: string;
+  door: string;
+  mark: string;
+  roomInk: string;
+  roomInk2: string;
+  frame: Palette;
+  rosette: string;
+  /** How much the rooms are lit from within (0: not at all). */
+  glow: number;
+}
+/** Oxblood on ivory, gilt accents, under a navy sky: the scheme the owner chose. */
+const DAY: FlatTheme = {
   wall: '#5B0E14',
-  gold: '#E3BC5C',
-  night: '#0A1330',
-  room: '#1C080D',
-  door: '#3E2613',
-  mark: '#F6E7B8',
+  gold: '#B08431',
+  paper: '#F3EBDA',
+  room: '#FBF7EE',
+  door: '#FBF7EE',
+  mark: '#7A1F24',
+  roomInk: '#5B0E14',
+  roomInk2: '#9C7428',
+  frame: { ink: '#5B0E14', ink2: '#CDB585', paper: '#F3EBDA', mark: '#7A1F24' },
+  rosette: '#B08431',
+  glow: 0,
 };
-const ROOM: Palette = { ink: FLAT_PAL.gold, ink2: '#A87F38', paper: FLAT_PAL.room, mark: FLAT_PAL.mark };
-const ON_WALL: Palette = { ink: '#F3E3B0', ink2: '#B08431', paper: FLAT_PAL.wall, mark: '#F3E3B0' };
+const NIGHT_FRAME: Palette = { ink: '#D9AE48', ink2: '#6F96CF', paper: '#0A1330', mark: '#F6E7B8' };
+export const THEMES: Record<'day' | 'dayNightFrame' | 'night', FlatTheme> = {
+  day: DAY,
+  // the same rooms, with the frame and the sheet's edge in gold on the sky's navy
+  dayNightFrame: { ...DAY, paper: '#0A1330', frame: NIGHT_FRAME },
+  // rooms dark, written in gold and lit from within
+  night: {
+    wall: '#5B0E14',
+    gold: '#E3BC5C',
+    paper: '#0A1330',
+    room: '#1C080D',
+    door: '#3E2613',
+    mark: '#F6E7B8',
+    roomInk: '#E3BC5C',
+    roomInk2: '#A87F38',
+    frame: NIGHT_FRAME,
+    rosette: '#F6E7B8',
+    glow: 1,
+  },
+};
+/** The scheme in use (flatSheet sets it from its options). */
+export let FLAT_PAL: FlatTheme = DAY;
+const roomPal = (): Palette => ({
+  ink: FLAT_PAL.roomInk,
+  ink2: FLAT_PAL.roomInk2,
+  paper: FLAT_PAL.room,
+  mark: FLAT_PAL.mark,
+});
+const ON_WALL: Palette = { ink: '#F3E3B0', ink2: '#B08431', paper: '#5B0E14', mark: '#F3E3B0' };
 
 const slot = (text: string, repeat: 'fill' | 'once' = 'fill'): TextSlot => ({ text, repeat, wordGap: 2 });
-export const flatStyle = (p: Palette = ROOM): Style => {
+export const flatStyle = (p: Palette = roomPal()): Style => {
   const s = structuredClone(DEFAULT_STYLE) as Style;
   s.palette = { ...p };
   s.letter = { ...s.letter, ascenders: 11 };
@@ -314,31 +362,58 @@ const medallion = (ground: FillerNode, outline: 'star' | 'circle', share: number
   }) as FillerNode;
 
 /** The rooms, borders on auto (solvePen sets them). */
-export function rooms(): Record<RoomId, Composition> {
+export function rooms(hall: HallKind = 'runner', kitchen: KitchenKind = 'seal'): Record<RoomId, Composition> {
+  const plainBorders: BorderNode[] = [
+      { type: 'ornamentBorder', ornament: 'braid', width: 3 },
+      { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
+    ],
+    // what the hall can be: none of them a text set in lines
+    hallFill: Record<HallKind, FillerNode> = {
+      // a runner, as a hall has: a field of stars drawn, and سلام at its middle
+      runner: medallion({ type: 'pattern', pattern: { tiling: 'hex', angle: 60, scale: 7 } }, 'star', 0.86),
+      // the field written in سلام, as the bedrooms' fields are written
+      stars: medallion({ type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 12 }, text: 'm' }, 'star', 0.86),
+      // سلام along the interlaced strands of a star pattern
+      strapwork: { type: 'strapwork', text: 'm', tiling: '488' },
+      // سلام woven, across and down
+      lattice: { type: 'lattice', text: 'm' },
+      // tiled like the bathroom, with سلام at its middle
+      tiles: medallion({ type: 'iznik', iznik: { fold: 8, scale: 6 } }, 'star', 0.86),
+    },
+    kitchenField: FillerNode = { type: 'pattern', pattern: { tiling: 'square', angle: 60, scale: 10 }, text: 'c' };
   return {
-    // the hall: a runner, as a hall has: a field of stars drawn in gold, and سلام at its middle
-    hall: room(
-      ROOMS.hall,
-      { m: FLAT.salam },
-      [
-        { type: 'ornamentBorder', ornament: 'braid', width: 3 },
-        { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
-      ],
-      medallion({ type: 'pattern', pattern: { tiling: 'hex', angle: 60, scale: 7 } }, 'star', 0.86),
-      61,
-    ),
-    // the kitchen as the other rooms are: its verse round it, a field in جميعا (together), and the words said
-    // before eating at its middle
-    kitchen: room(
-      ROOMS.kitchen,
-      { t: FLAT.grace, c: FLAT.together, m: FLAT.bismillah },
-      [
-        { ...roomBorder('kitchen', 't', { insideCorners: 'meet' }), separator: { kind: 'braid', width: 3 } },
-        { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
-      ],
-      medallion({ type: 'pattern', pattern: { tiling: 'square', angle: 60, scale: 10 }, text: 'c' }, 'circle', 0.8),
-      24,
-    ),
+    hall: room(ROOMS.hall, { m: FLAT.salam }, plainBorders, hallFill[hall], 61),
+    kitchen:
+      kitchen === 'seal'
+        ? // as the other rooms are: its verse round it, a field in جميعا (together), and the words said before
+          // eating at its middle
+          room(
+            ROOMS.kitchen,
+            { t: FLAT.grace, c: FLAT.together, m: FLAT.bismillah },
+            [
+              { ...roomBorder('kitchen', 't', { insideCorners: 'meet' }), separator: { kind: 'braid', width: 3 } },
+              { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
+            ],
+            medallion(kitchenField, 'circle', 0.8),
+            24,
+          )
+        : kitchen === 'plain'
+          ? // no verse round it: the field and the seal alone
+            room(
+              ROOMS.kitchen,
+              { c: FLAT.together, m: FLAT.bismillah },
+              plainBorders,
+              medallion(kitchenField, 'circle', 0.7),
+              24,
+            )
+          : // جميعا along the strands of a star pattern
+            room(
+              ROOMS.kitchen,
+              { m: FLAT.together },
+              plainBorders,
+              { type: 'strapwork', text: 'm', tiling: 'square' },
+              24,
+            ),
     bedroom: room(
       ROOMS.bedroom,
       { t: FLAT.bedroom, c: FLAT.rest, m: FLAT.night },
@@ -475,7 +550,7 @@ export function tableRosette(tb: Placed): void {
     R = Math.min(...P.map(q => Math.hypot(q[0] - c[0], q[1] - c[1]))) * Math.cos(Math.PI / 8) * 0.95,
     st = tb.styles[0],
     sOx = tb.styles.push({ ...st, colouring: 'solid' }) - 1,
-    sGold = tb.styles.push({ ...st, palette: { ...st.palette, ink: FLAT_PAL.mark }, colouring: 'solid' }) - 1,
+    sGold = tb.styles.push({ ...st, palette: { ...st.palette, ink: FLAT_PAL.rosette }, colouring: 'solid' }) - 1,
     ro = rosette(new Writer(kufi, st), FLAT.table, c, R, ROSETTE_SPOKES, sOx, 93);
   ro.items.forEach((it, i) => {
     if (i % 2 && it.type === 'strip') it.style = sGold;
@@ -526,7 +601,7 @@ export function flatFrame(): Composition {
     version: 1,
     seed: 36,
     canvas: { shape: 'portrait', margin: 2 },
-    style: flatStyle({ ink: '#D9AE48', ink2: '#6F96CF', paper: FLAT_PAL.night, mark: FLAT_PAL.mark }),
+    style: flatStyle(FLAT_PAL.frame),
     texts: { verse: slot(FLAT.frame) },
     root: {
       type: 'frame',
@@ -919,7 +994,8 @@ function lit(id: string, P: Pt[], k: number, at: Pt = centreOf(P)): string {
     `<radialGradient id="fl-lit-${id}" cx="${f(at[0])}" cy="${f(at[1])}" r="${f(r)}" gradientUnits="userSpaceOnUse">` +
     `<stop offset="0" stop-color="#F2C566" stop-opacity="${k}"/><stop offset=".45" stop-color="#C98A32" stop-opacity="${f(k * 0.45)}"/>` +
     `<stop offset="1" stop-color="#C98A32" stop-opacity="0"/></radialGradient>` +
-    `<path d="${pathD(P)}" fill="${FLAT_PAL.room}"/><path d="${pathD(P)}" fill="url(#fl-lit-${id})"/>`
+    `<path d="${pathD(P)}" fill="${FLAT_PAL.room}"/>` +
+    (k > 0 ? `<path d="${pathD(P)}" fill="url(#fl-lit-${id})"/>` : '')
   );
 }
 
@@ -927,7 +1003,19 @@ function lit(id: string, P: Pt[], k: number, at: Pt = centreOf(P)): string {
 const openingsOn = (pl: Placed, s: Setting): Pt[][] =>
   pl.meta.borders.flatMap(b => b.rings.flatMap(r => r.openings ?? [])).map(q => drawnPts(pl, q).map(s.map));
 
-export function flatSheet(): FlatSheet {
+export type HallKind = 'runner' | 'stars' | 'strapwork' | 'lattice' | 'tiles';
+export type KitchenKind = 'seal' | 'plain' | 'strapwork';
+export interface FlatOptions {
+  theme?: keyof typeof THEMES;
+  hall?: HallKind;
+  kitchen?: KitchenKind;
+  /** A glow under the table in a scheme whose rooms are not lit (0–1). */
+  tableGlow?: number;
+}
+
+export function flatSheet(opts: FlatOptions = {}): FlatSheet {
+  FLAT_PAL = THEMES[opts.theme ?? 'day'];
+  const tableGlow = opts.tableGlow ?? 0;
   const warnings: string[] = [];
   const sh = new SheetLayout();
   const place = (c: Composition, id: string, ground?: string) => {
@@ -942,7 +1030,7 @@ export function flatSheet(): FlatSheet {
   const wallPen = solvePen([walls()], { ...WALL_SCALES, step: 0.01 });
   if (!wallPen) throw new Error('the outer walls hold no pen');
   const wl = place(wallPen.compositions[0], 'wl');
-  const given = rooms(),
+  const given = rooms(opts.hall, opts.kitchen),
     ids = Object.keys(given) as RoomId[],
     fit = solvePen(ids.map(id => given[id]));
   if (!fit) throw new Error('no pen fits every room');
@@ -951,7 +1039,7 @@ export function flatSheet(): FlatSheet {
     litOf = {} as Record<RoomId, number>;
   ids.forEach((id, i) => {
     litOf[id] = sh.parts.length;
-    sh.parts.push(lit(id, ROOMS[id], GLOW[id]));
+    sh.parts.push(lit(id, ROOMS[id], GLOW[id] * FLAT_PAL.glow));
     partOf[id] = sh.parts.length;
     placed[id] = place(fit.compositions[i], id);
   });
@@ -1027,12 +1115,12 @@ export function flatSheet(): FlatSheet {
     warnings.push(...tb.meta.warnings.map(w => `table: ${w}`));
     tableRosette(tb);
     // the room's light comes from the table, and the table is the brightest thing in the house
-    sh.parts[litOf.reception] = lit('reception', ROOMS.reception, GLOW.reception, tc);
+    sh.parts[litOf.reception] = lit('reception', ROOMS.reception, GLOW.reception * FLAT_PAL.glow + tableGlow * 0.6, tc);
     const disc = Array.from({ length: 72 }, (_, i): Pt => {
       const a = (i / 72) * 2 * Math.PI;
       return [tc[0] + (dia / 2) * Math.cos(a), tc[1] + (dia / 2) * Math.sin(a)];
     });
-    sh.parts.push(lit('table', disc, TABLE_GLOW));
+    sh.parts.push(lit('table', disc, TABLE_GLOW * FLAT_PAL.glow + tableGlow));
     sh.place(tb, { id: 'tb', slot: { x: tc[0] - dia / 2, y: tc[1] - dia / 2, w: dia, h: dia } });
   }
 
@@ -1107,7 +1195,7 @@ export function flatSheet(): FlatSheet {
 
   const view = aSeries(frSvg.box);
   const svg =
-    sheetOpen(view, 'A1', FLAT_PAL.night, 'Houses of rest: a flat plan in square Kufic') +
+    sheetOpen(view, 'A1', FLAT_PAL.paper, 'Houses of rest: a flat plan in square Kufic') +
     frSvg.svg +
     sky.svg +
     sh.parts.join('') +
