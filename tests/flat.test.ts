@@ -50,8 +50,6 @@ describe('Houses of rest', () => {
     expect(s.h / s.w).toBeCloseTo(Math.SQRT2, 6);
     expect(s.pen.scale).toBeGreaterThan(0.4);
     expect(s.svg).toContain('aria-label="Houses of rest: a flat plan in square Kufic"');
-    // the written rays remain an option
-    expect(flatSheet({ rays: true }).warnings).toEqual([]);
     if (process.env.FLAT) {
       console.log('pen', s.pen);
       mkdirSync('docs/showpiece', { recursive: true });

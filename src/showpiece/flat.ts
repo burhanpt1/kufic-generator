@@ -10,6 +10,8 @@
 // The sheet is drawn in the plan's own units (the agent's drawing, in pixels, y down): every room is set at PX plan
 // units per cell, so one pen (solvePen) writes every room's border at one letter height.
 import { placeMap, resolve } from '../compose';
+import { inscribe } from '../compose/inscription';
+import type { Inscription } from '../compose/inscription';
 import { solvePen } from '../compose/pen';
 import type { Placed } from '../compose/placed';
 import { inside } from '../geometry/poly';
@@ -30,10 +32,9 @@ import {
   svgBody,
 } from '../render/sheet';
 import type { Box, Setting } from '../render/sheet';
-import { U } from '../render/svg';
 import { kufi } from '../script/kufi';
 import { AN_NUR, rasm } from './an-nur';
-import { rosette, Writer, writtenRays } from './radial';
+import { rosette, Writer } from './radial';
 import { altAz, eclipticPoint, lst, STARS, wanderers, WANDERERS } from './sky';
 
 const f = (n: number) => +n.toFixed(1);
@@ -223,10 +224,8 @@ export const PX = 2.6;
 export const WALL_SCALES = { lo: 0.74, hi: 0.8 };
 export const FRAME_SIZE = 344;
 export const FRAME_SCALE = 0.85;
-/** How much of the space left inside the reception's border the table fills, and its rays. */
+/** How much of the space left inside the reception's border the table fills. */
 export const TABLE_FILL = 0.94;
-export const RAYS = 56;
-export const RAY_SCALE = 0.42;
 
 const sizeOf = (P: Pt[]) => {
   const b = bbox(P);
@@ -294,23 +293,23 @@ const medallion = (ground: FillerNode, outline: 'star' | 'circle', share: number
       features: { tips: 'none' },
       // one colour, the border's oxblood (a nested region takes the next colour of "by ring" otherwise)
       style: { colouring: 'solid' },
-      fill: { type: 'monogram', text: 'm', method: 'seal', params: {} },
+      // in a square frame, as a seal is cut: it fills the medallion instead of floating in it
+      fill: { type: 'monogram', text: 'm', method: 'seal', params: { frame: 'square' } },
     },
   }) as FillerNode;
 
 /** The rooms, borders on auto (solvePen sets them). */
-export function rooms(rays = false): Record<RoomId, Composition> {
+export function rooms(): Record<RoomId, Composition> {
   return {
     hall: room(
       ROOMS.hall,
-      { once: FLAT.hall },
+      {},
       [
         { type: 'ornamentBorder', ornament: 'braid', width: 3 },
         { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
       ],
-      // the greeting read down the hall in lines, as the kitchen's grace is: with six doors, a border here carried
-      // only fragments of it
-      { type: 'lines', text: 'once', lineGap: 2 },
+      // left empty: the greeting is written down its length in two tall columns (hallGreeting)
+      undefined,
       61,
     ),
     kitchen: room(
@@ -352,8 +351,8 @@ export function rooms(rays = false): Record<RoomId, Composition> {
         },
         { type: 'ornamentBorder', ornament: 'pearls', width: 3 },
       ],
-      // a star field in سكنا round the table, as the bedrooms have round their seals; or none, under the written rays
-      rays ? undefined : { type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 15 }, text: 'c' },
+      // a star field in سكنا round the table, as the bedrooms have round their seals
+      { type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 15 }, text: 'c' },
       16,
     ),
     bath: room(
@@ -475,8 +474,8 @@ export function valePlate(): Composition {
     version: 1,
     seed: 5,
     canvas: { shape: 'portrait', margin: 0 },
-    // dotted, so وادي's final ya can't be read as a ba
-    style: { ...flatStyle(), colouring: 'solid', letter: { ...flatStyle().letter, marks: 'dots' } },
+    // dotted, and with the long final forms, so وادي's ya turns back on itself and can't be read as a ba
+    style: { ...flatStyle(), colouring: 'solid', letter: { ...flatStyle().letter, marks: 'dots', alternates: true } },
     texts: { v: slot(FLAT.vale) },
     root: {
       type: 'frame',
@@ -537,7 +536,6 @@ export function flatFrame(): Composition {
             separator: { kind: 'braid', width: 4 },
             ground: { kind: 'tint' },
           },
-          { type: 'ornamentBorder', ornament: 'braid', width: 6 },
           { type: 'ornamentBorder', ornament: 'pearls', width: 3 },
         ],
         features: { corners: 'star' },
@@ -889,13 +887,49 @@ export interface FlatSheet {
 const openingsOn = (pl: Placed, s: Setting): Pt[][] =>
   pl.meta.borders.flatMap(b => b.rings.flatMap(r => r.openings ?? [])).map(q => drawnPts(pl, q).map(s.map));
 
-export interface FlatOptions {
-  /** 5:114 written on rays from the table across the reception, instead of the room's star field. */
-  rays?: boolean;
+/** The hall's greeting as two columns running its length (bottom to top, so they read top to bottom, the first on
+ *  the left, as the lines of a page turned on its side): the largest letters at which both halves fit, split where
+ *  the two are drawn out most alike. In sheet units. */
+function hallGreeting(inner: Box): Inscription[] | null {
+  const words = FLAT.hall.split(' '),
+    pad = 10,
+    len = (inner.h - 2 * pad) / PX,
+    wide = (inner.w - 2 * pad) / PX,
+    style = flatStyle(),
+    cx = inner.x + inner.w / 2,
+    y0 = inner.y + inner.h - pad,
+    y1 = inner.y + pad;
+  for (let scale = 2; scale >= 0.6; scale -= 0.025) {
+    let best: { k: number; depth: number; cost: number } | null = null;
+    for (let k = 2; k <= words.length - 2; k++) {
+      const halves = [words.slice(0, k), words.slice(k)].map(w =>
+        inscribe({ text: w.join(' '), from: [0, len], to: [0, 0], scale, repeat: 'once' }, style, 0),
+      );
+      if (!halves[0] || !halves[1]) continue;
+      const depth = halves[0].depth,
+        cost = Math.max(halves[0].slack, halves[1].slack);
+      // two columns and the space between them, within the hall's width
+      if (2.3 * depth > wide) continue;
+      if (!best || cost < best.cost) best = { k, depth, cost };
+    }
+    if (!best) continue;
+    const off = (best.depth * 1.3 * PX) / 2;
+    return [words.slice(0, best.k), words.slice(best.k)].map((w, i) => {
+      const x = cx + (i ? off : -off);
+      return {
+        text: w.join(' '),
+        from: [x, y0] as Pt,
+        to: [x, y1] as Pt,
+        scale,
+        repeat: 'once' as const,
+        ring: 61 + i,
+      };
+    });
+  }
+  return null;
 }
 
-export function flatSheet(opts: FlatOptions = {}): FlatSheet {
-  const rays_ = !!opts.rays;
+export function flatSheet(): FlatSheet {
   const warnings: string[] = [];
   const sh = new SheetLayout();
   const place = (c: Composition, id: string, ground?: string) => {
@@ -910,7 +944,7 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
   const wallPen = solvePen([walls()], { ...WALL_SCALES, step: 0.01 });
   if (!wallPen) throw new Error('the outer walls hold no pen');
   const wl = place(wallPen.compositions[0], 'wl');
-  const given = rooms(rays_),
+  const given = rooms(),
     ids = Object.keys(given) as RoomId[],
     fit = solvePen(ids.map(id => given[id]));
   if (!fit) throw new Error('no pen fits every room');
@@ -933,6 +967,15 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
     sh.parts.push(
       `<path d="M${fd.x + fd.w - 4} ${fd.y}v${fd.h}" stroke="${FLAT_PAL.gold}" stroke-width="6" stroke-linecap="round"/>`,
     );
+  }
+
+  // the hall: its greeting down its length in two columns, as large as the hall allows
+  {
+    const { pl, s } = placed.hall,
+      ib = bbox(drawnPts(pl, outlineOf(pl).inner!).map(s.map)),
+      got = hallGreeting(ib);
+    if (!got) warnings.push("hall: the greeting doesn't fit");
+    else warnings.push(...sh.write(got, { ...flatStyle(), colouring: 'solid' }, { id: 'hg', unit: PX }));
   }
 
   // interior walls: Al-Kahf 18:39 along each, sized to the wall's thickness
@@ -968,59 +1011,7 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
       tc: Pt = [midX, best.y],
       dia = 2 * best.r * TABLE_FILL;
 
-    if (rays_) {
-      // its rays: 5:114 word by word on spokes out to the room's border, gold fading outward. Worked in the
-      // reception's own cells: sheet → drawn → cells.
-      const toCells = ([x, y]: Pt): Pt => {
-          const crop = bbox(drawnPts(rec, outlineOf(rec).outer));
-          return [
-            (crop.x + (x - rs.box.x) / rs.k) / U - rec.canvas.origin[0],
-            (crop.y + (y - rs.box.y) / rs.k) / U - rec.canvas.origin[1],
-          ];
-        },
-        c = toCells(tc),
-        rr = dia / 2 / rs.k / U,
-        disc = Array.from({ length: 96 }, (_, i) => {
-          const a = (i / 96) * 2 * Math.PI;
-          return [c[0] + rr * Math.cos(a), c[1] + rr * Math.sin(a)] as Pt;
-        }),
-        st = rec.styles[0],
-        gold: Style = {
-          ...st,
-          palette: { ...st.palette, ink: FLAT_PAL.gold },
-          colouring: 'solid',
-          stroke: { ...st.stroke, contrast: 0, taper: 0 },
-          terminals: { ...st.terminals, kind: 'none', flourish: 'none' },
-        },
-        sid = rec.styles.push(gold) - 1,
-        rays = writtenRays(
-          new Writer(kufi, st),
-          FLAT.feast.split(' '),
-          c,
-          disc,
-          outlineOf(rec).inner!,
-          RAYS,
-          RAY_SCALE,
-          [sid],
-          92,
-          1e4,
-        ),
-        crop = bbox(drawnPts(rec, outlineOf(rec).outer)),
-        raySvg = sh.set(svgBody(renderPlaced({ ...rec, items: rays } as Placed, { idPrefix: 'ry' })), crop, rs.k, [
-          rs.box.x + rs.box.w / 2,
-          rs.box.y + rs.box.h / 2,
-        ]).svg,
-        rt = rs.box,
-        R = Math.hypot(rt.w, rt.h) / 2;
-      sh.parts.push(
-        `<mask id="fl-rayfade" maskUnits="userSpaceOnUse" x="${f(rt.x)}" y="${f(rt.y)}" width="${f(rt.w)}" height="${f(rt.h)}">` +
-          `<radialGradient id="fl-rayfadeg" cx="${f(tc[0])}" cy="${f(tc[1])}" r="${f(R)}" gradientUnits="userSpaceOnUse">` +
-          `<stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#fff" stop-opacity=".8"/>` +
-          `<stop offset="1" stop-color="#fff" stop-opacity=".2"/></radialGradient>` +
-          `<rect x="${f(rt.x)}" y="${f(rt.y)}" width="${f(rt.w)}" height="${f(rt.h)}" fill="url(#fl-rayfadeg)"/></mask>` +
-          `<g mask="url(#fl-rayfade)">${raySvg}</g>`,
-      );
-    } else {
+    {
       // the room's star field stops round the table: a word that would run under it is left out whole
       const toSheet = (p: Pt) => rs.map(drawnPts(rec, [p])[0]),
         clear = dia / 2 + 6,
