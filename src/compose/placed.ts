@@ -146,6 +146,9 @@ export interface BorderMeta {
     Hb: number;
     /** Stretched cells / natural width, over the whole ring. */
     slack: number;
+    /** Share of each group's run left to stretching, in reading order (0 for a run left blank): how evenly the
+     *  ring's sides are written. */
+    runSlack: number[];
     strips: number[];
   }[];
 }

@@ -127,6 +127,22 @@ What is already done is listed at the end only as milestones; the commit history
 
 - [~] **20 of the 35 Kufic lab-compare cases differ from the lab by more than 12%.** They were reviewed and accepted
   (`tests/golden-lab/reviewed.json`). Revisit the worst: star-6-pen, la-ilaha-poly5, square-4, fatimid-circle.
+- [~] **Sheets of several compositions, written with one pen** (from the "Houses of rest" showpiece, a flat's plan
+  with a composition in every room, 26 November). Done: the sheet layer (`src/render/sheet.ts`: parts set by box or
+  by size per cell, the field's lines under them left out; "Light upon light" is built on it) and the shared pen
+  (`src/compose/pen.ts`, `solvePen`: one letter scale for the text borders of several compositions, scored on how
+  evenly each ring's sides are stretched; `runSlack` in the border's metadata). Still to do:
+  - [ ] **A sheet as a schema node** (several child regions in one composition), so the Studio can make one.
+  - [ ] **Text along a segment as a placed item.** `Writer` in `src/showpiece/radial.ts` does it for the rays; the
+        showpiece faked a wall's inscription with a thin rectangle and a `lines` fill.
+  - [ ] **A pattern ground under another fill** (a star field with a medallion in the middle). `roundel` has
+        `ground`; a nested `region` fill has not.
+  - [ ] **Verse anchoring:** start a border's text at a chosen corner, with a mark between repeats.
+  - [ ] **Openings in a text band** (doors, windows): `seam` allows one gap; a list of gaps the text breaks round.
+  - [ ] **Concave corners squash a border's letters;** chamfer them or leave the corner blank, as for a finial.
+  - [ ] **A fixed `scale` that doesn't fit drops the border.** Say by how much it misses and what would fit
+        (`solvePen`'s `limit` already knows).
+  - [ ] **The seal monogram doesn't fill its medallion** for short phrases, and its lines differ in weight.
 - [ ] **Region clipping for spandrels still uses the TypeScript Clipper2.** Only ring and band offsets are native
       (`dd46d6b`). It runs once per composition, so it is low priority.
 
@@ -135,6 +151,9 @@ What is already done is listed at the end only as milestones; the commit history
 - [~] **Material rendering:** carved relief, gold on lapis, banna'i brick. Only palettes exist (`src/model/style.ts`);
   there is no relief shading.
 - [~] **The "Light upon light" radial rays are still marked experimental** (`src/showpiece/radial.ts`).
+- [ ] **The angular numeral ٤ reads as a Latin E** (`src/ornament/numerals.ts`). Redraw it.
+- [ ] **Daylight as a primitive:** a clipped, fading beam from an edge (the Nur glow and the showpiece's windows are
+      the same thing, each drawn by hand).
 
 ## Studio and interface
 

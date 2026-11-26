@@ -342,6 +342,11 @@ function placeRegion(node: RegionNode, style: Style, shape: ShapeGeometry, ctx: 
         mode: fit.mode,
         Hb: p.Hb,
         slack: fit.caps.reduce((a, c) => a + c, 0) / Math.max(1, natural) - 1,
+        runSlack: fit.groups.map((g, gi) => {
+          const cap = fit.caps[(fit.caps.length - gi) % fit.caps.length],
+            w = g.reduce((x, sg, i) => x + sg.minW + (i < g.length - 1 ? (sg.endsWord ? slot.wordGap : 1) : 0), 0);
+          return g.length && cap > 0 ? Math.max(0, (cap - w) / cap) : 0;
+        }),
         strips: laid.map(l => l.strip.W),
       });
       // features at this band's corners
