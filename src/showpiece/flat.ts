@@ -362,7 +362,10 @@ const medallion = (ground: FillerNode, outline: 'star' | 'circle', share: number
   }) as FillerNode;
 
 /** The rooms, borders on auto (solvePen sets them). */
-export function rooms(hall: HallKind = 'runner', kitchen: KitchenKind = 'seal'): Record<RoomId, Composition> {
+export function rooms(
+  hall: HallKind = CHOSEN.hall,
+  kitchen: KitchenKind = CHOSEN.kitchen,
+): Record<RoomId, Composition> {
   const plainBorders: BorderNode[] = [
       { type: 'ornamentBorder', ornament: 'braid', width: 3 },
       { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
@@ -1003,6 +1006,10 @@ function lit(id: string, P: Pt[], k: number, at: Pt = centreOf(P)): string {
 const openingsOn = (pl: Placed, s: Setting): Pt[][] =>
   pl.meta.borders.flatMap(b => b.rings.flatMap(r => r.openings ?? [])).map(q => drawnPts(pl, q).map(s.map));
 
+/** The owner's choices (26 November, from the options page): the ivory frame, the hall tiled with its seal, the
+ *  kitchen as a field and a seal with no verse round it, and the table lit. */
+export const CHOSEN = { theme: 'day', hall: 'tiles', kitchen: 'plain', tableGlow: 0.4 } as const;
+
 export type HallKind = 'runner' | 'stars' | 'strapwork' | 'lattice' | 'tiles';
 export type KitchenKind = 'seal' | 'plain' | 'strapwork';
 export interface FlatOptions {
@@ -1014,8 +1021,8 @@ export interface FlatOptions {
 }
 
 export function flatSheet(opts: FlatOptions = {}): FlatSheet {
-  FLAT_PAL = THEMES[opts.theme ?? 'day'];
-  const tableGlow = opts.tableGlow ?? 0;
+  FLAT_PAL = THEMES[opts.theme ?? CHOSEN.theme];
+  const tableGlow = opts.tableGlow ?? CHOSEN.tableGlow;
   const warnings: string[] = [];
   const sh = new SheetLayout();
   const place = (c: Composition, id: string, ground?: string) => {
@@ -1030,7 +1037,7 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
   const wallPen = solvePen([walls()], { ...WALL_SCALES, step: 0.01 });
   if (!wallPen) throw new Error('the outer walls hold no pen');
   const wl = place(wallPen.compositions[0], 'wl');
-  const given = rooms(opts.hall, opts.kitchen),
+  const given = rooms(opts.hall ?? CHOSEN.hall, opts.kitchen ?? CHOSEN.kitchen),
     ids = Object.keys(given) as RoomId[],
     fit = solvePen(ids.map(id => given[id]));
   if (!fit) throw new Error('no pen fits every room');
