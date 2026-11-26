@@ -665,7 +665,13 @@ function monogramFill(
   }
   const g: CellGrid = m.grid,
     size = cr.r * 1.35,
-    cell = size / Math.max(g.w, g.h);
+    // `fill` (0–1): the block's own diagonal takes that share of the clear circle's diameter, so a block wider
+    // than it is tall is drawn as large as its shape allows; without it, the block's longer side is set to 1.35 r
+    fillK = (f.params as Record<string, unknown>).fill,
+    cell =
+      typeof fillK === 'number' && fillK > 0
+        ? (2 * cr.r * Math.min(1, fillK)) / Math.hypot(g.w, g.h)
+        : size / Math.max(g.w, g.h);
   ctx.items.push({
     type: 'grid',
     style: sid,

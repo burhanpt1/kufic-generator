@@ -286,7 +286,7 @@ export const PX = 2.6;
  *  the frame's verse is fixed. */
 export const WALL_SCALES = { lo: 0.74, hi: 0.8 };
 export const FRAME_SIZE = 344;
-export const FRAME_SCALE = 0.85;
+export const FRAME_SCALE = 0.76;
 /** How much of the space left inside the reception's border the table fills. */
 export const TABLE_FILL = 0.94;
 
@@ -319,12 +319,13 @@ function room(
   borders: BorderNode[],
   fill: FillerNode | undefined,
   seed: number,
+  palette: Palette = roomPal(),
 ): Composition {
   return {
     version: 1,
     seed,
     canvas: { shape: 'square', margin: 0 },
-    style: flatStyle(),
+    style: flatStyle(palette),
     texts: Object.fromEntries(Object.entries(texts).map(([k, t]) => [k, slot(t, k === 'once' ? 'once' : 'fill')])),
     root: {
       type: 'frame',
@@ -349,15 +350,12 @@ const medallion = (ground: FillerNode, outline: 'star' | 'circle', share: number
     node: {
       type: 'region',
       outline: outline === 'star' ? { kind: 'star', points: 8, depth: 0.85 } : { kind: 'circle' },
-      borders: [
-        { type: 'ornamentBorder', ornament: 'braid', width: 2 },
-        { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
-      ],
+      borders: [{ type: 'ornamentBorder', ornament: 'braid', width: 2 }],
       features: { tips: 'none' },
-      // one colour, the border's oxblood (a nested region takes the next colour of "by ring" otherwise)
-      style: { colouring: 'solid' },
-      // in a square frame, as a seal is cut: it fills the medallion instead of floating in it
-      fill: { type: 'monogram', text: 'm', method: 'seal', params: { frame: 'square' } },
+      // one colour, the house's oxblood, whatever the room's own ink (the tiled rooms are drawn quietly)
+      style: { colouring: 'solid', palette: { ink: FLAT_PAL.roomInk } },
+      // the words stand in the medallion itself, as large as it allows: a box round them made them a label
+      fill: { type: 'monogram', text: 'm', method: 'seal', params: { fill: 0.92 } },
     },
   }) as FillerNode;
 
@@ -383,9 +381,11 @@ export function rooms(
       // tiled like the bathroom, with سلام at its middle
       tiles: medallion({ type: 'iznik', iznik: { fold: 8, scale: 6 } }, 'star', 0.86),
     },
+    // the tiled middle of the plan, drawn back: its lines in muted gold, so the eye passes through it
+    quiet: Palette = FLAT_PAL.glow ? roomPal() : { ...roomPal(), ink: '#BFA674', ink2: '#D8C8A2', mark: '#BFA674' },
     kitchenField: FillerNode = { type: 'pattern', pattern: { tiling: 'square', angle: 60, scale: 10 }, text: 'c' };
   return {
-    hall: room(ROOMS.hall, { m: FLAT.salam }, plainBorders, hallFill[hall], 61),
+    hall: room(ROOMS.hall, { m: FLAT.salam }, plainBorders, hallFill[hall], 61, quiet),
     kitchen:
       kitchen === 'seal'
         ? // as the other rooms are: its verse round it, a field in جميعا (together), and the words said before
@@ -420,10 +420,7 @@ export function rooms(
     bedroom: room(
       ROOMS.bedroom,
       { t: FLAT.bedroom, c: FLAT.rest, m: FLAT.night },
-      [
-        { ...roomBorder('bedroom', 't'), separator: { kind: 'braid', width: 3 }, ground: { kind: 'vine' } },
-        { type: 'ornamentBorder', ornament: 'pearls', width: 2 },
-      ],
+      [{ ...roomBorder('bedroom', 't'), separator: { kind: 'braid', width: 3 }, ground: { kind: 'vine' } }],
       medallion({ type: 'pattern', pattern: { tiling: '488', angle: 67, scale: 13 }, text: 'c' }, 'star', 0.62),
       78,
     ),
@@ -455,6 +452,7 @@ export function rooms(
       [{ type: 'ornamentBorder', ornament: 'lines', width: 2 }],
       { type: 'iznik', iznik: { fold: 8, scale: 7 } },
       5,
+      quiet,
     ),
     cupboard: room(
       ROOMS.cupboard,
@@ -532,6 +530,7 @@ export function tableRoundel(): Composition {
             type: 'region',
             outline: { kind: 'polygon', sides: 8, rotation: 22.5 },
             borders: [{ type: 'ornamentBorder', ornament: 'braid', width: 2 }],
+            ...(FLAT_PAL.glow ? {} : { style: { palette: { ink: HEART.ink, ink2: HEART.ink } } }),
             features: { tips: 'none' },
             // left empty: the rosette of المائدة is written into it after resolving (tableRosette)
           },
@@ -552,8 +551,16 @@ export function tableRosette(tb: Placed): void {
     // the octagon's apothem, less a margin
     R = Math.min(...P.map(q => Math.hypot(q[0] - c[0], q[1] - c[1]))) * Math.cos(Math.PI / 8) * 0.95,
     st = tb.styles[0],
-    sOx = tb.styles.push({ ...st, colouring: 'solid' }) - 1,
-    sGold = tb.styles.push({ ...st, palette: { ...st.palette, ink: FLAT_PAL.rosette }, colouring: 'solid' }) - 1,
+    onNavy = !FLAT_PAL.glow,
+    sOx =
+      tb.styles.push({ ...st, ...(onNavy ? { palette: { ...st.palette, ink: HEART.ink } } : {}), colouring: 'solid' }) -
+      1,
+    sGold =
+      tb.styles.push({
+        ...st,
+        palette: { ...st.palette, ink: onNavy ? HEART.pale : FLAT_PAL.rosette },
+        colouring: 'solid',
+      }) - 1,
     ro = rosette(new Writer(kufi, st), FLAT.table, c, R, ROSETTE_SPOKES, sOx, 93);
   ro.items.forEach((it, i) => {
     if (i % 2 && it.type === 'strip') it.style = sGold;
@@ -569,7 +576,14 @@ export function valePlate(): Composition {
     seed: 5,
     canvas: { shape: 'portrait', margin: 0 },
     // dotted, and with the long final forms, so وادي's ya turns back on itself and can't be read as a ba
-    style: { ...flatStyle(), colouring: 'solid', letter: { ...flatStyle().letter, marks: 'dots', alternates: true } },
+    // on the sky itself, in its gold: part of the night, not a block set into it
+    style: {
+      ...flatStyle(
+        FLAT_PAL.glow ? roomPal() : { ink: HEART.ink, ink2: HEART.gold, paper: '#14214D', mark: HEART.pale },
+      ),
+      colouring: 'solid',
+      letter: { ...flatStyle().letter, marks: 'dots', alternates: true },
+    },
     texts: { v: slot(FLAT.vale) },
     root: {
       type: 'frame',
@@ -858,10 +872,7 @@ function skyOver(field: Box, c: Pt, covers: Pt[][]) {
           rr = i % 2 ? r * 0.42 : r;
         return [x + rr * Math.cos(a), y + rr * Math.sin(a)] as Pt;
       });
-      return (
-        `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r * 1.6)}" fill="${NIGHT.gilt}" fill-opacity=".12"/>` +
-        `<path d="${path(P)}Z" fill="${NIGHT.gilt}" stroke="${NIGHT.pale}" stroke-width="${f(Math.max(0.5, r * 0.08))}"/>`
-      );
+      return `<path d="${path(P)}Z" fill="${NIGHT.gilt}" stroke="${NIGHT.pale}" stroke-width="${f(Math.max(0.5, r * 0.08))}"/>`;
     };
   // a name under its star, or over it where there is no room beneath
   const label = (text: string, p: Pt, r: number) => {
@@ -920,8 +931,7 @@ function skyOver(field: Box, c: Pt, covers: Pt[][]) {
     } else {
       const r = w.body === 'venus' || w.body === 'jupiter' ? 9 : 7;
       out.push(
-        `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="${f(r * 2)}" fill="${NIGHT.gilt}" fill-opacity=".12"/>` +
-          `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}" fill="${NIGHT.pale}" stroke="${NIGHT.gilt}" stroke-width="1.4"/>` +
+        `<circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}" fill="${NIGHT.pale}" stroke="${NIGHT.gilt}" stroke-width="1.4"/>` +
           (w.body === 'saturn'
             ? `<ellipse cx="${f(p[0])}" cy="${f(p[1])}" rx="${f(r * 2.1)}" ry="${f(r * 0.6)}" transform="rotate(-20 ${f(p[0])} ${f(p[1])})" fill="none" stroke="${NIGHT.gilt}" stroke-width="1.4"/>`
             : ''),
@@ -987,6 +997,8 @@ const GLOW: Record<RoomId, number> = {
   bath: 0.12,
   cupboard: 0.08,
 };
+/** The table's heart: navy and gold, as the sky is. */
+const HEART = { navy: '#14214D', gold: '#C9A45A', ink: '#E9C46A', pale: '#F6E7B8' };
 /** The table's own light. */
 const TABLE_GLOW = 0.62;
 /** A room's ground, lit from its middle: lamplight falling off towards the walls. */
@@ -1128,7 +1140,18 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
       return [tc[0] + (dia / 2) * Math.cos(a), tc[1] + (dia / 2) * Math.sin(a)];
     });
     sh.parts.push(lit('table', disc, TABLE_GLOW * FLAT_PAL.glow + tableGlow));
-    sh.place(tb, { id: 'tb', slot: { x: tc[0] - dia / 2, y: tc[1] - dia / 2, w: dia, h: dia } });
+    const ts = sh.place(tb, { id: 'tb', slot: { x: tc[0] - dia / 2, y: tc[1] - dia / 2, w: dia, h: dia } });
+    // the table's heart: the sky's navy brought into the house, ringed in gold, under its lettering
+    if (!FLAT_PAL.glow) {
+      const oct = drawnPts(tb, outlinesOf(tb)[1].outer).map(ts.map),
+        r = Math.max(...oct.map(q => Math.hypot(q[0] - tc[0], q[1] - tc[1])));
+      sh.parts.splice(
+        sh.parts.length - 1,
+        0,
+        `<circle cx="${f(tc[0])}" cy="${f(tc[1])}" r="${f(r * 1.035)}" fill="${HEART.gold}"/>` +
+          `<path d="${pathD(oct)}" fill="${HEART.navy}"/>`,
+      );
+    }
   }
 
   // the landing: وادي المائدة on a plate beside the front door
@@ -1138,10 +1161,15 @@ export function flatSheet(opts: FlatOptions = {}): FlatSheet {
     warnings.push(...vp.meta.warnings.map(w => `vale: ${w}`));
     sh.place(vp, {
       id: 'vp',
-      ground: FLAT_PAL.room,
+      ...(FLAT_PAL.glow ? { ground: FLAT_PAL.room } : {}),
       slot: { x: LANDING.x + m, y: LANDING.y + m, w: LANDING.w - 2 * m, h: LANDING.h - 2 * m },
     });
   }
+
+  // one fine gold line round the whole footprint: the house as a single shape against the sky
+  sh.parts.push(
+    `<path d="${pathD(PLAN_OUTLINE)}" fill="none" stroke="${HEART.gold}" stroke-width="3.5" stroke-linejoin="miter"/>`,
+  );
 
   // the plan covers the frame's field
   sh.covers.push(PLAN_OUTLINE);
